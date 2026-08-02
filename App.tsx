@@ -1020,7 +1020,7 @@ function App() {
   };
 
   const handleBatchDelete = () => {
-    if (!authToken) { setIsAuthOpen(true); return; }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
     
     if (selectedLinks.size === 0) {
       alert('请先选择要删除的链接');
@@ -1036,7 +1036,7 @@ function App() {
   };
 
   const handleBatchMove = (targetCategoryId: string) => {
-    if (!authToken) { setIsAuthOpen(true); return; }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
     
     if (selectedLinks.size === 0) {
       alert('请先选择要移动的链接');
@@ -1271,7 +1271,7 @@ function App() {
   };
 
   const handleAddLink = (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
-    if (!authToken) { setIsAuthOpen(true); return; }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
     
     // 处理URL，确保有协议前缀
     let processedUrl = data.url;
@@ -1332,7 +1332,7 @@ function App() {
   };
 
   const handleEditLink = (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
-    if (!authToken) { setIsAuthOpen(true); return; }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
     if (!editingLink) return;
     
     // 处理URL，确保有协议前缀
@@ -1478,7 +1478,7 @@ function App() {
   );
 
   const handleDeleteLink = (id: string) => {
-    if (!authToken) { setIsAuthOpen(true); return; }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
     if (confirm('确定删除此链接吗?')) {
       updateData(links.filter(l => l.id !== id), categories);
     }
@@ -1487,7 +1487,7 @@ function App() {
   const togglePin = (id: string, e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!authToken) { setIsAuthOpen(true); return; }
+      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
       
       const linkToToggle = links.find(l => l.id === id);
       if (!linkToToggle) return;
@@ -1614,12 +1614,12 @@ function App() {
   };
 
   const handleUpdateCategories = (newCats: Category[]) => {
-      if (!authToken) { setIsAuthOpen(true); return; }
+      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
       updateData(links, newCats);
   };
 
   const handleDeleteCategory = (catId: string) => {
-      if (!authToken) { setIsAuthOpen(true); return; }
+      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
       
       // 防止删除"常用推荐"分类
       if (catId === 'common') {
@@ -2428,7 +2428,7 @@ function App() {
             <div className="flex items-center justify-between pt-4 pb-2 px-4">
                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">分类目录</span>
                <button 
-                  onClick={() => { if(!authToken) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
+                  onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                   title="管理分类"
                >
@@ -2508,7 +2508,7 @@ function App() {
             
             <div className="grid grid-cols-3 gap-2 mb-2">
                 <button 
-                    onClick={() => { if(!authToken) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
+                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="导入书签"
                 >
@@ -2517,7 +2517,7 @@ function App() {
                 </button>
                 
                 <button 
-                    onClick={() => { if(!authToken) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
+                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="备份与恢复"
                 >
@@ -2526,7 +2526,7 @@ function App() {
                 </button>
 
                 <button 
-                    onClick={() => { if(!authToken) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
+                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="AI 设置"
                 >
@@ -2779,7 +2779,7 @@ function App() {
             {/* 添加按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
             <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'}`}>
               <button
-                onClick={() => { if(!authToken) setIsAuthOpen(true); else { setEditingLink(undefined); setIsModalOpen(true); }}}
+                onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else { setEditingLink(undefined); setIsModalOpen(true); }}}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-full text-sm font-medium shadow-lg shadow-blue-500/30"
               >
                 <Plus size={16} /> <span className="hidden sm:inline">添加</span>
