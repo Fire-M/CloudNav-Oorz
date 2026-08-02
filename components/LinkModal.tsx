@@ -3,6 +3,43 @@ import { X, Sparkles, Loader2, Pin, Wand2, Trash2 } from 'lucide-react';
 import { LinkItem, Category, AIConfig } from '../types';
 import { generateLinkDescription, suggestCategory } from '../services/geminiService';
 
+// 树形节点接口
+interface CategoryTreeNode {
+  category: Category;
+  children: CategoryTreeNode[];
+}
+
+// 构建树形结构
+const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
+  const map = new Map<string, CategoryTreeNode>();
+  const roots: CategoryTreeNode[] = [];
+
+  categories.forEach(cat => {
+    map.set(cat.id, { category: cat, children: [] });
+  });
+
+  categories.forEach(cat => {
+    const node = map.get(cat.id)!;
+    if (cat.parentId && map.has(cat.parentId)) {
+      map.get(cat.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+};
+
+// 递归生成带缩进的选项
+const flattenTreeOptions = (nodes: CategoryTreeNode[], depth: number = 0): { category: Category; depth: number }[] => {
+  const result: { category: Category; depth: number }[] = [];
+  nodes.forEach(node => {
+    result.push({ category: node.category, depth });
+    result.push(...flattenTreeOptions(node.children, depth + 1));
+  });
+  return result;
+};
+
 interface LinkModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -428,9 +465,15 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
             onChange={(e) => setCategoryId(e.target.value)}
             className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
             >
-            {categories.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.name}</option>
-            ))}
+            {(() => {
+              const tree = buildCategoryTree(categories);
+              const options = flattenTreeOptions(tree);
+              return options.map(({ category: cat, depth }) => (
+                <option key={cat.id} value={cat.id}>
+                  {' '.repeat(depth)}{cat.name}
+                </option>
+              ));
+            })()}
             </select>
           </div>
 

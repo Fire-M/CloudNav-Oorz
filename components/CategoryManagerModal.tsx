@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, Lock, Unlock, Palette } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, ArrowUp, ArrowDown, Trash2, Edit2, Plus, Check, Lock, Palette, ChevronRight } from 'lucide-react';
 import { Category } from '../types';
 import Icon from './Icon';
 import IconSelector from './IconSelector';
@@ -14,6 +14,68 @@ interface CategoryManagerModalProps {
   onVerifyPassword?: (password: string) => Promise<boolean>;
 }
 
+// 树形节点接口
+interface CategoryTreeNode {
+  category: Category;
+  children: CategoryTreeNode[];
+}
+
+// 构建树形结构
+const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
+  const map = new Map<string, CategoryTreeNode>();
+  const roots: CategoryTreeNode[] = [];
+
+  categories.forEach(cat => {
+    map.set(cat.id, { category: cat, children: [] });
+  });
+
+  categories.forEach(cat => {
+    const node = map.get(cat.id)!;
+    if (cat.parentId && map.has(cat.parentId)) {
+      map.get(cat.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+};
+
+// 获取子孙分类ID
+const getAllChildIds = (categories: Category[], parentId: string): string[] => {
+  const children = categories.filter(c => c.parentId === parentId);
+  const ids: string[] = [];
+  children.forEach(child => {
+    ids.push(child.id);
+    ids.push(...getAllChildIds(categories, child.id));
+  });
+  return ids;
+};
+
+// 获取可用的父分类（排除自身及子孙）
+const getAvailableParents = (categories: Category[], excludeId?: string): Category[] => {
+  if (!excludeId) return categories;
+  const excludeIds = new Set([excludeId, ...getAllChildIds(categories, excludeId)]);
+  return categories.filter(c => !excludeIds.has(c.id));
+};
+
+// 获取同级分类
+const getSiblings = (categories: Category[], cat: Category): Category[] => {
+  return categories.filter(c => c.parentId === cat.parentId);
+};
+
+// 获取分类深度
+const getCategoryDepth = (categories: Category[], categoryId: string): number => {
+  let depth = 0;
+  let current = categories.find(c => c.id === categoryId);
+  while (current?.parentId) {
+    depth++;
+    current = categories.find(c => c.id === current.parentId);
+    if (!current) break;
+  }
+  return depth;
+};
+
 const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({ 
   isOpen, 
   onClose, 
@@ -27,11 +89,13 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   const [editPassword, setEditPassword] = useState('');
   const [editIcon, setEditIcon] = useState('');
   const [editRequireAuth, setEditRequireAuth] = useState(false);
+  const [editParentId, setEditParentId] = useState<string>('');
   
   const [newCatName, setNewCatName] = useState('');
   const [newCatPassword, setNewCatPassword] = useState('');
   const [newCatIcon, setNewCatIcon] = useState('Folder');
   const [newCatRequireAuth, setNewCatRequireAuth] = useState(false);
+  const [newCatParentId, setNewCatParentId] = useState<string>('');
   
   const [isIconSelectorOpen, setIsIconSelectorOpen] = useState(false);
   const [iconSelectorTarget, setIconSelectorTarget] = useState<'edit' | 'new' | null>(null);
@@ -44,21 +108,37 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     categoryName: string;
   } | null>(null);
 
+  // 构建树形结构
+  const treeNodes = useMemo(() => buildCategoryTree(categories), [categories]);
+
   if (!isOpen) return null;
 
-  const handleMove = (index: number, direction: 'up' | 'down') => {
-    const newCats = [...categories];
-    if (direction === 'up' && index > 0) {
-      [newCats[index], newCats[index - 1]] = [newCats[index - 1], newCats[index]];
-    } else if (direction === 'down' && index < newCats.length - 1) {
-      [newCats[index], newCats[index + 1]] = [newCats[index + 1], newCats[index]];
+  // 在同级分类内移动
+  const handleMove = (cat: Category, direction: 'up' | 'down') => {
+    const siblings = getSiblings(categories, cat);
+    const indexInSiblings = siblings.findIndex(c => c.id === cat.id);
+    
+    if (direction === 'up' && indexInSiblings > 0) {
+      const prevSibling = siblings[indexInSiblings - 1];
+      // 在 categories 数组中交换位置
+      const idx1 = categories.findIndex(c => c.id === prevSibling.id);
+      const idx2 = categories.findIndex(c => c.id === cat.id);
+      const newCats = [...categories];
+      [newCats[idx1], newCats[idx2]] = [newCats[idx2], newCats[idx1]];
+      onUpdateCategories(newCats);
+    } else if (direction === 'down' && indexInSiblings < siblings.length - 1) {
+      const nextSibling = siblings[indexInSiblings + 1];
+      const idx1 = categories.findIndex(c => c.id === cat.id);
+      const idx2 = categories.findIndex(c => c.id === nextSibling.id);
+      const newCats = [...categories];
+      [newCats[idx1], newCats[idx2]] = [newCats[idx2], newCats[idx1]];
+      onUpdateCategories(newCats);
     }
-    onUpdateCategories(newCats);
   };
 
   // 处理密码验证
   const handlePasswordVerification = async (password: string): Promise<boolean> => {
-    if (!onVerifyPassword) return true; // 如果没有提供验证函数，默认通过
+    if (!onVerifyPassword) return true;
     
     try {
       const isValid = await onVerifyPassword(password);
@@ -72,40 +152,39 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   // 处理编辑分类前的验证
   const handleStartEdit = (cat: Category) => {
     if (!onVerifyPassword) {
-      // 如果没有提供验证函数，直接编辑
       startEdit(cat);
       return;
     }
 
-    // 设置待处理的操作
     setPendingAction({
       type: 'edit',
       categoryId: cat.id,
       categoryName: cat.name
     });
     
-    // 打开验证弹窗
     setIsAuthModalOpen(true);
   };
 
   // 处理删除分类前的验证
   const handleDeleteClick = (cat: Category) => {
+    const childCount = getAllChildIds(categories, cat.id).length;
+    const confirmMsg = childCount > 0
+      ? `确定删除"${cat.name}"分类吗？该分类及其 ${childCount} 个子分类下的书签将移动到"常用推荐"。`
+      : `确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`;
+
     if (!onVerifyPassword) {
-      // 如果没有提供验证函数，直接删除
-      if (confirm(`确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`)) {
+      if (confirm(confirmMsg)) {
         onDeleteCategory(cat.id);
       }
       return;
     }
 
-    // 设置待处理的操作
     setPendingAction({
       type: 'delete',
       categoryId: cat.id,
       categoryName: cat.name
     });
     
-    // 打开验证弹窗
     setIsAuthModalOpen(true);
   };
 
@@ -120,12 +199,15 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       }
     } else if (pendingAction.type === 'delete') {
       const cat = categories.find(c => c.id === pendingAction.categoryId);
-      if (cat && confirm(`确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`)) {
+      const childCount = getAllChildIds(categories, cat.id).length;
+      const confirmMsg = childCount > 0
+        ? `确定删除"${cat.name}"分类吗？该分类及其 ${childCount} 个子分类下的书签将移动到"常用推荐"。`
+        : `确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`;
+      if (cat && confirm(confirmMsg)) {
         onDeleteCategory(cat.id);
       }
     }
 
-    // 清除待处理的操作
     setPendingAction(null);
   };
 
@@ -141,6 +223,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setEditPassword(cat.password || '');
     setEditIcon(cat.icon);
     setEditRequireAuth(!!cat.requireAuth);
+    setEditParentId(cat.parentId || '');
   };
 
   const saveEdit = () => {
@@ -150,7 +233,8 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
         name: editName.trim(),
         icon: editIcon,
         password: editPassword.trim() || undefined,
-        requireAuth: editRequireAuth
+        requireAuth: editRequireAuth,
+        parentId: editParentId || undefined
     } : c);
     onUpdateCategories(newCats);
     setEditingId(null);
@@ -163,13 +247,15 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       name: newCatName.trim(),
       icon: newCatIcon,
       password: newCatPassword.trim() || undefined,
-      requireAuth: newCatRequireAuth
+      requireAuth: newCatRequireAuth,
+      parentId: newCatParentId || undefined
     };
     onUpdateCategories([...categories, newCat]);
     setNewCatName('');
     setNewCatPassword('');
     setNewCatIcon('Folder');
     setNewCatRequireAuth(false);
+    setNewCatParentId('');
   };
 
   const openIconSelector = (target: 'edit' | 'new') => {
@@ -189,12 +275,166 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setIsIconSelectorOpen(false);
     setIconSelectorTarget(null);
   };
-  
-  const cancelAdd = () => {
-    setNewCatName('');
-    setNewCatPassword('');
-    setNewCatIcon('Folder');
-    setNewCatRequireAuth(false);
+
+  // 生成父分类选项（带缩进）
+  const renderParentOptions = (excludeId?: string) => {
+    const availableParents = getAvailableParents(categories, excludeId);
+    const parentTree = buildCategoryTree(availableParents);
+    
+    const renderOptions = (nodes: CategoryTreeNode[], depth: number): React.ReactNode[] => {
+      return nodes.flatMap(node => {
+        const indent = ' '.repeat(depth);
+        const option = (
+          <option key={node.category.id} value={node.category.id}>
+            {indent}{node.category.name}
+          </option>
+        );
+        return [option, ...renderOptions(node.children, depth + 1)];
+      });
+    };
+
+    return renderOptions(parentTree, 0);
+  };
+
+  // 递归渲染树形分类列表
+  const renderCategoryNode = (node: CategoryTreeNode, depth: number = 0): React.ReactNode => {
+    const cat = node.category;
+    const siblings = getSiblings(categories, cat);
+    const indexInSiblings = siblings.findIndex(c => c.id === cat.id);
+    const canMoveUp = indexInSiblings > 0;
+    const canMoveDown = indexInSiblings < siblings.length - 1;
+    const indentPx = depth * 20;
+
+    return (
+      <React.Fragment key={cat.id}>
+        <div 
+          className="flex flex-col p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg group gap-2"
+          style={{ marginLeft: `${indentPx}px` }}
+        >
+          <div className="flex items-center gap-2">
+            {/* Order Controls */}
+            <div className="flex flex-col gap-1 mr-2">
+              <button 
+                onClick={() => handleMove(cat, 'up')}
+                disabled={!canMoveUp}
+                className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
+              >
+                <ArrowUp size={14} />
+              </button>
+              <button 
+                onClick={() => handleMove(cat, 'down')}
+                disabled={!canMoveDown}
+                className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
+              >
+                <ArrowDown size={14} />
+              </button>
+            </div>
+
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {editingId === cat.id && cat.id !== 'common' ? (
+                <div className="flex flex-col gap-2 flex-1">
+                  <div className="flex items-center gap-2">
+                    <Icon name={editIcon} size={16} />
+                    <input 
+                      type="text" 
+                      value={editName}
+                      onChange={(e) => setEditName(e.target.value)}
+                      className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
+                      placeholder="分类名称"
+                      autoFocus
+                    />
+                    <button
+                      type="button"
+                      className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
+                      onClick={() => openIconSelector('edit')}
+                      title="选择图标"
+                    >
+                      <Palette size={16} />
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <Lock size={14} className="text-slate-400" />
+                    <input 
+                      type="password" 
+                      value={editPassword}
+                      onChange={(e) => setEditPassword(e.target.value)}
+                      className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
+                      placeholder="密码（可选）"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-slate-500 dark:text-slate-400">父分类:</span>
+                    <select
+                      value={editParentId}
+                      onChange={(e) => setEditParentId(e.target.value)}
+                      className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
+                    >
+                      <option value="">无（顶级分类）</option>
+                      {renderParentOptions(cat.id)}
+                    </select>
+                  </div>
+                  <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
+                    <input
+                      type="checkbox"
+                      checked={editRequireAuth}
+                      onChange={(e) => setEditRequireAuth(e.target.checked)}
+                      className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
+                    />
+                    <span>需要先输入全站密码才能看这个分类</span>
+                  </label>
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 min-w-0">
+                  {node.children.length > 0 && (
+                    <ChevronRight size={14} className="text-slate-400 rotate-90" />
+                  )}
+                  <Icon name={cat.icon} size={16} />
+                  <span className="font-medium dark:text-slate-200 truncate">
+                    {cat.name}
+                    {cat.id === 'common' && (
+                      <span className="ml-2 text-xs text-slate-400">(默认分类，不可编辑)</span>
+                    )}
+                  </span>
+                  {(cat.password || cat.requireAuth) && (
+                    <Lock size={12} className="text-slate-400" />
+                  )}
+                </div>
+              )}
+            </div>
+
+            {/* Actions */}
+            <div className="flex items-center gap-1 self-start mt-1">
+              {editingId === cat.id ? (
+                 <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16}/></button>
+              ) : (
+                 <>
+                  {cat.id !== 'common' && (
+                    <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
+                        <Edit2 size={14} />
+                    </button>
+                  )}
+                  {cat.id !== 'common' && (
+                      <button 
+                      onClick={() => handleDeleteClick(cat)}
+                      className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
+                      >
+                      <Trash2 size={14} />
+                      </button>
+                  )}
+                  {cat.id === 'common' && (
+                      <div className="p-1.5 text-slate-300" title="常用推荐分类不能被删除">
+                          <Lock size={14} />
+                      </div>
+                  )}
+                 </>
+              )}
+            </div>
+          </div>
+        </div>
+        {/* 递归渲染子分类 */}
+        {node.children.map(child => renderCategoryNode(child, depth + 1))}
+      </React.Fragment>
+    );
   };
 
   return (
@@ -208,117 +448,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
         </div>
 
         <div className="flex-1 overflow-y-auto p-4 space-y-2">
-          {categories.map((cat, index) => (
-            <div key={cat.id} className="flex flex-col p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg group gap-2">
-              <div className="flex items-center gap-2">
-                  {/* Order Controls */}
-                  <div className="flex flex-col gap-1 mr-2">
-                    <button 
-                      onClick={() => handleMove(index, 'up')}
-                      disabled={index === 0}
-                      className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
-                    >
-                      <ArrowUp size={14} />
-                    </button>
-                    <button 
-                      onClick={() => handleMove(index, 'down')}
-                      disabled={index === categories.length - 1}
-                      className="p-0.5 text-slate-400 hover:text-blue-500 disabled:opacity-30"
-                    >
-                      <ArrowDown size={14} />
-                    </button>
-                  </div>
-
-                  <div className="flex items-center gap-2">
-                    {editingId === cat.id && cat.id !== 'common' ? (
-                      <div className="flex flex-col gap-2">
-                        <div className="flex items-center gap-2">
-                          <Icon name={editIcon} size={16} />
-                          <input 
-                            type="text" 
-                            value={editName}
-                            onChange={(e) => setEditName(e.target.value)}
-                            className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
-                            placeholder="分类名称"
-                            autoFocus
-                          />
-                          <button
-                            type="button"
-                            className="p-1 text-slate-400 hover:text-blue-600 transition-colors"
-                            onClick={() => openIconSelector('edit')}
-                            title="选择图标"
-                          >
-                            <Palette size={16} />
-                          </button>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Lock size={14} className="text-slate-400" />
-                          <input 
-                            type="password" 
-                            value={editPassword}
-                            onChange={(e) => setEditPassword(e.target.value)}
-                            className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
-                            placeholder="密码（可选）"
-                          />
-                        </div>
-                        <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
-                          <input
-                            type="checkbox"
-                            checked={editRequireAuth}
-                            onChange={(e) => setEditRequireAuth(e.target.checked)}
-                            className="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 dark:border-slate-600 dark:bg-slate-700"
-                          />
-                          <span>需要先输入全站密码才能看这个分类</span>
-                        </label>
-                      </div>
-                    ) : (
-                      <div className="flex items-center gap-2">
-                        <Icon name={cat.icon} size={16} />
-                        <span className="font-medium dark:text-slate-200 truncate">
-                          {cat.name}
-                          {cat.id === 'common' && (
-                            <span className="ml-2 text-xs text-slate-400">(默认分类，不可编辑)</span>
-                          )}
-                        </span>
-                        {(cat.password || cat.requireAuth) && (
-                          <Lock size={12} className="text-slate-400" />
-                        )}
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Actions */}
-                  <div className="flex items-center gap-1 self-start mt-1">
-                    {editingId === cat.id ? (
-                       <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16}/></button>
-                    ) : (
-                       <>
-                        {cat.id !== 'common' && (
-                          <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
-                              <Edit2 size={14} />
-                          </button>
-                        )}
-                        {/* 只有非"常用推荐"分类才显示删除按钮 */}
-                        {cat.id !== 'common' && (
-                            <button 
-                            onClick={() => handleDeleteClick(cat)}
-                            className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
-                            >
-                            <Trash2 size={14} />
-                            </button>
-                        )}
-                        {/* "常用推荐"分类显示锁定图标 */}
-                        {cat.id === 'common' && (
-                            <div className="p-1.5 text-slate-300" title="常用推荐分类不能被删除">
-                                <Lock size={14} />
-                            </div>
-                        )}
-                       </>
-                    )}
-                  </div>
-              </div>
-            </div>
-          ))}
+          {treeNodes.map(node => renderCategoryNode(node))}
         </div>
 
         <div className="p-4 border-t border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
@@ -341,6 +471,17 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                >
                  <Palette size={16} />
                </button>
+             </div>
+             <div className="flex items-center gap-2">
+               <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">父分类:</span>
+               <select
+                 value={newCatParentId}
+                 onChange={(e) => setNewCatParentId(e.target.value)}
+                 className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
+               >
+                 <option value="">无（顶级分类）</option>
+                 {renderParentOptions()}
+               </select>
              </div>
              <div className="flex gap-2">
                  <div className="flex-1 relative">

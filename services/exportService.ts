@@ -1,7 +1,35 @@
 import { Category, LinkItem } from "../types";
 
+// 树形节点接口
+interface CategoryTreeNode {
+  category: Category;
+  children: CategoryTreeNode[];
+}
+
+// 构建树形结构
+const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
+  const map = new Map<string, CategoryTreeNode>();
+  const roots: CategoryTreeNode[] = [];
+
+  categories.forEach(cat => {
+    map.set(cat.id, { category: cat, children: [] });
+  });
+
+  categories.forEach(cat => {
+    const node = map.get(cat.id)!;
+    if (cat.parentId && map.has(cat.parentId)) {
+      map.get(cat.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+};
+
 /**
  * Generates a Netscape Bookmark HTML string compatible with Chrome/Edge/Firefox import.
+ * Supports nested categories (tree structure).
  */
 export const generateBookmarkHtml = (links: LinkItem[], categories: Category[]): string => {
   const now = Math.floor(Date.now() / 1000);
@@ -34,23 +62,37 @@ export const generateBookmarkHtml = (links: LinkItem[], categories: Category[]):
     linksByCat.set(link.categoryId, list);
   });
 
-  // 1. Process Categories
-  categories.forEach(cat => {
+  // Recursive function to render category tree
+  const renderCategoryNode = (node: CategoryTreeNode, indent: string): string => {
+    const cat = node.category;
     const catLinks = linksByCat.get(cat.id) || [];
     
-    html += `    <DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(cat.name)}</H3>\n`;
-    html += `    <DL><p>\n`;
+    let result = `${indent}<DT><H3 ADD_DATE="${now}" LAST_MODIFIED="${now}">${escapeHtml(cat.name)}</H3>\n`;
+    result += `${indent}<DL><p>\n`;
     
+    // Render links in this category
     catLinks.forEach(link => {
       const date = Math.floor(link.createdAt / 1000);
       const iconAttr = link.icon ? ` ICON="${link.icon}"` : '';
-      html += `        <DT><A HREF="${link.url}" ADD_DATE="${date}"${iconAttr}>${escapeHtml(link.title)}</A>\n`;
+      result += `${indent}    <DT><A HREF="${link.url}" ADD_DATE="${date}"${iconAttr}>${escapeHtml(link.title)}</A>\n`;
     });
+    
+    // Render child categories recursively
+    node.children.forEach(child => {
+      result += renderCategoryNode(child, indent + '    ');
+    });
+    
+    result += `${indent}</DL><p>\n`;
+    return result;
+  };
 
-    html += `    </DL><p>\n`;
+  // Build tree and render
+  const tree = buildCategoryTree(categories);
+  tree.forEach(node => {
+    html += renderCategoryNode(node, '    ');
   });
 
-  // 2. Process Uncategorized (links with invalid categoryId)
+  // Process Uncategorized (links with invalid categoryId)
   const validCatIds = new Set(categories.map(c => c.id));
   const uncategorized = links.filter(l => !validCatIds.has(l.categoryId));
 

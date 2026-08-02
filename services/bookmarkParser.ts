@@ -20,34 +20,36 @@ export const parseBookmarks = async (file: File): Promise<ImportResult> => {
   const categories: Category[] = [];
   const categoryMap = new Map<string, string>(); // Name -> ID
 
-  // Helper to get or create category ID
-  const getCategoryId = (name: string): string => {
+  // Helper to get or create category ID with parent support
+  const getCategoryId = (name: string, parentId?: string): string => {
     if (!name) return 'common';
     // Normalize: remove generic folders like "Bookmarks Bar"
     if (['Bookmarks Bar', '书签栏', 'Other Bookmarks', '其他书签'].includes(name)) {
         return 'common';
     }
 
-    if (categoryMap.has(name)) {
-      return categoryMap.get(name)!;
-    }
+    // Create a unique key based on name and parent
+    const key = parentId ? `${parentId}:${name}` : name;
     
-    // Check existing default categories could be mapped here if we had access, 
-    // but for now we create new ones.
+    if (categoryMap.has(key)) {
+      return categoryMap.get(key)!;
+    }
+
     const newId = generateId();
     categories.push({
       id: newId,
       name: name,
-      icon: 'Folder' // Default icon for imported folders
+      icon: 'Folder', // Default icon for imported folders
+      parentId: parentId || undefined
     });
-    categoryMap.set(name, newId);
+    categoryMap.set(key, newId);
     return newId;
   };
 
   // Traverse the DL/DT structure
   // Chrome structure: <DT><H3>Folder Name</H3><DL> ...items... </DL>
   
-  const traverse = (element: Element, currentCategoryName: string) => {
+  const traverse = (element: Element, currentCategoryName: string, parentCategoryId?: string) => {
     const children = Array.from(element.children);
     
     for (let i = 0; i < children.length; i++) {
@@ -61,20 +63,24 @@ export const parseBookmarks = async (file: File): Promise<ImportResult> => {
         const dl = node.querySelector('dl');
 
         if (h3 && dl) {
-            // It's a folder
+            // It's a folder - create a category with parent
             const folderName = h3.textContent || 'Unknown';
-            traverse(dl, folderName);
+            const folderCategoryId = getCategoryId(folderName, parentCategoryId);
+            traverse(dl, folderName, folderCategoryId);
         } else if (a) {
             // It's a link
             const title = a.textContent || a.getAttribute('href') || 'No Title';
             const url = a.getAttribute('href');
             
             if (url && !url.startsWith('chrome://') && !url.startsWith('about:')) {
+                // Determine the category: use parent folder's category if available
+                const linkCategoryId = parentCategoryId || getCategoryId(currentCategoryName);
+                
                 links.push({
                     id: generateId(),
                     title: title,
                     url: url,
-                    categoryId: getCategoryId(currentCategoryName),
+                    categoryId: linkCategoryId,
                     createdAt: Date.now(),
                     icon: a.getAttribute('icon') || undefined
                 });

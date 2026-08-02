@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { 
   Search, Plus, Upload, Moon, Sun, Menu, 
   Trash2, Edit2, Loader2, Cloud, CheckCircle2, AlertCircle,
-  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X
+  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X, ChevronRight
 } from 'lucide-react';
 import {
   DndContext,
@@ -48,6 +48,75 @@ const AUTH_TIME_KEY = 'lastLoginTime';
 const WEBDAV_CONFIG_KEY = 'cloudnav_webdav_config';
 const AI_CONFIG_KEY = 'cloudnav_ai_config';
 const SEARCH_CONFIG_KEY = 'cloudnav_search_config';
+
+// --- 树形分类工具函数 ---
+interface CategoryTreeNode {
+  category: Category;
+  children: CategoryTreeNode[];
+}
+
+// 将扁平分类数组转为嵌套树结构
+const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
+  const map = new Map<string, CategoryTreeNode>();
+  const roots: CategoryTreeNode[] = [];
+
+  // 先创建所有节点
+  categories.forEach(cat => {
+    map.set(cat.id, { category: cat, children: [] });
+  });
+
+  // 建立父子关系
+  categories.forEach(cat => {
+    const node = map.get(cat.id)!;
+    if (cat.parentId && map.has(cat.parentId)) {
+      map.get(cat.parentId)!.children.push(node);
+    } else {
+      roots.push(node);
+    }
+  });
+
+  return roots;
+};
+
+// 递归获取某分类下所有子孙分类 ID
+const getAllChildIds = (categories: Category[], parentId: string): string[] => {
+  const children = categories.filter(c => c.parentId === parentId);
+  const ids: string[] = [];
+  children.forEach(child => {
+    ids.push(child.id);
+    ids.push(...getAllChildIds(categories, child.id));
+  });
+  return ids;
+};
+
+// 获取分类在树中的层级深度（顶级为0）
+const getCategoryDepth = (categories: Category[], categoryId: string): number => {
+  let depth = 0;
+  let current = categories.find(c => c.id === categoryId);
+  while (current?.parentId) {
+    depth++;
+    current = categories.find(c => c.id === current.parentId);
+    if (!current) break; // 防止循环引用
+  }
+  return depth;
+};
+
+// 获取可选择的父分类列表（排除自身及其子孙，防止循环引用）
+const getAvailableParents = (categories: Category[], excludeId?: string): Category[] => {
+  if (!excludeId) return categories;
+  const excludeIds = new Set([excludeId, ...getAllChildIds(categories, excludeId)]);
+  return categories.filter(c => !excludeIds.has(c.id));
+};
+
+// 将树形节点扁平化（深度优先，用于渲染）
+const flattenTree = (nodes: CategoryTreeNode[]): Category[] => {
+  const result: Category[] = [];
+  nodes.forEach(node => {
+    result.push(node.category);
+    result.push(...flattenTree(node.children));
+  });
+  return result;
+};
 
 const createRoundedFavicon = (source: string): Promise<string> => {
   return new Promise((resolve) => {
@@ -114,6 +183,9 @@ function App() {
   
   // Category Security State
   const [unlockedCategoryIds, setUnlockedCategoryIds] = useState<Set<string>>(new Set());
+
+  // Category Tree Expand State
+  const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set());
 
   // WebDAV Config State
   const [webDavConfig, setWebDavConfig] = useState<WebDavConfig>({
@@ -1555,7 +1627,11 @@ function App() {
           return;
       }
       
-      let newCats = categories.filter(c => c.id !== catId);
+      // 获取所有子孙分类ID（包括自身）
+      const allChildIds = getAllChildIds(categories, catId);
+      const idsToDelete = new Set([catId, ...allChildIds]);
+      
+      let newCats = categories.filter(c => !idsToDelete.has(c.id));
       
       // 检查是否存在"常用推荐"分类，如果不存在则创建它
       if (!newCats.some(c => c.id === 'common')) {
@@ -1565,9 +1641,9 @@ function App() {
           ];
       }
       
-      // Move links to common or first available
+      // 将所有被删除分类及其子分类下的链接移动到"常用推荐"
       const targetId = 'common'; 
-      const newLinks = links.map(l => l.categoryId === catId ? { ...l, categoryId: targetId } : l);
+      const newLinks = links.map(l => idsToDelete.has(l.categoryId) ? { ...l, categoryId: targetId } : l);
       
       updateData(newLinks, newCats);
   };
@@ -1963,9 +2039,10 @@ function App() {
       );
     }
 
-    // Category Filter
+    // Category Filter (包含子分类)
     if (selectedCategory !== 'all') {
-      result = result.filter(l => l.categoryId === selectedCategory);
+      const targetIds = [selectedCategory, ...getAllChildIds(categories, selectedCategory)];
+      result = result.filter(l => targetIds.includes(l.categoryId));
     }
     
     // 按照order字段排序，如果没有order字段则按创建时间排序
@@ -1988,9 +2065,10 @@ function App() {
     const q = searchQuery.toLowerCase();
     
     // 获取其他目录中匹配的链接
+    const selectedTargetIds = [selectedCategory, ...getAllChildIds(categories, selectedCategory)];
     const otherLinks = links.filter(link => {
-      // 排除当前目录的链接
-      if (link.categoryId === selectedCategory) {
+      // 排除当前目录及其子目录的链接
+      if (selectedTargetIds.includes(link.categoryId)) {
         return false;
       }
       
@@ -2358,31 +2436,71 @@ function App() {
                </button>
             </div>
 
-            {categories.map(cat => {
+            {/* 树形分类列表 */}
+            {(() => {
+              const treeNodes = buildCategoryTree(categories);
+              
+              // 递归渲染分类节点
+              const renderCategoryNode = (node: CategoryTreeNode, depth: number = 0): React.ReactNode => {
+                const cat = node.category;
                 const isLocked = isCategoryLocked(cat.id);
+                const hasChildren = node.children.length > 0;
+                const isExpanded = expandedCategoryIds.has(cat.id);
+                const indentPx = depth * 16;
+                
                 return (
-                  <button
-                    key={cat.id}
-                    onClick={() => handleCategoryClick(cat)}
-                    className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-xl transition-all group ${
-                      selectedCategory === cat.id 
-                        ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
-                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
-                    }`}
-                  >
-                    <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
-                      {isLocked ? <Lock size={16} className="text-amber-500" /> : <Icon name={cat.icon} size={16} />}
-                    </div>
-                    <span className="truncate flex-1 text-left">{cat.name}</span>
-                    {requiresGlobalCategoryAuth(cat.id) && (
-                      <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
-                        需登录
-                      </span>
-                    )}
-                    {selectedCategory === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
-                  </button>
+                  <React.Fragment key={cat.id}>
+                    <button
+                      onClick={() => {
+                        // 如果有子分类，切换展开状态
+                        if (hasChildren) {
+                          setExpandedCategoryIds(prev => {
+                            const newSet = new Set(prev);
+                            if (isExpanded) {
+                              newSet.delete(cat.id);
+                            } else {
+                              newSet.add(cat.id);
+                            }
+                            return newSet;
+                          });
+                        }
+                        handleCategoryClick(cat);
+                      }}
+                      style={{ paddingLeft: `${16 + indentPx}px` }}
+                      className={`w-full flex items-center gap-2 py-2 pr-4 rounded-xl transition-all group ${
+                        selectedCategory === cat.id 
+                          ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
+                          : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      {/* 展开/折叠箭头 */}
+                      {hasChildren ? (
+                        <ChevronRight 
+                          size={14} 
+                          className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                        />
+                      ) : (
+                        <span className="w-3.5"></span>
+                      )}
+                      <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                        {isLocked ? <Lock size={16} className="text-amber-500" /> : <Icon name={cat.icon} size={16} />}
+                      </div>
+                      <span className="truncate flex-1 text-left">{cat.name}</span>
+                      {requiresGlobalCategoryAuth(cat.id) && (
+                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                          需登录
+                        </span>
+                      )}
+                      {selectedCategory === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
+                    </button>
+                    {/* 递归渲染子分类 */}
+                    {isExpanded && node.children.map(child => renderCategoryNode(child, depth + 1))}
+                  </React.Fragment>
                 );
-            })}
+              };
+              
+              return treeNodes.map(node => renderCategoryNode(node));
+            })()}
         </div>
 
         {/* Footer Actions */}

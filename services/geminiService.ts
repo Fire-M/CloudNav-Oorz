@@ -93,14 +93,27 @@ export const generateLinkDescription = async (title: string, url: string, config
 /**
  * Suggests a category
  */
-export const suggestCategory = async (title: string, url: string, categories: {id: string, name: string}[], config: AIConfig): Promise<string | null> => {
+export const suggestCategory = async (title: string, url: string, categories: {id: string, name: string, parentId?: string}[], config: AIConfig): Promise<string | null> => {
     if (!config.apiKey) return null;
 
-    const catList = categories.map(c => `${c.id}: ${c.name}`).join('\n');
+    // Build category path for better AI understanding
+    const getCategoryPath = (catId: string): string => {
+        const cat = categories.find(c => c.id === catId);
+        if (!cat) return '';
+        if (!cat.parentId) return cat.name;
+        const parentPath = getCategoryPath(cat.parentId);
+        return parentPath ? `${parentPath} > ${cat.name}` : cat.name;
+    };
+
+    const catList = categories.map(c => {
+        const path = getCategoryPath(c.id);
+        return `${c.id}: ${path}`;
+    }).join('\n');
+    
     const prompt = `
         Website: "${title}" (${url})
 
-        Available Categories:
+        Available Categories (with hierarchy paths):
         ${catList}
 
         Return ONLY the 'id' of the best matching category. If unsure, return 'common'.
