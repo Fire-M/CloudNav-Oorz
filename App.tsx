@@ -807,10 +807,7 @@ function App() {
                         }
                     }
                 }
-                if (authData.requiresAuth && !savedToken) {
-                    setIsCheckingAuth(false);
-                    return;
-                }
+                // 首页开放访问，不再因为 requiresAuth 阻止数据加载
             }
         } catch (e) {
             console.warn("Failed to check auth requirement.", e);
@@ -2520,15 +2517,16 @@ function App() {
         canClose={true}
         description="输入部署时设置的 PASSWORD，验证后就能继续操作。"
       />
-      {requiresAuth !== false && !authToken && (
+      {/* 首页开放访问，不需要登录认证；编辑操作通过 needsEditAuth() 检查 */}
+      <>
+      {/* 全屏认证弹窗，仅在用户主动触发编辑操作时弹出 */}
+      {isAuthOpen && (
         <AuthModal
           isOpen={true}
           onLogin={handleLogin}
-          description="这个站点开了访问验证，先输密码才能看。"
+          description="输入部署时设置的 PASSWORD，验证后就能继续操作。"
         />
       )}
-      {(requiresAuth === false || authToken) && (
-      <>
       <CategoryAuthModal 
         isOpen={!!catAuthModalData}
         category={catAuthModalData}
@@ -3406,7 +3404,6 @@ function App() {
           {/* 全局确认/提示模态框 */}
           <ConfirmDialogHost />
       </>
-      )}
     </div>
   );
 }

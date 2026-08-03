@@ -262,17 +262,9 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
       });
     }
     
-    // 从 KV 中读取数据
+    // 从 KV 中读取数据（首页开放访问，不需要认证）
     const data = await env.CLOUDNAV_KV.get('app_data');
-    
-    // 如果开启了访问认证，读取数据时也需要密码
-    if (requiresAuth) {
-      const authCheck = await validateAuth(request, env, corsHeaders, { requireSession: true });
-      if (!authCheck.ok) {
-        return authCheck.response;
-      }
-    }
-    
+
     if (!data) {
       // 如果没有数据，返回空结构
       return new Response(JSON.stringify({ links: [], categories: [] }), {
