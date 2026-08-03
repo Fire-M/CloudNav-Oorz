@@ -377,8 +377,10 @@ function App() {
     if (stored) {
       try {
         const parsed = JSON.parse(stored);
-        let loadedCategories = parsed.categories || DEFAULT_CATEGORIES;
-        
+        let loadedCategories = parsed.categories && parsed.categories.length > 0
+            ? parsed.categories
+            : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
+
         // 确保"常用推荐"分类始终存在，并确保它是第一个分类
         if (!loadedCategories.some(c => c.id === 'common')) {
           loadedCategories = [
@@ -386,7 +388,6 @@ function App() {
             ...loadedCategories
           ];
         } else {
-          // 如果"常用推荐"分类已存在，确保它是第一个分类
           const commonIndex = loadedCategories.findIndex(c => c.id === 'common');
           if (commonIndex > 0) {
             const commonCategory = loadedCategories[commonIndex];
@@ -398,37 +399,28 @@ function App() {
           }
         }
 
-        // 合并默认分类：将 DEFAULT_CATEGORIES 中存在但 loadedCategories 中不存在的分类补充进来
-        // 用于升级时补充新的多级子分类
-        const loadedIds = new Set(loadedCategories.map(c => c.id));
-        const missingDefaults = DEFAULT_CATEGORIES.filter(c => !loadedIds.has(c.id));
-        if (missingDefaults.length > 0) {
-          loadedCategories = [...loadedCategories, ...missingDefaults];
-        }
-        
         // 检查是否有链接的categoryId不存在于当前分类中，将这些链接移动到"常用推荐"
         const validCategoryIds = new Set(loadedCategories.map(c => c.id));
-        let loadedLinks = parsed.links || INITIAL_LINKS;
+        let loadedLinks = parsed.links || [];
         loadedLinks = loadedLinks.map(link => {
           if (!validCategoryIds.has(link.categoryId)) {
             return { ...link, categoryId: 'common' };
           }
           return link;
         });
-        
+
         setLinks(loadedLinks);
         setCategories(loadedCategories);
-        // 默认选中第一个顶级分类（移除了"置顶网站"全部分类）
         setSelectedCategory(prev => prev === 'all' ? loadedCategories.find(c => !c.parentId)?.id || 'common' : prev);
       } catch (e) {
-        setLinks(INITIAL_LINKS);
-        setCategories(DEFAULT_CATEGORIES);
-        setSelectedCategory(prev => prev === 'all' ? DEFAULT_CATEGORIES.find(c => !c.parentId)?.id || 'common' : prev);
+        setLinks([]);
+        setCategories([{ id: 'common', name: '常用推荐', icon: 'Star' }]);
+        setSelectedCategory('common');
       }
     } else {
-      setLinks(INITIAL_LINKS);
-      setCategories(DEFAULT_CATEGORIES);
-      setSelectedCategory(prev => prev === 'all' ? DEFAULT_CATEGORIES.find(c => !c.parentId)?.id || 'common' : prev);
+      setLinks([]);
+      setCategories([{ id: 'common', name: '常用推荐', icon: 'Star' }]);
+      setSelectedCategory('common');
     }
   };
 
@@ -834,14 +826,20 @@ function App() {
         }
 
         // 处理云端数据（覆盖本地缓存）
-        if (cloudData && cloudData.links && cloudData.links.length > 0) {
-            setLinks(cloudData.links);
-            const loadedCats = cloudData.categories || DEFAULT_CATEGORIES;
+        if (cloudData) {
+            // 云端有数据就用云端的（包括空数据），只有请求失败才回退本地
+            setLinks(cloudData.links || []);
+            const loadedCats = cloudData.categories && cloudData.categories.length > 0
+                ? cloudData.categories
+                : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
             setCategories(loadedCats);
             setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
-            loadLinkIcons(cloudData.links, loadedCats);
+            if (cloudData.links && cloudData.links.length > 0) {
+                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
+                loadLinkIcons(cloudData.links, loadedCats);
+            }
         } else if (!hadCache) {
+            // 请求失败且无缓存，加载本地默认数据
             loadFromLocal();
         }
 
