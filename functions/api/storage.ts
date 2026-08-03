@@ -285,7 +285,7 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
     }
     
     // 从 KV 中读取数据（首页开放访问，不需要认证）
-    const data = await env.CLOUDNAV_KV.get('app_data');
+    let data = await env.CLOUDNAV_KV.get('app_data');
 
     if (!data) {
       // 如果没有数据，返回空结构
@@ -294,8 +294,46 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
       });
     }
 
+    // 服务端迁移：剥离 app_data 中的 base64 图标，存入 favicon 缓存
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.links && Array.isArray(parsed.links)) {
+        let hasBase64 = false;
+        const iconWrites: Promise<void>[] = [];
+
+        const cleanedLinks = parsed.links.map((link: any) => {
+          if (link.icon && typeof link.icon === 'string' && link.icon.startsWith('data:') && link.url) {
+            hasBase64 = true;
+            const domain = normalizeDomain(link.url);
+            if (domain) {
+              // 异步写入 favicon 缓存（不阻塞响应）
+              iconWrites.push(
+                env.CLOUDNAV_KV.put(`favicon:${domain}`, link.icon).catch(() => {})
+              );
+            }
+            const { icon, ...rest } = link;
+            return rest;
+          }
+          return link;
+        });
+
+        if (hasBase64) {
+          // 回写精简后的数据到 KV
+          const cleanedData = JSON.stringify({ ...parsed, links: cleanedLinks });
+          // 异步回写，不阻塞当前响应
+          env.CLOUDNAV_KV.put('app_data', cleanedData).catch(() => {});
+          // 使用精简数据作为本次响应
+          data = cleanedData;
+        }
+      }
+    } catch {}
+
     return new Response(data, {
-      headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      headers: {
+        'Content-Type': 'application/json',
+        ...corsHeaders,
+        'Cache-Control': 'public, max-age=300',
+      },
     });
   } catch (err) {
     return new Response(JSON.stringify({ error: 'Failed to fetch data' }), {
