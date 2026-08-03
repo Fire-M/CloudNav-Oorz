@@ -477,11 +477,8 @@ function App() {
       // 1. Optimistic UI Update
       setLinks(newLinks);
       setCategories(newCategories);
-      
-      // 2. Save to Local Cache
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: newLinks, categories: newCategories }));
 
-      // 3. Sync to Cloud (if authenticated)
+      // 2. Sync to Cloud (if authenticated)
       if (authToken) {
           syncToCloud(newLinks, newCategories, authToken);
       }
@@ -757,7 +754,7 @@ function App() {
         }
     }
 
-    // Initial Data Fetch - 优化版：先加载本地缓存秒开，再并行请求云端
+    // Initial Data Fetch - 直接从云端加载，避免本地缓存与云端数据不同步
     const initData = async () => {
         // 本地开发模式：跳过所有 Cloudflare API 调用与密码验证，直接加载本地数据
         if (IS_DEV) {
@@ -774,13 +771,7 @@ function App() {
             return;
         }
 
-        // Step 1: 立即从本地缓存加载（秒开）
-        const hadCache = loadFromLocalCache();
-        if (hadCache) {
-            setIsCheckingAuth(false);
-        }
-
-        // Step 2: 并行请求 checkAuth + 数据 + 配置
+        // 并行请求 checkAuth + 数据 + 配置
         const authPromise = fetch('/api/storage?checkAuth=true')
             .then(r => r.ok ? r.json() : null)
             .catch(() => null);
@@ -826,26 +817,19 @@ function App() {
             setHasPassword(false);
         }
 
-        // 处理云端数据（覆盖本地缓存）
+        // 处理云端数据（直接使用云端数据，避免本地缓存导致数据不同步）
         if (cloudData) {
-            // 如果本地有缓存且云端返回空数据，保留本地缓存
-            // 场景：用户刚添加分类/链接，本地有缓存，云端可能还没更新
-            if (hadCache && (!cloudData.links || cloudData.links.length === 0) && (!cloudData.categories || cloudData.categories.length === 0)) {
-                // 保留本地缓存的数据，不覆盖
-            } else {
-                setLinks(cloudData.links || []);
-                const loadedCats = cloudData.categories && cloudData.categories.length > 0
-                    ? cloudData.categories
-                    : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
-                setCategories(loadedCats);
-                setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-                if (cloudData.links && cloudData.links.length > 0) {
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
-                    loadLinkIcons(cloudData.links, loadedCats);
-                }
+            setLinks(cloudData.links || []);
+            const loadedCats = cloudData.categories && cloudData.categories.length > 0
+                ? cloudData.categories
+                : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
+            setCategories(loadedCats);
+            setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
+            if (cloudData.links && cloudData.links.length > 0) {
+                loadLinkIcons(cloudData.links, loadedCats);
             }
-        } else if (!hadCache) {
-            // 请求失败且无缓存，加载本地默认数据
+        } else {
+            // 请求失败时回退本地缓存（仅用于离线场景）
             loadFromLocal();
         }
 
@@ -886,21 +870,6 @@ function App() {
 
         setIsLoadingSearchConfig(false);
         setIsCheckingAuth(false);
-    };
-
-    // 从 localStorage 加载缓存，返回是否有缓存
-    const loadFromLocalCache = (): boolean => {
-        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
-        if (stored) {
-            try {
-                const parsed = JSON.parse(stored);
-                if (parsed.links && parsed.categories) {
-                    loadFromLocal();
-                    return true;
-                }
-            } catch {}
-        }
-        return false;
     };
 
     initData();
