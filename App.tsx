@@ -497,9 +497,11 @@ function App() {
   const requireAuth = () => {
     // 本地开发模式：无需鉴权，直接放行
     if (IS_DEV) return true;
-    if (authToken) return true;
-    setIsAuthOpen(true);
-    return false;
+    if (needsEditAuth()) {
+      setIsAuthOpen(true);
+      return false;
+    }
+    return true;
   };
 
   // --- Context Menu Functions ---
@@ -1451,6 +1453,7 @@ function App() {
 
   // 拖拽结束事件处理函数
   const handleDragEnd = (event: DragEndEvent) => {
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -1486,6 +1489,7 @@ function App() {
 
   // 置顶链接拖拽结束事件处理函数
   const handlePinnedDragEnd = (event: DragEndEvent) => {
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     const { active, over } = event;
 
     if (over && active.id !== over.id) {
@@ -1546,6 +1550,7 @@ function App() {
 
   // 保存排序
   const saveSorting = () => {
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     // 在保存排序时，确保将当前排序后的数据保存到服务器和本地存储
     updateData(links, categories);
     setIsSortingMode(null);
@@ -1558,6 +1563,7 @@ function App() {
 
   // 保存置顶链接排序
   const savePinnedSorting = () => {
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     // 在保存排序时，确保将当前排序后的数据保存到服务器和本地存储
     updateData(links, categories);
     setIsSortingPinned(false);
