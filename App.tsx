@@ -811,8 +811,10 @@ function App() {
             }
         } catch (e) {
             console.warn("Failed to check auth requirement.", e);
+            setRequiresAuth(false);
+            setHasPassword(false);
         }
-        
+
         // 获取数据
         let hasCloudData = false;
         try {
@@ -833,14 +835,8 @@ function App() {
                     hasCloudData = true;
                 }
             } else if (res.status === 401) {
-                // 如果返回401，可能是密码过期，清除本地token并要求重新登录
-                const errorData = await res.json();
-                if (errorData.error && errorData.error.includes('过期')) {
-                    clearAuthSession();
-                    setIsAuthOpen(true);
-                    setIsCheckingAuth(false);
-                    return;
-                }
+                // 如果返回401，清除本地token，继续加载本地数据
+                clearAuthSession();
             }
         } catch (e) {
             console.warn("Failed to fetch from cloud, falling back to local.", e);
