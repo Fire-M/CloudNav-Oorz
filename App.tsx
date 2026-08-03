@@ -367,8 +367,9 @@ function App() {
 
   // 判断敏感操作是否需要认证：只要服务器设置了密码（hasPassword !== false），就需要认证
   const needsEditAuth = (): boolean => {
-    if (hasPassword === null) return true; // 检查未完成，阻止操作
-    if (hasPassword && !authToken) return true; // 有密码但未登录
+    if (isCheckingAuth) return true;
+    if (hasPassword === null) return true;
+    if (hasPassword && !authToken) return true;
     return false;
   };
 
@@ -827,16 +828,21 @@ function App() {
 
         // 处理云端数据（覆盖本地缓存）
         if (cloudData) {
-            // 云端有数据就用云端的（包括空数据），只有请求失败才回退本地
-            setLinks(cloudData.links || []);
-            const loadedCats = cloudData.categories && cloudData.categories.length > 0
-                ? cloudData.categories
-                : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
-            setCategories(loadedCats);
-            setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-            if (cloudData.links && cloudData.links.length > 0) {
-                localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
-                loadLinkIcons(cloudData.links, loadedCats);
+            // 如果本地有缓存且云端返回空数据，保留本地缓存
+            // 场景：用户刚添加分类/链接，本地有缓存，云端可能还没更新
+            if (hadCache && (!cloudData.links || cloudData.links.length === 0) && (!cloudData.categories || cloudData.categories.length === 0)) {
+                // 保留本地缓存的数据，不覆盖
+            } else {
+                setLinks(cloudData.links || []);
+                const loadedCats = cloudData.categories && cloudData.categories.length > 0
+                    ? cloudData.categories
+                    : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
+                setCategories(loadedCats);
+                setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
+                if (cloudData.links && cloudData.links.length > 0) {
+                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
+                    loadLinkIcons(cloudData.links, loadedCats);
+                }
             }
         } else if (!hadCache) {
             // 请求失败且无缓存，加载本地默认数据
