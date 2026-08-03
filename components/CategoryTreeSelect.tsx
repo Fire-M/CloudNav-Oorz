@@ -64,12 +64,14 @@ interface CategoryTreeSelectProps {
   value: string;
   onChange: (id: string) => void;
   placeholder?: string;
-  /** 允许选择"无"（顶级），显示为第一个选项 */
   allowNone?: boolean;
-  /** none 选项的标签文本 */
   noneLabel?: string;
-  /** 排除的分类 ID 列表（如自身及子孙，防止循环引用） */
   excludeIds?: string[];
+  isOpen?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  title?: string;
+  /** 隐藏触发按钮（外部控制时使用） */
+  hideTrigger?: boolean;
 }
 
 const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
@@ -80,8 +82,21 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
   allowNone = false,
   noneLabel = '无（顶级分类）',
   excludeIds = [],
+  isOpen: externalIsOpen,
+  onOpenChange,
+  title = '选择分类',
+  hideTrigger = false,
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
+  // 如果外部控制，使用 externalIsOpen；否则使用内部状态
+  const [internalIsOpen, setInternalIsOpen] = useState(false);
+  const isOpen = externalIsOpen !== undefined ? externalIsOpen : internalIsOpen;
+  const setIsOpen = (open: boolean) => {
+    if (onOpenChange) {
+      onOpenChange(open);
+    } else {
+      setInternalIsOpen(open);
+    }
+  };
   // 弹窗内临时选中路径（每一级选中的节点 ID）
   const [tempPath, setTempPath] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
@@ -192,26 +207,27 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
 
   return (
     <>
-      {/* 触发按钮 */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all flex items-center justify-between text-left"
-      >
-        <span className="flex items-center gap-2 truncate">
-          {selectedCategory ? (
-            <>
-              <Folder size={14} className="text-amber-500 shrink-0" />
-              <span className="truncate">{selectedCategory.name}</span>
-            </>
-          ) : allowNone ? (
-            <span className="text-slate-500 dark:text-slate-400 truncate">{noneLabel}</span>
-          ) : (
-            <span className="text-slate-400">{placeholder}</span>
-          )}
-        </span>
-        <ChevronRight size={14} className="text-slate-400 shrink-0" />
-      </button>
+      {!hideTrigger && (
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all flex items-center justify-between text-left"
+        >
+          <span className="flex items-center gap-2 truncate">
+            {selectedCategory ? (
+              <>
+                <Folder size={14} className="text-amber-500 shrink-0" />
+                <span className="truncate">{selectedCategory.name}</span>
+              </>
+            ) : allowNone ? (
+              <span className="text-slate-500 dark:text-slate-400 truncate">{noneLabel}</span>
+            ) : (
+              <span className="text-slate-400">{placeholder}</span>
+            )}
+          </span>
+          <ChevronRight size={14} className="text-slate-400 shrink-0" />
+        </button>
+      )}
 
       {/* 弹窗：居中模态框 - 级联列视图 */}
       {isOpen && (
@@ -224,7 +240,7 @@ const CategoryTreeSelect: React.FC<CategoryTreeSelectProps> = ({
           <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden border border-slate-200 dark:border-slate-700 flex flex-col max-h-[80vh]">
             {/* 标题栏 */}
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h2 className="text-base font-bold dark:text-white">选择分类</h2>
+              <h2 className="text-base font-bold dark:text-white">{title}</h2>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}

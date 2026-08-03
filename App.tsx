@@ -35,6 +35,7 @@ import CategoryAuthModal from './components/CategoryAuthModal';
 import ImportModal from './components/ImportModal';
 import SettingsModal from './components/SettingsModal';
 import { ConfirmDialogHost, confirmDialog, alertDialog } from './components/ConfirmDialog';
+import CategoryTreeSelect from './components/CategoryTreeSelect';
 import SearchConfigModal from './components/SearchConfigModal';
 import ContextMenu from './components/ContextMenu';
 import QRCodeModal from './components/QRCodeModal';
@@ -287,6 +288,7 @@ function App() {
   // Batch Edit State
   const [isBatchEditMode, setIsBatchEditMode] = useState(false); // 是否处于批量编辑模式
   const [selectedLinks, setSelectedLinks] = useState<Set<string>>(new Set()); // 选中的链接ID集合
+  const [batchMoveOpen, setBatchMoveOpen] = useState(false); // 批量移动分类选择器
   
   // Context Menu State
   const [contextMenu, setContextMenu] = useState<{
@@ -1134,6 +1136,7 @@ function App() {
     updateData(newLinks, categories);
     setSelectedLinks(new Set());
     setIsBatchEditMode(false);
+    setBatchMoveOpen(false);
   };
 
   const handleSelectAll = () => {
@@ -3207,26 +3210,20 @@ function App() {
                                              <CheckSquare size={14} />
                                              <span>{selectedLinks.size === displayedLinks.length ? '取消全选' : '全选'}</span>
                                          </button>
-                                         <div className="relative group">
-                                              <button 
-                                                  className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-full transition-colors"
-                                                  title="批量移动"
-                                              >
-                                                  <Upload size={14} />
-                                                  <span>批量移动</span>
-                                              </button>
-                                              <div className="absolute top-full right-0 mt-1 w-48 bg-white dark:bg-slate-800 rounded-lg shadow-lg border border-slate-200 dark:border-slate-700 z-20 opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all duration-200">
-                                                  {categories.filter(cat => cat.id !== selectedCategory).map(cat => (
-                                                      <button
-                                                          key={cat.id}
-                                                          onClick={() => handleBatchMove(cat.id)}
-                                                          className="w-full text-left px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 first:rounded-t-lg last:rounded-b-lg"
-                                                      >
-                                                          {cat.name}
-                                                      </button>
-                                                  ))}
-                                              </div>
-                                          </div>
+                                         <button 
+                                             onClick={() => {
+                                               if (selectedLinks.size === 0) {
+                                                 alertDialog({ message: '请先选择要移动的链接', variant: 'warning' });
+                                                 return;
+                                               }
+                                               setBatchMoveOpen(true);
+                                             }}
+                                             className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-full transition-colors"
+                                             title="批量移动"
+                                         >
+                                             <Upload size={14} />
+                                             <span>批量移动</span>
+                                         </button>
                                      </>
                                  ) : (
                                      <button 
@@ -3368,6 +3365,17 @@ function App() {
             url={qrCodeModal.url || ''}
             title={qrCodeModal.title || ''}
             onClose={() => setQrCodeModal({ isOpen: false, url: '', title: '' })}
+          />
+
+          {/* 批量移动分类选择器 */}
+          <CategoryTreeSelect
+            categories={categories}
+            value={selectedCategory}
+            onChange={handleBatchMove}
+            isOpen={batchMoveOpen}
+            onOpenChange={setBatchMoveOpen}
+            title="批量移动到分类"
+            hideTrigger
           />
 
           {/* 全局确认/提示模态框 */}
