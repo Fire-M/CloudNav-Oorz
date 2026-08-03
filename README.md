@@ -1,5 +1,5 @@
 # CloudNav-Oorz（修改版）
-本项目基于
+本项目基于MWX
 https://github.com/sese972010/CloudNav-
 https://github.com/aabacada/CloudNav-abcd
 两个融合 并根据自身需求做了一些修改MWX
