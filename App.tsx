@@ -662,7 +662,6 @@ function App() {
 
   // 加载链接图标缓存（存入内存 iconCache，不再回写 link.icon）
   const loadLinkIcons = async (linksToLoad: LinkItem[], categoriesToUse: Category[]) => {
-    if (!authToken) return; // 只有在已登录状态下才加载图标缓存
     
     const domainsToFetch = new Set<string>();
     

@@ -318,9 +318,10 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
         });
 
         if (hasBase64) {
-          // 回写精简后的数据到 KV
+          // 等待图标写入完成，确保前端后续请求能命中缓存
+          await Promise.all(iconWrites);
+          // 回写精简后的数据到 KV（异步，不阻塞当前响应）
           const cleanedData = JSON.stringify({ ...parsed, links: cleanedLinks });
-          // 异步回写，不阻塞当前响应
           env.CLOUDNAV_KV.put('app_data', cleanedData).catch(() => {});
           // 使用精简数据作为本次响应
           data = cleanedData;
