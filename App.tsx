@@ -279,6 +279,7 @@ function App() {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [authToken, setAuthToken] = useState<string>('');
   const [requiresAuth, setRequiresAuth] = useState<boolean | null>(null); // null表示未检查，true表示需要认证，false表示不需要
+  const [hasPassword, setHasPassword] = useState<boolean | null>(null); // 服务器是否设置了密码
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   
   // Sort State
@@ -363,6 +364,13 @@ function App() {
   };
   
   // --- Helpers & Sync Logic ---
+
+  // 判断敏感操作是否需要认证：只要服务器设置了密码（hasPassword !== false），就需要认证
+  const needsEditAuth = (): boolean => {
+    if (hasPassword === null) return true; // 检查未完成，阻止操作
+    if (hasPassword && !authToken) return true; // 有密码但未登录
+    return false;
+  };
 
   const loadFromLocal = () => {
     const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
@@ -777,6 +785,7 @@ function App() {
             if (authRes.ok) {
                 const authData = await authRes.json();
                 setRequiresAuth(authData.requiresAuth);
+                setHasPassword(authData.hasPassword);
                 if (authData.hasPassword && savedToken) {
                     const validateRes = await fetch('/api/storage', {
                         method: 'POST',
@@ -1101,7 +1110,7 @@ function App() {
   };
 
   const handleBatchDelete = async () => {
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
 
     if (selectedLinks.size === 0) {
       alertDialog({ message: '请先选择要删除的链接', variant: 'warning' });
@@ -1123,7 +1132,7 @@ function App() {
   };
 
   const handleBatchMove = (targetCategoryId: string) => {
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
 
     if (selectedLinks.size === 0) {
       alertDialog({ message: '请先选择要移动的链接', variant: 'warning' });
@@ -1365,7 +1374,7 @@ function App() {
   };
 
   const handleAddLink = (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     
     // 处理URL，确保有协议前缀
     let processedUrl = data.url;
@@ -1426,7 +1435,7 @@ function App() {
   };
 
   const handleEditLink = (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     if (!editingLink) return;
     
     // 处理URL，确保有协议前缀
@@ -1572,7 +1581,7 @@ function App() {
   );
 
   const handleDeleteLink = async (id: string) => {
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     const ok = await confirmDialog({
       title: '删除链接',
       message: '确定删除此链接吗?',
@@ -1587,7 +1596,7 @@ function App() {
   const togglePin = (id: string, e: React.MouseEvent) => {
       e.preventDefault();
       e.stopPropagation();
-      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+      if (needsEditAuth()) { setIsAuthOpen(true); return; }
       
       const linkToToggle = links.find(l => l.id === id);
       if (!linkToToggle) return;
@@ -1612,7 +1621,7 @@ function App() {
   // 切换收藏（常用推荐标记），不改变链接的原分类归属
   const toggleFavorite = (id: string, e?: React.MouseEvent) => {
     if (e) { e.preventDefault(); e.stopPropagation(); }
-    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    if (needsEditAuth()) { setIsAuthOpen(true); return; }
     const updated = links.map(l =>
       l.id === id ? { ...l, favorite: !l.favorite } : l
     );
@@ -1756,12 +1765,12 @@ function App() {
   };
 
   const handleUpdateCategories = (newCats: Category[]) => {
-      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+      if (needsEditAuth()) { setIsAuthOpen(true); return; }
       updateData(links, newCats);
   };
 
   const handleDeleteCategory = (catId: string) => {
-      if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+      if (needsEditAuth()) { setIsAuthOpen(true); return; }
 
       // 防止删除"常用推荐"分类
       if (catId === 'common') {
@@ -2505,14 +2514,14 @@ function App() {
         canClose={true}
         description="输入部署时设置的 PASSWORD，验证后就能继续操作。"
       />
-      {requiresAuth && !authToken && (
+      {requiresAuth !== false && !authToken && (
         <AuthModal
           isOpen={true}
           onLogin={handleLogin}
           description="这个站点开了访问验证，先输密码才能看。"
         />
       )}
-      {(!requiresAuth || authToken) && (
+      {(requiresAuth === false || authToken) && (
       <>
       <CategoryAuthModal 
         isOpen={!!catAuthModalData}
@@ -2527,7 +2536,7 @@ function App() {
         categories={categories}
         onUpdateCategories={handleUpdateCategories}
         onDeleteCategory={handleDeleteCategory}
-        onVerifyPassword={IS_DEV ? undefined : handleCategoryActionAuth}
+        onVerifyPassword={IS_DEV || authToken ? undefined : handleCategoryActionAuth}
       />
 
       <BackupModal
@@ -2617,7 +2626,7 @@ function App() {
             <div className={`flex items-center justify-between pt-4 pb-2 px-4 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">分类目录</span>
                <button 
-                  onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
+                  onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
                   title="管理分类"
                >
@@ -2718,7 +2727,7 @@ function App() {
             
             <div className={`grid grid-cols-3 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-1 lg:gap-1.5' : ''}`}>
                 <button 
-                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
+                    onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="导入书签"
                 >
@@ -2727,7 +2736,7 @@ function App() {
                 </button>
                 
                 <button 
-                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
+                    onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="备份与恢复"
                 >
@@ -2736,7 +2745,7 @@ function App() {
                 </button>
 
                 <button 
-                    onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
+                    onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="AI 设置"
                 >
@@ -3043,7 +3052,7 @@ function App() {
             {/* 添加按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
             <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'}`}>
               <button
-                onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else { setEditingLink(undefined); setIsModalOpen(true); }}}
+                onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else { setEditingLink(undefined); setIsModalOpen(true); }}}
                 className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-3 py-2 rounded-full text-sm font-medium shadow-lg shadow-blue-500/30"
               >
                 <Plus size={16} /> <span className="hidden sm:inline">添加</span>
