@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react';
-import { Copy, QrCode, Edit2, Trash2, Pin } from 'lucide-react';
+import { Copy, QrCode, Edit2, Trash2, Pin, Star } from 'lucide-react';
 
 interface ContextMenuProps {
   isOpen: boolean;
@@ -10,6 +10,8 @@ interface ContextMenuProps {
   onEditLink: () => void;
   onDeleteLink: () => void;
   onTogglePin: () => void;
+  onToggleFavorite: () => void;
+  isFavorite?: boolean;
 }
 
 const ContextMenu: React.FC<ContextMenuProps> = ({
@@ -20,7 +22,9 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
   onShowQRCode,
   onEditLink,
   onDeleteLink,
-  onTogglePin
+  onTogglePin,
+  onToggleFavorite,
+  isFavorite
 }) => {
   const menuRef = useRef<HTMLDivElement>(null);
 
@@ -64,6 +68,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
     { icon: Copy, label: '复制链接', onClick: onCopyLink },
     { icon: QrCode, label: '显示二维码', onClick: onShowQRCode },
     { icon: Edit2, label: '编辑链接', onClick: onEditLink },
+    { icon: Star, label: isFavorite ? '取消常用' : '加入常用', onClick: onToggleFavorite, active: isFavorite },
     { icon: Pin, label: '置顶/取消置顶', onClick: onTogglePin },
     { icon: Trash2, label: '删除链接', onClick: onDeleteLink, className: 'text-red-600 dark:text-red-400' }
   ];
@@ -90,7 +95,7 @@ const ContextMenu: React.FC<ContextMenuProps> = ({
             item.className || 'text-slate-700 dark:text-slate-300'
           }`}
         >
-          <item.icon size={16} className={item.className} />
+          <item.icon size={16} className={`${item.className} ${item.active ? 'text-amber-500' : ''}`} fill={item.active ? 'currentColor' : 'none'} />
           <span>{item.label}</span>
         </button>
       ))}

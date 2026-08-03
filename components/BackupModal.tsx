@@ -3,6 +3,7 @@ import { X, Cloud, Download, Upload, CheckCircle2, AlertCircle, RefreshCw, Save 
 import { Category, LinkItem, WebDavConfig, SearchConfig, AIConfig } from '../types';
 import { checkWebDavConnection, uploadBackup, uploadBackupWithTimestamp, downloadBackup } from '../services/webDavService';
 import { generateBookmarkHtml, downloadHtmlFile } from '../services/exportService';
+import { confirmDialog } from './ConfirmDialog';
 
 interface BackupModalProps {
   isOpen: boolean;
@@ -95,8 +96,14 @@ const BackupModal: React.FC<BackupModalProps> = ({
   };
 
   const handleRestoreFromCloud = async () => {
-    if (!confirm("确定要从 WebDAV 恢复吗？这将覆盖当前的本地数据。")) return;
-    
+    const ok = await confirmDialog({
+      title: '从 WebDAV 恢复',
+      message: '确定要从 WebDAV 恢复吗？这将覆盖当前的本地数据。',
+      variant: 'warning',
+      confirmText: '恢复',
+    });
+    if (!ok) return;
+
     setSyncStatus('downloading');
     setStatusMsg('正在下载...');
     const data = await downloadBackup(config);

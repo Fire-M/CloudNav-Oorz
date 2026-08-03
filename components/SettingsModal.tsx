@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { X, Save, Bot, Key, Globe, Sparkles, PauseCircle, Wrench, Box, Copy, Check, LayoutTemplate, Info, Download, Sidebar, Keyboard, MousePointerClick, AlertTriangle, Package, Zap, Menu, Upload } from 'lucide-react';
 import { AIConfig, LinkItem, Category, SiteSettings } from '../types';
 import { generateLinkDescription } from '../services/geminiService';
+import { confirmDialog, alertDialog } from './ConfirmDialog';
 import JSZip from 'jszip';
 
 interface SettingsModalProps {
@@ -116,17 +117,23 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
 
   const handleBulkGenerate = async () => {
     if (!localConfig.apiKey) {
-        alert("请先配置并保存 API Key");
+        alertDialog({ message: "请先配置并保存 API Key", variant: 'warning', title: '未配置 API Key' });
         return;
     }
 
     const missingLinks = links.filter(l => !l.description);
     if (missingLinks.length === 0) {
-        alert("所有链接都已有描述！");
+        alertDialog({ message: "所有链接都已有描述！", variant: 'info' });
         return;
     }
 
-    if (!confirm(`发现 ${missingLinks.length} 个链接缺少描述，确定要使用 AI 自动生成吗？这可能需要一些时间。`)) return;
+    const ok = await confirmDialog({
+      title: '批量生成描述',
+      message: `发现 ${missingLinks.length} 个链接缺少描述，确定要使用 AI 自动生成吗？这可能需要一些时间。`,
+      variant: 'info',
+      confirmText: '开始生成',
+    });
+    if (!ok) return;
 
     setIsProcessing(true);
     shouldStopRef.current = false;
@@ -164,7 +171,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       if (!file) return;
 
       if (!file.type.startsWith('image/')) {
-          alert('请上传图片文件');
+          alertDialog({ message: '请上传图片文件', variant: 'warning' });
           e.target.value = '';
           return;
       }
@@ -1067,7 +1074,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   const handleDownloadIcon = async () => {
     const blob = await generateIconBlob();
     if (!blob) {
-        alert("生成图片失败 (可能是跨域限制)。\n\n请尝试右键点击下方的预览图片，选择 '图片另存为...' 保存。");
+        alertDialog({ message: "生成图片失败 (可能是跨域限制)。\n\n请尝试右键点击下方的预览图片，选择 '图片另存为...' 保存。", variant: 'warning', title: '下载失败' });
         return;
     }
     const url = window.URL.createObjectURL(blob);
@@ -1112,7 +1119,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         
     } catch(e) {
         console.error(e);
-        alert("打包下载失败");
+        alertDialog({ message: "打包下载失败", variant: 'danger', title: '下载失败' });
     } finally {
         setIsZipping(false);
     }

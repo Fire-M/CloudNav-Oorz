@@ -1,9 +1,9 @@
 
 import React, { useState, useEffect, useMemo, useRef } from 'react';
-import { 
-  Search, Plus, Upload, Moon, Sun, Menu, 
+import {
+  Search, Plus, Upload, Moon, Sun, Menu,
   Trash2, Edit2, Loader2, Cloud, CheckCircle2, AlertCircle,
-  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X, ChevronRight
+  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X, ChevronRight, Star, PanelLeftClose, PanelLeftOpen
 } from 'lucide-react';
 import {
   DndContext,
@@ -27,13 +27,14 @@ import { CSS } from '@dnd-kit/utilities';
 import { LinkItem, Category, DEFAULT_CATEGORIES, INITIAL_LINKS, WebDavConfig, AIConfig, SearchMode, ExternalSearchSource, SearchConfig } from './types';
 import { parseBookmarks } from './services/bookmarkParser';
 import Icon from './components/Icon';
-import LinkModal from './components/LinkModal';
 import AuthModal from './components/AuthModal';
+import LinkModal from './components/LinkModal';
 import CategoryManagerModal from './components/CategoryManagerModal';
 import BackupModal from './components/BackupModal';
 import CategoryAuthModal from './components/CategoryAuthModal';
 import ImportModal from './components/ImportModal';
 import SettingsModal from './components/SettingsModal';
+import { ConfirmDialogHost, confirmDialog, alertDialog } from './components/ConfirmDialog';
 import SearchConfigModal from './components/SearchConfigModal';
 import ContextMenu from './components/ContextMenu';
 import QRCodeModal from './components/QRCodeModal';
@@ -41,6 +42,10 @@ import QRCodeModal from './components/QRCodeModal';
 // --- 配置项 ---
 // 项目核心仓库地址
 const GITHUB_REPO_URL = 'https://github.com/Aaowu/CloudNav-Oorz';
+
+// 本地开发模式：跳过 Cloudflare API 与密码验证，直接使用本地数据
+// 生产构建时 import.meta.env.DEV 为 false，自动失效
+const IS_DEV = import.meta.env.DEV === true;
 
 const LOCAL_STORAGE_KEY = 'cloudnav_data_cache';
 const AUTH_KEY = 'cloudnav_auth_token';
@@ -86,6 +91,22 @@ const getAllChildIds = (categories: Category[], parentId: string): string[] => {
     ids.push(child.id);
     ids.push(...getAllChildIds(categories, child.id));
   });
+  return ids;
+};
+
+// 获取某分类的所有祖先分类 ID（从父级到根，含自身）
+const getAncestorIds = (categories: Category[], categoryId: string): string[] => {
+  const ids: string[] = [];
+  const map = new Map(categories.map(c => [c.id, c]));
+  let current = map.get(categoryId);
+  // 防御性循环引用保护
+  const visited = new Set<string>();
+  while (current && !visited.has(current.id)) {
+    visited.add(current.id);
+    ids.push(current.id);
+    if (!current.parentId) break;
+    current = map.get(current.parentId);
+  }
   return ids;
 };
 
@@ -175,6 +196,9 @@ function App() {
   const [searchQuery, setSearchQuery] = useState('');
   const [darkMode, setDarkMode] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(() => {
+    return localStorage.getItem('cloudnav_sidebar_collapsed') === 'true';
+  });
   
   // Search Mode State
   const [searchMode, setSearchMode] = useState<SearchMode>('internal');
@@ -186,6 +210,10 @@ function App() {
 
   // Category Tree Expand State
   const [expandedCategoryIds, setExpandedCategoryIds] = useState<Set<string>>(new Set());
+
+  // 折叠模式下 hover 子分类弹出层
+  const [collapsedFlyout, setCollapsedFlyout] = useState<{ catId: string; rect: DOMRect } | null>(null);
+  const flyoutTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // WebDAV Config State
   const [webDavConfig, setWebDavConfig] = useState<WebDavConfig>({
@@ -239,6 +267,8 @@ function App() {
   const [isSearchConfigModalOpen, setIsSearchConfigModalOpen] = useState(false);
   const [catAuthModalData, setCatAuthModalData] = useState<Category | null>(null);
   const [pendingProtectedCategoryId, setPendingProtectedCategoryId] = useState<string | null>(null);
+  // 多级导航：记录用户原本想点击的子分类，解锁祖先后选中它而不是祖先本身
+  const [pendingSelectCategoryId, setPendingSelectCategoryId] = useState<string | null>(null);
   
   const [editingLink, setEditingLink] = useState<LinkItem | undefined>(undefined);
   // State for data pre-filled from Bookmarklet
@@ -357,6 +387,14 @@ function App() {
             ];
           }
         }
+
+        // 合并默认分类：将 DEFAULT_CATEGORIES 中存在但 loadedCategories 中不存在的分类补充进来
+        // 用于升级时补充新的多级子分类
+        const loadedIds = new Set(loadedCategories.map(c => c.id));
+        const missingDefaults = DEFAULT_CATEGORIES.filter(c => !loadedIds.has(c.id));
+        if (missingDefaults.length > 0) {
+          loadedCategories = [...loadedCategories, ...missingDefaults];
+        }
         
         // 检查是否有链接的categoryId不存在于当前分类中，将这些链接移动到"常用推荐"
         const validCategoryIds = new Set(loadedCategories.map(c => c.id));
@@ -370,17 +408,27 @@ function App() {
         
         setLinks(loadedLinks);
         setCategories(loadedCategories);
+        // 默认选中第一个顶级分类（移除了"置顶网站"全部分类）
+        setSelectedCategory(prev => prev === 'all' ? loadedCategories.find(c => !c.parentId)?.id || 'common' : prev);
       } catch (e) {
         setLinks(INITIAL_LINKS);
         setCategories(DEFAULT_CATEGORIES);
+        setSelectedCategory(prev => prev === 'all' ? DEFAULT_CATEGORIES.find(c => !c.parentId)?.id || 'common' : prev);
       }
     } else {
       setLinks(INITIAL_LINKS);
       setCategories(DEFAULT_CATEGORIES);
+      setSelectedCategory(prev => prev === 'all' ? DEFAULT_CATEGORIES.find(c => !c.parentId)?.id || 'common' : prev);
     }
   };
 
   const syncToCloud = async (newLinks: LinkItem[], newCategories: Category[], token: string) => {
+    // 本地开发模式：跳过云端同步，仅模拟保存成功状态
+    if (IS_DEV) {
+      setSyncStatus('saved');
+      setTimeout(() => setSyncStatus('idle'), 1500);
+      return true;
+    }
     setSyncStatus('saving');
     try {
         const response = await fetch('/api/storage', {
@@ -396,7 +444,7 @@ function App() {
             try {
                 const errorData = await response.json();
                 if (errorData.error && errorData.error.includes('过期')) {
-                    alert('您的密码已过期，请重新登录');
+                    alertDialog({ message: '您的密码已过期，请重新登录', variant: 'warning', title: '登录已过期' });
                 }
             } catch (e) {
                 // 如果无法解析错误信息，使用默认提示
@@ -437,6 +485,8 @@ function App() {
   };
 
   const requireAuth = () => {
+    // 本地开发模式：无需鉴权，直接放行
+    if (IS_DEV) return true;
     if (authToken) return true;
     setIsAuthOpen(true);
     return false;
@@ -501,11 +551,17 @@ function App() {
     closeContextMenu();
   };
 
-  const deleteLinkFromContextMenu = () => {
+  const deleteLinkFromContextMenu = async () => {
     if (!contextMenu.link) return;
     if (!requireAuth()) return;
-    
-    if (window.confirm(`确定要删除"${contextMenu.link.title}"吗？`)) {
+
+    const ok = await confirmDialog({
+      title: '删除链接',
+      message: `确定要删除"${contextMenu.link.title}"吗？`,
+      variant: 'danger',
+      confirmText: '删除',
+    });
+    if (ok) {
       const newLinks = links.filter(link => link.id !== contextMenu.link!.id);
       updateData(newLinks, categories);
     }
@@ -535,6 +591,12 @@ function App() {
     });
     
     updateData(updated, categories);
+    closeContextMenu();
+  };
+
+  const toggleFavoriteFromContextMenu = () => {
+    if (!contextMenu.link) return;
+    toggleFavorite(contextMenu.link.id);
     closeContextMenu();
   };
 
@@ -692,6 +754,21 @@ function App() {
 
     // Initial Data Fetch
     const initData = async () => {
+        // 本地开发模式：跳过所有 Cloudflare API 调用与密码验证，直接加载本地数据
+        if (IS_DEV) {
+            setRequiresAuth(false);
+            loadFromLocal();
+            setSearchMode('internal');
+            setExternalSearchSources([
+                { id: 'bing', name: '必应', url: 'https://www.bing.com/search?q={query}', icon: 'Search', enabled: true, createdAt: Date.now() },
+                { id: 'google', name: 'Google', url: 'https://www.google.com/search?q={query}', icon: 'Search', enabled: true, createdAt: Date.now() },
+                { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd={query}', icon: 'Globe', enabled: true, createdAt: Date.now() }
+            ]);
+            setIsLoadingSearchConfig(false);
+            setIsCheckingAuth(false);
+            return;
+        }
+
         // 首先检查是否需要认证
         try {
             const authRes = await fetch('/api/storage?checkAuth=true');
@@ -736,11 +813,13 @@ function App() {
                 const data = await res.json();
                 if (data.links && data.links.length > 0) {
                     setLinks(data.links);
-                    setCategories(data.categories || DEFAULT_CATEGORIES);
+                    const loadedCats = data.categories || DEFAULT_CATEGORIES;
+                    setCategories(loadedCats);
+                    setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
                     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                     
                     // 加载链接图标缓存
-                    loadLinkIcons(data.links, data.categories || DEFAULT_CATEGORIES);
+                    loadLinkIcons(data.links, loadedCats);
                     hasCloudData = true;
                 }
             } else if (res.status === 401) {
@@ -1019,15 +1098,21 @@ function App() {
     });
   };
 
-  const handleBatchDelete = () => {
+  const handleBatchDelete = async () => {
     if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
-    
+
     if (selectedLinks.size === 0) {
-      alert('请先选择要删除的链接');
+      alertDialog({ message: '请先选择要删除的链接', variant: 'warning' });
       return;
     }
-    
-    if (confirm(`确定要删除选中的 ${selectedLinks.size} 个链接吗？`)) {
+
+    const ok = await confirmDialog({
+      title: '批量删除',
+      message: `确定要删除选中的 ${selectedLinks.size} 个链接吗？`,
+      variant: 'danger',
+      confirmText: '删除',
+    });
+    if (ok) {
       const newLinks = links.filter(link => !selectedLinks.has(link.id));
       updateData(newLinks, categories);
       setSelectedLinks(new Set());
@@ -1037,9 +1122,9 @@ function App() {
 
   const handleBatchMove = (targetCategoryId: string) => {
     if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
-    
+
     if (selectedLinks.size === 0) {
-      alert('请先选择要移动的链接');
+      alertDialog({ message: '请先选择要移动的链接', variant: 'warning' });
       return;
     }
     
@@ -1119,7 +1204,7 @@ function App() {
                 if (expiryTimeMs > 0 && timeDiff > expiryTimeMs) {
                     clearAuthSession();
                     setIsAuthOpen(true);
-                    alert('您的密码已过期，请重新登录');
+                    alertDialog({ message: '您的密码已过期，请重新登录', variant: 'warning', title: '登录已过期' });
                     return false;
                 }
             }
@@ -1136,11 +1221,13 @@ function App() {
                     // 如果服务器有数据，使用服务器数据
                     if (data.links && data.links.length > 0) {
                         setLinks(data.links);
-                        setCategories(data.categories || DEFAULT_CATEGORIES);
+                        const loadedCats = data.categories || DEFAULT_CATEGORIES;
+                        setCategories(loadedCats);
+                        setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
                         
                         // 加载链接图标缓存
-                        loadLinkIcons(data.links, data.categories || DEFAULT_CATEGORIES);
+                        loadLinkIcons(data.links, loadedCats);
                     } else {
                         // 如果服务器没有数据，使用本地数据
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links, categories }));
@@ -1190,8 +1277,10 @@ function App() {
             }
 
             if (pendingProtectedCategoryId) {
-                setSelectedCategory(pendingProtectedCategoryId);
+                // 多级导航：登录成功后，优先选中用户原本想点击的子分类
+                setSelectedCategory(pendingSelectCategoryId || pendingProtectedCategoryId);
                 setPendingProtectedCategoryId(null);
+                setPendingSelectCategoryId(null);
             }
             
             return true;
@@ -1212,6 +1301,8 @@ function App() {
 
   // 分类操作密码验证处理函数
   const handleCategoryActionAuth = async (password: string): Promise<boolean> => {
+    // 本地开发模式：直接通过，无需密码
+    if (IS_DEV) return true;
     try {
       // 验证密码
       const authResponse = await fetch('/api/storage', {
@@ -1267,7 +1358,7 @@ function App() {
       const mergedLinks = [...links, ...newLinks];
       updateData(mergedLinks, mergedCategories);
       setIsImportModalOpen(false);
-      alert(`成功导入 ${newLinks.length} 个新书签!`);
+      alertDialog({ message: `成功导入 ${newLinks.length} 个新书签!`, variant: 'success', title: '导入完成' });
   };
 
   const handleAddLink = (data: Omit<LinkItem, 'id' | 'createdAt'>) => {
@@ -1477,9 +1568,15 @@ function App() {
     })
   );
 
-  const handleDeleteLink = (id: string) => {
+  const handleDeleteLink = async (id: string) => {
     if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
-    if (confirm('确定删除此链接吗?')) {
+    const ok = await confirmDialog({
+      title: '删除链接',
+      message: '确定删除此链接吗?',
+      variant: 'danger',
+      confirmText: '删除',
+    });
+    if (ok) {
       updateData(links.filter(l => l.id !== id), categories);
     }
   };
@@ -1507,6 +1604,16 @@ function App() {
       });
       
       updateData(updated, categories);
+  };
+
+  // 切换收藏（常用推荐标记），不改变链接的原分类归属
+  const toggleFavorite = (id: string, e?: React.MouseEvent) => {
+    if (e) { e.preventDefault(); e.stopPropagation(); }
+    if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
+    const updated = links.map(l =>
+      l.id === id ? { ...l, favorite: !l.favorite } : l
+    );
+    updateData(updated, categories);
   };
 
   const handleSaveAIConfig = async (config: AIConfig, newSiteSettings?: any) => {
@@ -1590,17 +1697,47 @@ function App() {
 
   // --- Category Management & Security ---
 
+  const toggleSidebarCollapsed = () => {
+    setSidebarCollapsed(prev => {
+      const next = !prev;
+      localStorage.setItem('cloudnav_sidebar_collapsed', String(next));
+      return next;
+    });
+  };
+
   const handleCategoryClick = (cat: Category) => {
-      if (cat.requireAuth && !authToken) {
-          setPendingProtectedCategoryId(cat.id);
+      // 本地开发模式：直接选中分类，不做任何鉴权
+      if (IS_DEV) {
+        setSelectedCategory(cat.id);
+        setSidebarOpen(false);
+        return;
+      }
+      // 多级导航：检查祖先链上是否有需要解锁的分类
+      // 找到最近一个被锁定的祖先（含自身），优先处理它
+      const ancestorIds = getAncestorIds(categories, cat.id);
+      let lockedAncestor: Category | null = null;
+      for (const id of ancestorIds) {
+        const ancestor = categories.find(c => c.id === id);
+        if (!ancestor) continue;
+        if (ancestor.requireAuth && !authToken) {
+          // requireAuth 走全站密码流程
+          setPendingProtectedCategoryId(id);
+          // 如果用户点击的不是被锁定的祖先本身，记录用户原本想点击的分类
+          setPendingSelectCategoryId(cat.id !== id ? cat.id : null);
           setIsAuthOpen(true);
           setSidebarOpen(false);
           return;
+        }
+        if (ancestor.password && !unlockedCategoryIds.has(id)) {
+          lockedAncestor = ancestor;
+          break;
+        }
       }
 
-      // If category has password and is NOT unlocked
-      if (cat.password && !unlockedCategoryIds.has(cat.id)) {
-          setCatAuthModalData(cat);
+      if (lockedAncestor) {
+          // 记录用户原本想点击的子分类（如果不是被锁定的祖先本身）
+          setPendingSelectCategoryId(cat.id !== lockedAncestor.id ? cat.id : null);
+          setCatAuthModalData(lockedAncestor);
           setSidebarOpen(false);
           return;
       }
@@ -1610,7 +1747,9 @@ function App() {
 
   const handleUnlockCategory = (catId: string) => {
       setUnlockedCategoryIds(prev => new Set(prev).add(catId));
-      setSelectedCategory(catId);
+      // 多级导航：解锁祖先后，如果有用户原本想点击的子分类，选中它
+      setSelectedCategory(pendingSelectCategoryId || catId);
+      setPendingSelectCategoryId(null);
   };
 
   const handleUpdateCategories = (newCats: Category[]) => {
@@ -1620,10 +1759,10 @@ function App() {
 
   const handleDeleteCategory = (catId: string) => {
       if (requiresAuth && !authToken) { setIsAuthOpen(true); return; }
-      
+
       // 防止删除"常用推荐"分类
       if (catId === 'common') {
-          alert('"常用推荐"分类不能被删除');
+          alertDialog({ message: '"常用推荐"分类不能被删除', variant: 'warning' });
           return;
       }
       
@@ -1993,17 +2132,30 @@ function App() {
   // --- Filtering & Memo ---
 
   const requiresGlobalCategoryAuth = (catId: string) => {
-      const cat = categories.find(c => c.id === catId);
-      return !!cat?.requireAuth && !authToken;
+      // 本地开发模式：跳过 requireAuth 检查
+      if (IS_DEV) return false;
+      // 多级导航：祖先链中任意分类标记 requireAuth 且未登录时，该分类也视为需登录
+      const ancestorIds = getAncestorIds(categories, catId);
+      return ancestorIds.some(id => {
+        const cat = categories.find(c => c.id === id);
+        return !!cat?.requireAuth && !authToken;
+      });
   };
 
   // Helper to check if a category is "Locked"
+  // 多级导航：分类锁定状态会向子孙传递
+  // 如果任意祖先分类被锁定（requireAuth 未通过 或 password 未解锁），该分类也视为锁定
   const isCategoryLocked = (catId: string) => {
-      const cat = categories.find(c => c.id === catId);
-      if (!cat) return false;
-      if (cat.requireAuth && !authToken) return true;
-      if (!cat.password) return false;
-      return !unlockedCategoryIds.has(catId);
+      // 本地开发模式：跳过所有分类锁检查
+      if (IS_DEV) return false;
+      const ancestorIds = getAncestorIds(categories, catId);
+      for (const id of ancestorIds) {
+        const cat = categories.find(c => c.id === id);
+        if (!cat) continue;
+        if (cat.requireAuth && !authToken) return true;
+        if (cat.password && !unlockedCategoryIds.has(id)) return true;
+      }
+      return false;
   };
 
   const pinnedLinks = useMemo(() => {
@@ -2039,10 +2191,14 @@ function App() {
       );
     }
 
-    // Category Filter (包含子分类)
+    // Category Filter: 严格匹配当前分类，不包含子分类
+    // "常用推荐"(common) 分类显示所有被收藏(favorite)的链接
     if (selectedCategory !== 'all') {
-      const targetIds = [selectedCategory, ...getAllChildIds(categories, selectedCategory)];
-      result = result.filter(l => targetIds.includes(l.categoryId));
+      if (selectedCategory === 'common') {
+        result = result.filter(l => l.favorite);
+      } else {
+        result = result.filter(l => l.categoryId === selectedCategory);
+      }
     }
     
     // 按照order字段排序，如果没有order字段则按创建时间排序
@@ -2065,10 +2221,11 @@ function App() {
     const q = searchQuery.toLowerCase();
     
     // 获取其他目录中匹配的链接
-    const selectedTargetIds = [selectedCategory, ...getAllChildIds(categories, selectedCategory)];
     const otherLinks = links.filter(link => {
-      // 排除当前目录及其子目录的链接
-      if (selectedTargetIds.includes(link.categoryId)) {
+      // 排除当前分类的链接（common 分类排除所有已收藏的链接）
+      if (selectedCategory === 'common') {
+        if (link.favorite) return false;
+      } else if (link.categoryId === selectedCategory) {
         return false;
       }
       
@@ -2146,6 +2303,14 @@ function App() {
         {...attributes}
         {...listeners}
       >
+        {/* 已收藏角标 */}
+        {link.favorite && (
+          <Star
+            size={14}
+            fill="currentColor"
+            className="absolute top-1.5 left-1.5 text-amber-400 z-10 pointer-events-none"
+          />
+        )}
         {/* 链接内容 - 移除a标签，改为div防止点击跳转 */}
         <div className={`flex flex-1 min-w-0 overflow-hidden ${
           isDetailedView ? 'flex-col' : 'items-center gap-3'
@@ -2201,6 +2366,14 @@ function App() {
         onClick={() => isBatchEditMode && toggleLinkSelection(link.id)}
         onContextMenu={(e) => handleContextMenu(e, link)}
       >
+        {/* 已收藏角标 */}
+        {link.favorite && (
+          <Star
+            size={14}
+            fill="currentColor"
+            className="absolute top-1.5 left-1.5 text-amber-400 z-10 pointer-events-none"
+          />
+        )}
         {/* 链接内容 - 在批量编辑模式下不使用a标签 */}
         {isBatchEditMode ? (
           <div className={`flex flex-1 min-w-0 overflow-hidden h-full ${
@@ -2276,7 +2449,18 @@ function App() {
           <div className={`flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm rounded-md p-1 absolute ${
             isDetailedView ? 'top-3 right-3' : 'top-1/2 -translate-y-1/2 right-2'
           }`}>
-              <button 
+              <button
+                  onClick={(e) => toggleFavorite(link.id, e)}
+                  className={`p-1 rounded-md transition-colors ${
+                    link.favorite
+                      ? 'text-amber-500 hover:bg-amber-50 dark:hover:bg-slate-700'
+                      : 'text-slate-400 hover:text-amber-500 hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
+                  title={link.favorite ? '取消常用' : '加入常用'}
+              >
+                  <Star size={18} fill={link.favorite ? 'currentColor' : 'none'} />
+              </button>
+              <button
                   onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(!requireAuth()) return; setEditingLink(link); setIsModalOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
                   title="编辑"
@@ -2314,7 +2498,7 @@ function App() {
       <AuthModal
         isOpen={isAuthOpen}
         onLogin={handleLogin}
-        onClose={() => setIsAuthOpen(false)}
+        onClose={() => { setIsAuthOpen(false); setPendingSelectCategoryId(null); }}
         canClose={true}
         description="输入部署时设置的 PASSWORD，验证后就能继续操作。"
       />
@@ -2330,7 +2514,7 @@ function App() {
       <CategoryAuthModal 
         isOpen={!!catAuthModalData}
         category={catAuthModalData}
-        onClose={() => setCatAuthModalData(null)}
+        onClose={() => { setCatAuthModalData(null); setPendingSelectCategoryId(null); }}
         onUnlock={handleUnlockCategory}
       />
 
@@ -2340,7 +2524,7 @@ function App() {
         categories={categories}
         onUpdateCategories={handleUpdateCategories}
         onDeleteCategory={handleDeleteCategory}
-        onVerifyPassword={handleCategoryActionAuth}
+        onVerifyPassword={IS_DEV ? undefined : handleCategoryActionAuth}
       />
 
       <BackupModal
@@ -2399,33 +2583,35 @@ function App() {
       {/* Sidebar */}
       <aside 
         className={`
-          fixed lg:static inset-y-0 left-0 z-30 w-64 transform transition-transform duration-300 ease-in-out
+          fixed lg:static inset-y-0 left-0 z-30 transform transition-all duration-300 ease-in-out
           bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col
+          ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
       >
         {/* Logo */}
-        <div className="h-16 flex items-center px-6 border-b border-slate-100 dark:border-slate-700 shrink-0">
-            <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
-              {siteSettings.navTitle || 'CloudNav'}
-            </span>
+        <div className={`h-16 flex items-center border-b border-slate-100 dark:border-slate-700 shrink-0 ${sidebarCollapsed ? 'lg:px-0 lg:justify-center' : 'px-6'}`}>
+            {sidebarCollapsed ? (
+              <span className="hidden lg:block text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent">
+                {(siteSettings.navTitle || 'CloudNav').charAt(0)}
+              </span>
+            ) : (
+              <span className="text-xl font-bold bg-gradient-to-r from-blue-500 to-purple-500 bg-clip-text text-transparent flex-1 truncate">
+                {siteSettings.navTitle || 'CloudNav'}
+              </span>
+            )}
+            <button
+              onClick={toggleSidebarCollapsed}
+              className="hidden lg:flex p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors shrink-0"
+              title={sidebarCollapsed ? '展开侧边栏' : '折叠侧边栏'}
+            >
+              {sidebarCollapsed ? <PanelLeftOpen size={18} /> : <PanelLeftClose size={18} />}
+            </button>
         </div>
 
         {/* Categories List */}
-        <div className="flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide">
-            <button
-              onClick={() => { setSelectedCategory('all'); setSidebarOpen(false); }}
-              className={`w-full flex items-center gap-3 px-4 py-3 rounded-xl transition-all ${
-                selectedCategory === 'all' 
-                  ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
-                  : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
-              }`}
-            >
-              <div className="p-1"><Icon name="LayoutGrid" size={18} /></div>
-              <span>置顶网站</span>
-            </button>
-            
-            <div className="flex items-center justify-between pt-4 pb-2 px-4">
+        <div className={`flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide ${sidebarCollapsed ? 'lg:px-2' : ''}`}>
+            <div className={`flex items-center justify-between pt-4 pb-2 px-4 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">分类目录</span>
                <button 
                   onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
@@ -2447,54 +2633,75 @@ function App() {
                 const hasChildren = node.children.length > 0;
                 const isExpanded = expandedCategoryIds.has(cat.id);
                 const indentPx = depth * 16;
+                // 多级导航：父分类自身被锁定（含祖先锁定）时不允许展开子分类
+                const canExpand = hasChildren && !isLocked;
                 
                 return (
                   <React.Fragment key={cat.id}>
-                    <button
-                      onClick={() => {
-                        // 如果有子分类，切换展开状态
-                        if (hasChildren) {
-                          setExpandedCategoryIds(prev => {
-                            const newSet = new Set(prev);
-                            if (isExpanded) {
-                              newSet.delete(cat.id);
-                            } else {
-                              newSet.add(cat.id);
-                            }
-                            return newSet;
-                          });
+                    <div
+                      onClick={() => handleCategoryClick(cat)}
+                      onMouseEnter={(e) => {
+                        if (sidebarCollapsed && hasChildren && canExpand) {
+                          if (flyoutTimer.current) { clearTimeout(flyoutTimer.current); flyoutTimer.current = null; }
+                          setCollapsedFlyout({ catId: cat.id, rect: e.currentTarget.getBoundingClientRect() });
                         }
-                        handleCategoryClick(cat);
                       }}
-                      style={{ paddingLeft: `${16 + indentPx}px` }}
-                      className={`w-full flex items-center gap-2 py-2 pr-4 rounded-xl transition-all group ${
+                      onMouseLeave={() => {
+                        if (sidebarCollapsed) {
+                          if (flyoutTimer.current) clearTimeout(flyoutTimer.current);
+                          flyoutTimer.current = setTimeout(() => setCollapsedFlyout(null), 200);
+                        }
+                      }}
+                      style={sidebarCollapsed ? undefined : { paddingLeft: `${16 + indentPx}px` }}
+                      className={`w-full flex items-center gap-2 py-2 pr-4 rounded-xl transition-all group cursor-pointer ${sidebarCollapsed ? 'lg:justify-center lg:px-0 lg:pr-0' : ''} ${
                         selectedCategory === cat.id 
                           ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium' 
                           : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700'
                       }`}
+                      title={sidebarCollapsed ? cat.name : undefined}
                     >
-                      {/* 展开/折叠箭头 */}
+                      {/* 展开/折叠箭头（独立点击区域） */}
                       {hasChildren ? (
-                        <ChevronRight 
-                          size={14} 
-                          className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
-                        />
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            if (!canExpand) return;
+                            setExpandedCategoryIds(prev => {
+                              const newSet = new Set(prev);
+                              if (isExpanded) {
+                                newSet.delete(cat.id);
+                              } else {
+                                newSet.add(cat.id);
+                              }
+                              return newSet;
+                            });
+                          }}
+                          className={`p-0.5 rounded transition-colors ${sidebarCollapsed ? 'lg:hidden' : ''} ${canExpand ? 'hover:bg-slate-200 dark:hover:bg-slate-600 text-slate-500' : 'text-slate-300 dark:text-slate-600 cursor-not-allowed'}`}
+                          aria-label={isExpanded ? '折叠' : '展开'}
+                          tabIndex={-1}
+                        >
+                          <ChevronRight 
+                            size={14} 
+                            className={`transition-transform ${isExpanded ? 'rotate-90' : ''}`}
+                          />
+                        </button>
                       ) : (
-                        <span className="w-3.5"></span>
+                        <span className={`w-3.5 inline-block ${sidebarCollapsed ? 'lg:hidden' : ''}`}></span>
                       )}
-                      <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                      <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center shrink-0 ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
                         {isLocked ? <Lock size={16} className="text-amber-500" /> : <Icon name={cat.icon} size={16} />}
                       </div>
-                      <span className="truncate flex-1 text-left">{cat.name}</span>
+                      <span className={`truncate flex-1 text-left ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{cat.name}</span>
                       {requiresGlobalCategoryAuth(cat.id) && (
-                        <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300">
+                        <span className={`text-[10px] px-1.5 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-300 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                           需登录
                         </span>
                       )}
                       {selectedCategory === cat.id && <div className="w-1.5 h-1.5 rounded-full bg-blue-500"></div>}
-                    </button>
+                    </div>
                     {/* 递归渲染子分类 */}
-                    {isExpanded && node.children.map(child => renderCategoryNode(child, depth + 1))}
+                    {isExpanded && canExpand && node.children.map(child => renderCategoryNode(child, depth + 1))}
                   </React.Fragment>
                 );
               };
@@ -2504,16 +2711,16 @@ function App() {
         </div>
 
         {/* Footer Actions */}
-        <div className="p-4 border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0">
+        <div className={`border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0 ${sidebarCollapsed ? 'lg:p-2' : 'p-4'}`}>
             
-            <div className="grid grid-cols-3 gap-2 mb-2">
+            <div className={`grid grid-cols-3 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-1 lg:gap-1.5' : ''}`}>
                 <button 
                     onClick={() => { if(requiresAuth && !authToken) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="导入书签"
                 >
                     <Upload size={14} />
-                    <span>导入</span>
+                    <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>导入</span>
                 </button>
                 
                 <button 
@@ -2522,7 +2729,7 @@ function App() {
                     title="备份与恢复"
                 >
                     <CloudCog size={14} />
-                    <span>备份</span>
+                    <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>备份</span>
                 </button>
 
                 <button 
@@ -2531,16 +2738,16 @@ function App() {
                     title="AI 设置"
                 >
                     <Settings size={14} />
-                    <span>设置</span>
+                    <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>设置</span>
                 </button>
             </div>
             
-            <div className="flex items-center justify-between text-xs px-2 mt-2">
+            <div className={`flex items-center justify-between text-xs px-2 mt-2 ${sidebarCollapsed ? 'lg:flex-col lg:gap-1 lg:px-0' : ''}`}>
                <div className="flex items-center gap-1 text-slate-400">
                  {syncStatus === 'saving' && <Loader2 className="animate-spin w-3 h-3 text-blue-500" />}
                  {syncStatus === 'saved' && <CheckCircle2 className="w-3 h-3 text-green-500" />}
                  {syncStatus === 'error' && <AlertCircle className="w-3 h-3 text-red-500" />}
-                 {authToken ? <span className="text-green-600">已同步</span> : <span className="text-amber-500">离线</span>}
+                 {authToken ? <span className={`text-green-600 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>已同步</span> : <span className={`text-amber-500 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>离线</span>}
                </div>
 
                <a 
@@ -2551,11 +2758,65 @@ function App() {
                  title="Fork this project on GitHub"
                >
                  <GitFork size={14} />
-                 <span>Fork 项目 v1.7.1</span>
+                 <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>Fork 项目 v1.7.1</span>
                </a>
             </div>
         </div>
       </aside>
+
+      {/* 折叠模式下的子分类弹出层 */}
+      {sidebarCollapsed && collapsedFlyout && (() => {
+        const allNodes = buildCategoryTree(categories);
+        const flyoutNode = allNodes.find(n => n.category.id === collapsedFlyout.catId);
+        if (!flyoutNode || flyoutNode.children.length === 0) return null;
+
+        // 递归渲染弹出层中的子分类
+        const renderFlyoutNode = (node: CategoryTreeNode, depth: number = 0): React.ReactNode => {
+          const cat = node.category;
+          const isLocked = isCategoryLocked(cat.id);
+          const hasChildren = node.children.length > 0;
+          return (
+            <React.Fragment key={cat.id}>
+              <div
+                onClick={() => { handleCategoryClick(cat); setCollapsedFlyout(null); }}
+                style={{ paddingLeft: `${12 + depth * 16}px` }}
+                className={`w-full flex items-center gap-2 py-1.5 pr-3 rounded-lg cursor-pointer transition-colors ${
+                  selectedCategory === cat.id
+                    ? 'bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 font-medium'
+                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                {hasChildren ? <ChevronRight size={12} className="text-slate-400 shrink-0" /> : <span className="w-3 inline-block shrink-0" />}
+                <div className={`p-1 rounded flex items-center justify-center shrink-0 ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                  {isLocked ? <Lock size={12} className="text-amber-500" /> : <Icon name={cat.icon} size={12} />}
+                </div>
+                <span className="truncate text-sm">{cat.name}</span>
+              </div>
+              {node.children.map(child => renderFlyoutNode(child, depth + 1))}
+            </React.Fragment>
+          );
+        };
+
+        return (
+          <div
+            className="fixed z-50 min-w-[200px] max-h-[70vh] overflow-y-auto p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl"
+            style={{ top: Math.min(collapsedFlyout.rect.top, window.innerHeight * 0.7), left: collapsedFlyout.rect.right + 8 }}
+            onMouseEnter={() => { if (flyoutTimer.current) { clearTimeout(flyoutTimer.current); flyoutTimer.current = null; } }}
+            onMouseLeave={() => {
+              if (flyoutTimer.current) clearTimeout(flyoutTimer.current);
+              flyoutTimer.current = setTimeout(() => setCollapsedFlyout(null), 200);
+            }}
+          >
+            {/* 弹出层标题 */}
+            <div className="px-3 py-1.5 mb-1 text-xs font-semibold text-slate-400 uppercase tracking-wider border-b border-slate-100 dark:border-slate-700">
+              {flyoutNode.category.name}
+            </div>
+            <div className="space-y-0.5">
+              {flyoutNode.children.map(child => renderFlyoutNode(child))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Main Content */}
       <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative">
@@ -3097,6 +3358,8 @@ function App() {
             onEditLink={editLinkFromContextMenu}
             onDeleteLink={deleteLinkFromContextMenu}
             onTogglePin={togglePinFromContextMenu}
+            onToggleFavorite={toggleFavoriteFromContextMenu}
+            isFavorite={contextMenu.link?.favorite}
           />
 
           {/* 二维码模态框 */}
@@ -3106,6 +3369,9 @@ function App() {
             title={qrCodeModal.title || ''}
             onClose={() => setQrCodeModal({ isOpen: false, url: '', title: '' })}
           />
+
+          {/* 全局确认/提示模态框 */}
+          <ConfirmDialogHost />
       </>
       )}
     </div>

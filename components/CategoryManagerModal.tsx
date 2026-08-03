@@ -4,6 +4,8 @@ import { Category } from '../types';
 import Icon from './Icon';
 import IconSelector from './IconSelector';
 import CategoryActionAuthModal from './CategoryActionAuthModal';
+import { confirmDialog } from './ConfirmDialog';
+import CategoryTreeSelect from './CategoryTreeSelect';
 
 interface CategoryManagerModalProps {
   isOpen: boolean;
@@ -50,13 +52,6 @@ const getAllChildIds = (categories: Category[], parentId: string): string[] => {
     ids.push(...getAllChildIds(categories, child.id));
   });
   return ids;
-};
-
-// 获取可用的父分类（排除自身及子孙）
-const getAvailableParents = (categories: Category[], excludeId?: string): Category[] => {
-  if (!excludeId) return categories;
-  const excludeIds = new Set([excludeId, ...getAllChildIds(categories, excludeId)]);
-  return categories.filter(c => !excludeIds.has(c.id));
 };
 
 // 获取同级分类
@@ -166,14 +161,20 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
   };
 
   // 处理删除分类前的验证
-  const handleDeleteClick = (cat: Category) => {
+  const handleDeleteClick = async (cat: Category) => {
     const childCount = getAllChildIds(categories, cat.id).length;
     const confirmMsg = childCount > 0
       ? `确定删除"${cat.name}"分类吗？该分类及其 ${childCount} 个子分类下的书签将移动到"常用推荐"。`
       : `确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`;
 
     if (!onVerifyPassword) {
-      if (confirm(confirmMsg)) {
+      const ok = await confirmDialog({
+        title: '删除分类',
+        message: confirmMsg,
+        variant: 'danger',
+        confirmText: '删除',
+      });
+      if (ok) {
         onDeleteCategory(cat.id);
       }
       return;
@@ -184,12 +185,12 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       categoryId: cat.id,
       categoryName: cat.name
     });
-    
+
     setIsAuthModalOpen(true);
   };
 
   // 处理验证成功后的操作
-  const handleAuthSuccess = () => {
+  const handleAuthSuccess = async () => {
     if (!pendingAction) return;
 
     if (pendingAction.type === 'edit') {
@@ -199,12 +200,20 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
       }
     } else if (pendingAction.type === 'delete') {
       const cat = categories.find(c => c.id === pendingAction.categoryId);
-      const childCount = getAllChildIds(categories, cat.id).length;
-      const confirmMsg = childCount > 0
-        ? `确定删除"${cat.name}"分类吗？该分类及其 ${childCount} 个子分类下的书签将移动到"常用推荐"。`
-        : `确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`;
-      if (cat && confirm(confirmMsg)) {
-        onDeleteCategory(cat.id);
+      if (cat) {
+        const childCount = getAllChildIds(categories, cat.id).length;
+        const confirmMsg = childCount > 0
+          ? `确定删除"${cat.name}"分类吗？该分类及其 ${childCount} 个子分类下的书签将移动到"常用推荐"。`
+          : `确定删除"${cat.name}"分类吗？该分类下的书签将移动到"常用推荐"。`;
+        const ok = await confirmDialog({
+          title: '删除分类',
+          message: confirmMsg,
+          variant: 'danger',
+          confirmText: '删除',
+        });
+        if (ok) {
+          onDeleteCategory(cat.id);
+        }
       }
     }
 
@@ -276,26 +285,6 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
     setIconSelectorTarget(null);
   };
 
-  // 生成父分类选项（带缩进）
-  const renderParentOptions = (excludeId?: string) => {
-    const availableParents = getAvailableParents(categories, excludeId);
-    const parentTree = buildCategoryTree(availableParents);
-    
-    const renderOptions = (nodes: CategoryTreeNode[], depth: number): React.ReactNode[] => {
-      return nodes.flatMap(node => {
-        const indent = ' '.repeat(depth);
-        const option = (
-          <option key={node.category.id} value={node.category.id}>
-            {indent}{node.category.name}
-          </option>
-        );
-        return [option, ...renderOptions(node.children, depth + 1)];
-      });
-    };
-
-    return renderOptions(parentTree, 0);
-  };
-
   // 递归渲染树形分类列表
   const renderCategoryNode = (node: CategoryTreeNode, depth: number = 0): React.ReactNode => {
     const cat = node.category;
@@ -331,7 +320,7 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
             </div>
 
             <div className="flex items-center gap-2 flex-1 min-w-0">
-              {editingId === cat.id && cat.id !== 'common' ? (
+              {editingId === cat.id ? (
                 <div className="flex flex-col gap-2 flex-1">
                   <div className="flex items-center gap-2">
                     <Icon name={editIcon} size={16} />
@@ -362,17 +351,18 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                       placeholder="密码（可选）"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-slate-500 dark:text-slate-400">父分类:</span>
-                    <select
-                      value={editParentId}
-                      onChange={(e) => setEditParentId(e.target.value)}
-                      className="flex-1 p-1.5 px-2 text-sm rounded border border-blue-500 dark:bg-slate-800 dark:text-white outline-none"
-                    >
-                      <option value="">无（顶级分类）</option>
-                      {renderParentOptions(cat.id)}
-                    </select>
-                  </div>
+                  {cat.id !== 'common' && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 dark:text-slate-400 shrink-0">父分类:</span>
+                      <CategoryTreeSelect
+                        categories={categories}
+                        value={editParentId}
+                        onChange={setEditParentId}
+                        allowNone
+                        excludeIds={[cat.id, ...getAllChildIds(categories, cat.id)]}
+                      />
+                    </div>
+                  )}
                   <label className="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-300">
                     <input
                       type="checkbox"
@@ -391,9 +381,6 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                   <Icon name={cat.icon} size={16} />
                   <span className="font-medium dark:text-slate-200 truncate">
                     {cat.name}
-                    {cat.id === 'common' && (
-                      <span className="ml-2 text-xs text-slate-400">(默认分类，不可编辑)</span>
-                    )}
                   </span>
                   {(cat.password || cat.requireAuth) && (
                     <Lock size={12} className="text-slate-400" />
@@ -408,20 +395,18 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                  <button onClick={saveEdit} className="text-green-500 hover:bg-green-50 dark:hover:bg-slate-600 p-1.5 rounded bg-white dark:bg-slate-800 shadow-sm border border-slate-200 dark:border-slate-600"><Check size={16}/></button>
               ) : (
                  <>
-                  {cat.id !== 'common' && (
-                    <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded">
-                        <Edit2 size={14} />
-                    </button>
-                  )}
-                  {cat.id !== 'common' && (
+                  <button onClick={() => handleStartEdit(cat)} className="p-1.5 text-slate-400 hover:text-blue-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded" title="编辑">
+                      <Edit2 size={14} />
+                  </button>
+                  {cat.id !== 'common' ? (
                       <button 
                       onClick={() => handleDeleteClick(cat)}
                       className="p-1.5 text-slate-400 hover:text-red-500 hover:bg-slate-200 dark:hover:bg-slate-600 rounded"
+                      title="删除"
                       >
                       <Trash2 size={14} />
                       </button>
-                  )}
-                  {cat.id === 'common' && (
+                  ) : (
                       <div className="p-1.5 text-slate-300" title="常用推荐分类不能被删除">
                           <Lock size={14} />
                       </div>
@@ -473,15 +458,13 @@ const CategoryManagerModal: React.FC<CategoryManagerModalProps> = ({
                </button>
              </div>
              <div className="flex items-center gap-2">
-               <span className="text-sm text-slate-500 dark:text-slate-400 whitespace-nowrap">父分类:</span>
-               <select
+               <span className="text-sm text-slate-500 dark:text-slate-400 shrink-0">父分类:</span>
+               <CategoryTreeSelect
+                 categories={categories}
                  value={newCatParentId}
-                 onChange={(e) => setNewCatParentId(e.target.value)}
-                 className="flex-1 p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white text-sm focus:ring-2 focus:ring-blue-500 outline-none"
-               >
-                 <option value="">无（顶级分类）</option>
-                 {renderParentOptions()}
-               </select>
+                 onChange={setNewCatParentId}
+                 allowNone
+               />
              </div>
              <div className="flex gap-2">
                  <div className="flex-1 relative">

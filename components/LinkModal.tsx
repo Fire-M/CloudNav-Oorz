@@ -2,43 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { X, Sparkles, Loader2, Pin, Wand2, Trash2 } from 'lucide-react';
 import { LinkItem, Category, AIConfig } from '../types';
 import { generateLinkDescription, suggestCategory } from '../services/geminiService';
-
-// 树形节点接口
-interface CategoryTreeNode {
-  category: Category;
-  children: CategoryTreeNode[];
-}
-
-// 构建树形结构
-const buildCategoryTree = (categories: Category[]): CategoryTreeNode[] => {
-  const map = new Map<string, CategoryTreeNode>();
-  const roots: CategoryTreeNode[] = [];
-
-  categories.forEach(cat => {
-    map.set(cat.id, { category: cat, children: [] });
-  });
-
-  categories.forEach(cat => {
-    const node = map.get(cat.id)!;
-    if (cat.parentId && map.has(cat.parentId)) {
-      map.get(cat.parentId)!.children.push(node);
-    } else {
-      roots.push(node);
-    }
-  });
-
-  return roots;
-};
-
-// 递归生成带缩进的选项
-const flattenTreeOptions = (nodes: CategoryTreeNode[], depth: number = 0): { category: Category; depth: number }[] => {
-  const result: { category: Category; depth: number }[] = [];
-  nodes.forEach(node => {
-    result.push({ category: node.category, depth });
-    result.push(...flattenTreeOptions(node.children, depth + 1));
-  });
-  return result;
-};
+import { alertDialog } from './ConfirmDialog';
+import CategoryTreeSelect from './CategoryTreeSelect';
 
 interface LinkModalProps {
   isOpen: boolean;
@@ -209,7 +174,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
   const handleAIAssist = async () => {
     if (!url || !title) return;
     if (!aiConfig.apiKey) {
-        alert("请先点击侧边栏左下角设置图标配置 AI API Key");
+        alertDialog({ message: "请先点击侧边栏左下角设置图标配置 AI API Key", variant: 'warning', title: '未配置 AI' });
         return;
     }
 
@@ -292,7 +257,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
       }
     } catch (e) {
       console.error("Failed to fetch icon", e);
-      alert("无法获取图标，请检查URL是否正确");
+      alertDialog({ message: "无法获取图标，请检查URL是否正确", variant: 'warning', title: '获取图标失败' });
     } finally {
       setIsFetchingIcon(false);
     }
@@ -460,21 +425,11 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
 
           <div>
             <label className="block text-sm font-medium mb-1 dark:text-slate-300">分类</label>
-            <select
-            value={categoryId}
-            onChange={(e) => setCategoryId(e.target.value)}
-            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
-            >
-            {(() => {
-              const tree = buildCategoryTree(categories);
-              const options = flattenTreeOptions(tree);
-              return options.map(({ category: cat, depth }) => (
-                <option key={cat.id} value={cat.id}>
-                  {' '.repeat(depth)}{cat.name}
-                </option>
-              ));
-            })()}
-            </select>
+            <CategoryTreeSelect
+              categories={categories}
+              value={categoryId}
+              onChange={setCategoryId}
+            />
           </div>
 
           <div className="pt-2 relative">

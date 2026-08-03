@@ -2,6 +2,7 @@ import React, { useState, useRef } from 'react';
 import { X, Upload, FileText, ArrowRight, Check, AlertCircle, FolderInput, ListTree, Database } from 'lucide-react';
 import { Category, LinkItem, SearchConfig, AIConfig, WebDavConfig } from '../types';
 import { parseBookmarks } from '../services/bookmarkParser';
+import { alertDialog } from './ConfirmDialog';
 
 interface ImportModalProps {
   isOpen: boolean;
@@ -137,10 +138,10 @@ const ImportModal: React.FC<ImportModalProps> = ({
         
         setStep('preview');
     } catch (error) {
-        const errorMessage = type === 'html' 
+        const errorMessage = type === 'html'
             ? "解析文件失败，请确保是标准的 Chrome HTML 书签文件。"
             : "解析文件失败，请确保是有效的 cloudnav_backup.json 文件。";
-        alert(errorMessage);
+        alertDialog({ message: errorMessage, variant: 'danger', title: '解析失败' });
         console.error(error);
     } finally {
         setAnalyzing(false);
