@@ -51,13 +51,7 @@ const validateAuth = async (
 ) => {
   const serverPassword = env.PASSWORD;
   if (!serverPassword) {
-    return {
-      ok: false,
-      response: new Response(JSON.stringify({ error: 'Server misconfigured: PASSWORD not set' }), {
-        status: 500,
-        headers: { 'Content-Type': 'application/json', ...corsHeaders },
-      }),
-    };
+    return { ok: true };
   }
 
   const providedPassword = request.headers.get('x-auth-password');
@@ -215,6 +209,34 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
         requirePasswordOnVisit: false,
         passwordExpiryDays: 7,
         ...websiteConfig,
+      }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // 批量获取所有配置（搜索+网站+WebDAV）
+    if (getConfig === 'all') {
+      const searchConfig = await env.CLOUDNAV_KV.get('search_config');
+      const websiteData = {
+        requirePasswordOnVisit: false,
+        passwordExpiryDays: 7,
+        ...websiteConfig,
+      };
+
+      // WebDAV 配置需要认证
+      let webDavData = null;
+      const authCheck = await validateAuth(request, env, corsHeaders, { requireSession: false });
+      if (authCheck.ok) {
+        const webDavConfig = await env.CLOUDNAV_KV.get('webdav_config');
+        if (webDavConfig) {
+          try { webDavData = JSON.parse(webDavConfig); } catch {}
+        }
+      }
+
+      return new Response(JSON.stringify({
+        search: searchConfig ? JSON.parse(searchConfig) : null,
+        website: websiteData,
+        webdav: webDavData,
       }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });

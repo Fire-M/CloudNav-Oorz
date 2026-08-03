@@ -764,7 +764,7 @@ function App() {
         }
     }
 
-    // Initial Data Fetch
+    // Initial Data Fetch - 优化版：先加载本地缓存秒开，再并行请求云端
     const initData = async () => {
         // 本地开发模式：跳过所有 Cloudflare API 调用与密码验证，直接加载本地数据
         if (IS_DEV) {
@@ -781,22 +781,42 @@ function App() {
             return;
         }
 
-        // 首先检查是否需要认证
-        try {
-            const authRes = await fetch('/api/storage?checkAuth=true');
-            if (authRes.ok) {
-                const authData = await authRes.json();
-                setRequiresAuth(authData.requiresAuth);
-                setHasPassword(authData.hasPassword);
-                if (authData.hasPassword && savedToken) {
+        // Step 1: 立即从本地缓存加载（秒开）
+        const hadCache = loadFromLocalCache();
+        if (hadCache) {
+            setIsCheckingAuth(false);
+        }
+
+        // Step 2: 并行请求 checkAuth + 数据 + 配置
+        const authPromise = fetch('/api/storage?checkAuth=true')
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null);
+
+        const dataPromise = fetch('/api/storage')
+            .then(r => {
+                if (r.ok) return r.json();
+                if (r.status === 401) { clearAuthSession(); return null; }
+                return null;
+            })
+            .catch(() => null);
+
+        const configPromise = fetch('/api/storage?getConfig=all')
+            .then(r => r.ok ? r.json() : null)
+            .catch(() => null);
+
+        const [authData, cloudData, allConfig] = await Promise.all([authPromise, dataPromise, configPromise]);
+
+        // 处理认证状态
+        if (authData) {
+            setRequiresAuth(authData.requiresAuth);
+            setHasPassword(authData.hasPassword);
+            if (authData.hasPassword && savedToken) {
+                try {
                     const validateRes = await fetch('/api/storage', {
                         method: 'POST',
-                        headers: buildAuthHeaders(savedToken, {
-                            'Content-Type': 'application/json',
-                        }),
+                        headers: buildAuthHeaders(savedToken, { 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ authOnly: true })
                     });
-
                     if (!validateRes.ok) {
                         clearAuthSession();
                     } else {
@@ -806,187 +826,77 @@ function App() {
                             setAuthToken(savedToken);
                         }
                     }
-                }
-                // 首页开放访问，不再因为 requiresAuth 阻止数据加载
+                } catch {}
             }
-        } catch (e) {
-            console.warn("Failed to check auth requirement.", e);
+        } else {
             setRequiresAuth(false);
             setHasPassword(false);
         }
 
-        // 获取数据
-        let hasCloudData = false;
-        try {
-            const res = await fetch('/api/storage', {
-                headers: authToken ? buildAuthHeaders(authToken) : {}
-            });
-            if (res.ok) {
-                const data = await res.json();
-                if (data.links && data.links.length > 0) {
-                    setLinks(data.links);
-                    const loadedCats = data.categories || DEFAULT_CATEGORIES;
-                    setCategories(loadedCats);
-                    setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-                    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
-                    
-                    // 加载链接图标缓存
-                    loadLinkIcons(data.links, loadedCats);
-                    hasCloudData = true;
-                }
-            } else if (res.status === 401) {
-                // 如果返回401，清除本地token，继续加载本地数据
-                clearAuthSession();
-            }
-        } catch (e) {
-            console.warn("Failed to fetch from cloud, falling back to local.", e);
+        // 处理云端数据（覆盖本地缓存）
+        if (cloudData && cloudData.links && cloudData.links.length > 0) {
+            setLinks(cloudData.links);
+            const loadedCats = cloudData.categories || DEFAULT_CATEGORIES;
+            setCategories(loadedCats);
+            setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
+            localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(cloudData));
+            loadLinkIcons(cloudData.links, loadedCats);
+        } else if (!hadCache) {
+            loadFromLocal();
         }
-        
-        // 无论是否有云端数据，都尝试从KV空间加载搜索配置和网站配置
-        try {
-            const searchConfigRes = await fetch('/api/storage?getConfig=search');
-            if (searchConfigRes.ok) {
-                const searchConfigData = await searchConfigRes.json();
-                // 检查搜索配置是否有效（包含必要的字段）
-                if (searchConfigData && (searchConfigData.mode || searchConfigData.externalSources || searchConfigData.selectedSource)) {
-                    setSearchMode('internal');
-                    setExternalSearchSources(searchConfigData.externalSources || []);
-                    // 加载已保存的选中搜索源
-                    if (searchConfigData.selectedSource) {
-                        setSelectedSearchSource(searchConfigData.selectedSource);
-                    }
-                }
-            }
-            
-            // 获取网站配置（包括密码过期时间设置）
-            const websiteConfigRes = await fetch('/api/storage?getConfig=website');
-            if (websiteConfigRes.ok) {
-                const websiteConfigData = await websiteConfigRes.json();
-                if (websiteConfigData) {
-                    setSiteSettings(prev => ({
-                        ...prev,
-                        title: websiteConfigData.title || prev.title,
-                        navTitle: websiteConfigData.navTitle || prev.navTitle,
-                        favicon: websiteConfigData.favicon || prev.favicon,
-                        cardStyle: websiteConfigData.cardStyle || prev.cardStyle,
-                        requirePasswordOnVisit: websiteConfigData.requirePasswordOnVisit !== undefined ? websiteConfigData.requirePasswordOnVisit : prev.requirePasswordOnVisit,
-                        passwordExpiryDays: websiteConfigData.passwordExpiryDays !== undefined ? websiteConfigData.passwordExpiryDays : prev.passwordExpiryDays
-                    }));
+
+        // 处理配置
+        if (allConfig) {
+            // 搜索配置
+            if (allConfig.search && (allConfig.search.mode || allConfig.search.externalSources || allConfig.search.selectedSource)) {
+                setSearchMode('internal');
+                setExternalSearchSources(allConfig.search.externalSources || []);
+                if (allConfig.search.selectedSource) {
+                    setSelectedSearchSource(allConfig.search.selectedSource);
                 }
             }
 
-            if (savedToken) {
-                const webDavConfigRes = await fetch('/api/storage?getConfig=webdav', {
-                    headers: buildAuthHeaders(savedToken)
-                });
-                if (webDavConfigRes.ok) {
-                    const webDavConfigData = await webDavConfigRes.json();
-                    if (webDavConfigData && (webDavConfigData.url || webDavConfigData.username || webDavConfigData.password || webDavConfigData.enabled !== undefined)) {
-                        setWebDavConfig(webDavConfigData);
-                        localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(webDavConfigData));
-                    }
+            // 网站配置
+            if (allConfig.website) {
+                const wc = allConfig.website;
+                setSiteSettings(prev => ({
+                    ...prev,
+                    title: wc.title || prev.title,
+                    navTitle: wc.navTitle || prev.navTitle,
+                    favicon: wc.favicon || prev.favicon,
+                    cardStyle: wc.cardStyle || prev.cardStyle,
+                    requirePasswordOnVisit: wc.requirePasswordOnVisit !== undefined ? wc.requirePasswordOnVisit : prev.requirePasswordOnVisit,
+                    passwordExpiryDays: wc.passwordExpiryDays !== undefined ? wc.passwordExpiryDays : prev.passwordExpiryDays
+                }));
+            }
+
+            // WebDAV 配置（需要登录）
+            if (allConfig.webdav && savedToken) {
+                const webDavConfigData = allConfig.webdav;
+                if (webDavConfigData && (webDavConfigData.url || webDavConfigData.username || webDavConfigData.password || webDavConfigData.enabled !== undefined)) {
+                    setWebDavConfig(webDavConfigData);
+                    localStorage.setItem(WEBDAV_CONFIG_KEY, JSON.stringify(webDavConfigData));
                 }
             }
-        } catch (e) {
-            console.warn("Failed to fetch configs from KV.", e);
         }
-        
-        // 如果有云端数据，则不需要加载本地数据
-        if (hasCloudData) {
-            setIsCheckingAuth(false);
-            return;
-        }
-        
-        // 如果没有云端数据，则加载本地数据
-        loadFromLocal();
-        
-        // 如果从KV空间加载搜索配置失败，直接使用默认配置（不使用localStorage回退）
-        setSearchMode('internal');
-        setExternalSearchSources([
-            {
-                id: 'bing',
-                name: '必应',
-                url: 'https://www.bing.com/search?q={query}',
-                icon: 'Search',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'google',
-                name: 'Google',
-                url: 'https://www.google.com/search?q={query}',
-                icon: 'Search',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'baidu',
-                name: '百度',
-                url: 'https://www.baidu.com/s?wd={query}',
-                icon: 'Globe',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'sogou',
-                name: '搜狗',
-                url: 'https://www.sogou.com/web?query={query}',
-                icon: 'Globe',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'yandex',
-                name: 'Yandex',
-                url: 'https://yandex.com/search/?text={query}',
-                icon: 'Globe',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'github',
-                name: 'GitHub',
-                url: 'https://github.com/search?q={query}',
-                icon: 'Github',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'linuxdo',
-                name: 'Linux.do',
-                url: 'https://linux.do/search?q={query}',
-                icon: 'Terminal',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'bilibili',
-                name: 'B站',
-                url: 'https://search.bilibili.com/all?keyword={query}',
-                icon: 'Play',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'youtube',
-                name: 'YouTube',
-                url: 'https://www.youtube.com/results?search_query={query}',
-                icon: 'Video',
-                enabled: true,
-                createdAt: Date.now()
-            },
-            {
-                id: 'wikipedia',
-                name: '维基',
-                url: 'https://zh.wikipedia.org/wiki/Special:Search?search={query}',
-                icon: 'BookOpen',
-                enabled: true,
-                createdAt: Date.now()
-            }
-        ]);
-        
+
         setIsLoadingSearchConfig(false);
         setIsCheckingAuth(false);
+    };
+
+    // 从 localStorage 加载缓存，返回是否有缓存
+    const loadFromLocalCache = (): boolean => {
+        const stored = localStorage.getItem(LOCAL_STORAGE_KEY);
+        if (stored) {
+            try {
+                const parsed = JSON.parse(stored);
+                if (parsed.links && parsed.categories) {
+                    loadFromLocal();
+                    return true;
+                }
+            } catch {}
+        }
+        return false;
     };
 
     initData();
