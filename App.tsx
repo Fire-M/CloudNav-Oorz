@@ -508,9 +508,9 @@ function App() {
   const handleContextMenu = (event: React.MouseEvent, link: LinkItem) => {
     event.preventDefault();
     event.stopPropagation();
-    
-    // 在批量编辑模式下禁用右键菜单
-    if (isBatchEditMode) return;
+
+    // 在批量编辑模式下或未登录时禁用右键菜单
+    if (isBatchEditMode || needsEditAuth()) return;
     
     setContextMenu({
       isOpen: true,
@@ -2462,8 +2462,8 @@ function App() {
           </a>
         )}
 
-        {/* Hover Actions (Absolute Right) - 在批量编辑模式下隐藏 */}
-        {!isBatchEditMode && (
+        {/* Hover Actions (Absolute Right) - 在批量编辑模式下隐藏，未登录时隐藏 */}
+        {!isBatchEditMode && !needsEditAuth() && (
           <div className={`flex items-center justify-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity bg-blue-50 dark:bg-blue-900/20 backdrop-blur-sm rounded-md p-1 absolute ${
             isDetailedView ? 'top-3 right-3' : 'top-1/2 -translate-y-1/2 right-2'
           }`}>
@@ -2631,6 +2631,7 @@ function App() {
         <div className={`flex-1 overflow-y-auto p-4 space-y-1 scrollbar-hide ${sidebarCollapsed ? 'lg:px-2' : ''}`}>
             <div className={`flex items-center justify-between pt-4 pb-2 px-4 ${sidebarCollapsed ? 'lg:hidden' : ''}`}>
                <span className="text-xs font-semibold text-slate-400 uppercase tracking-wider">分类目录</span>
+               {!needsEditAuth() && (
                <button 
                   onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
@@ -2638,6 +2639,7 @@ function App() {
                >
                   <Settings size={14} />
                </button>
+               )}
             </div>
 
             {/* 树形分类列表 */}
@@ -2730,9 +2732,10 @@ function App() {
 
         {/* Footer Actions */}
         <div className={`border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0 ${sidebarCollapsed ? 'lg:p-2' : 'p-4'}`}>
-            
+
+            {!needsEditAuth() && (
             <div className={`grid grid-cols-3 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-1 lg:gap-1.5' : ''}`}>
-                <button 
+                <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="导入书签"
@@ -2740,8 +2743,8 @@ function App() {
                     <Upload size={14} />
                     <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>导入</span>
                 </button>
-                
-                <button 
+
+                <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="备份与恢复"
@@ -2750,7 +2753,7 @@ function App() {
                     <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>备份</span>
                 </button>
 
-                <button 
+                <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
                     title="AI 设置"
@@ -2759,6 +2762,7 @@ function App() {
                     <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>设置</span>
                 </button>
             </div>
+            )}
             
             <div className={`flex items-center justify-between text-xs px-2 mt-2 ${sidebarCollapsed ? 'lg:flex-col lg:gap-1 lg:px-0' : ''}`}>
                <div className="flex items-center gap-1 text-slate-400">
@@ -3055,7 +3059,8 @@ function App() {
               )}
             </div>
 
-            {/* 添加按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
+            {/* 添加按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示；未登录时隐藏 */}
+            {!needsEditAuth() && (
             <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'}`}>
               <button
                 onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else { setEditingLink(undefined); setIsModalOpen(true); }}}
@@ -3064,6 +3069,7 @@ function App() {
                 <Plus size={16} /> <span className="hidden sm:inline">添加</span>
               </button>
             </div>
+            )}
           </div>
         </header>
 
@@ -3102,7 +3108,8 @@ function App() {
                                 </button>
                             </div>
                         ) : (
-                            <button 
+                            !needsEditAuth() && (
+                            <button
                                 onClick={() => { if(!requireAuth()) return; setIsSortingPinned(true); }}
                                 className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-full transition-colors"
                                 title="排序"
@@ -3110,6 +3117,7 @@ function App() {
                                 <GripVertical size={14} />
                                 <span>排序</span>
                             </button>
+                            )
                         )}
                     </div>
                     {isSortingPinned ? (
@@ -3195,12 +3203,13 @@ function App() {
                                  </button>
                              </div>
                          ) : (
+                            !needsEditAuth() && (
                              <div className="flex gap-2">
-                                 <button 
+                                 <button
                                      onClick={toggleBatchEditMode}
                                      className={`flex items-center gap-1 px-3 py-1.5 text-white text-xs font-medium rounded-full transition-colors ${
-                                         isBatchEditMode 
-                                             ? 'bg-red-600 hover:bg-red-700' 
+                                         isBatchEditMode
+                                             ? 'bg-red-600 hover:bg-red-700'
                                              : 'bg-blue-600 hover:bg-blue-700'
                                      }`}
                                      title={isBatchEditMode ? "退出批量编辑" : "批量编辑"}
@@ -3209,7 +3218,7 @@ function App() {
                                  </button>
                                  {isBatchEditMode ? (
                                      <>
-                                         <button 
+                                         <button
                                              onClick={handleBatchDelete}
                                              className="flex items-center gap-1 px-3 py-1.5 bg-red-600 hover:bg-red-700 text-white text-xs font-medium rounded-full transition-colors"
                                              title="批量删除"
@@ -3217,7 +3226,7 @@ function App() {
                                              <Trash2 size={14} />
                                              <span>批量删除</span>
                                          </button>
-                                         <button 
+                                         <button
                                              onClick={handleSelectAll}
                                              className="flex items-center gap-1 px-3 py-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-medium rounded-full transition-colors"
                                              title="全选/取消全选"
@@ -3225,7 +3234,7 @@ function App() {
                                              <CheckSquare size={14} />
                                              <span>{selectedLinks.size === displayedLinks.length ? '取消全选' : '全选'}</span>
                                          </button>
-                                         <button 
+                                         <button
                                              onClick={() => {
                                                if (selectedLinks.size === 0) {
                                                  alertDialog({ message: '请先选择要移动的链接', variant: 'warning' });
@@ -3241,7 +3250,7 @@ function App() {
                                          </button>
                                      </>
                                  ) : (
-                                     <button 
+                                     <button
                                          onClick={() => startSorting(selectedCategory)}
                                          className="flex items-center gap-1 px-3 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium rounded-full transition-colors"
                                          title="排序"
@@ -3251,6 +3260,7 @@ function App() {
                                      </button>
                                  )}
                              </div>
+                            )
                          )
                      )}
                  </div>
