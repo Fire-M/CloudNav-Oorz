@@ -190,6 +190,25 @@ function App() {
   const themeButtonRef = useRef<HTMLButtonElement | null>(null);
   const themeTransitionTimerRef = useRef<number | null>(null);
 
+  // 图标缓存：domain → base64 data URL，避免将大体积图标存入 app_data
+  const iconCache = useRef<Map<string, string>>(new Map());
+
+  // 根据链接获取图标：优先内存缓存，其次 link.icon（兼容非 base64 的外部 URL）
+  const getLinkIcon = (link: LinkItem): string | undefined => {
+    if (link.url) {
+      try {
+        let url = link.url;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+        const domain = new URL(url).hostname;
+        const cached = iconCache.current.get(domain);
+        if (cached) return cached;
+      } catch {}
+    }
+    // 兼容：非 base64 的图标（如外部 URL）直接返回
+    if (link.icon && !link.icon.startsWith('data:')) return link.icon;
+    return undefined;
+  };
+
   // --- State ---
   const [links, setLinks] = useState<LinkItem[]>([]);
   const [categories, setCategories] = useState<Category[]>([]);
@@ -410,6 +429,21 @@ function App() {
           return link;
         });
 
+        // 迁移：将本地缓存中的 base64 图标提取到内存缓存
+        loadedLinks = loadedLinks.map(link => {
+          if (link.icon && link.icon.startsWith('data:') && link.url) {
+            try {
+              let url = link.url;
+              if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+              const domain = new URL(url).hostname;
+              iconCache.current.set(domain, link.icon);
+            } catch {}
+            const { icon, ...rest } = link;
+            return rest as LinkItem;
+          }
+          return link;
+        });
+
         setLinks(loadedLinks);
         setCategories(loadedCategories);
         setSelectedCategory(prev => prev === 'all' ? loadedCategories.find(c => !c.parentId)?.id || 'common' : prev);
@@ -434,12 +468,21 @@ function App() {
     }
     setSyncStatus('saving');
     try {
+        // 保存前剥离 base64 图标，大幅减小请求体积
+        const linksWithoutIcons = newLinks.map(link => {
+          if (link.icon && link.icon.startsWith('data:')) {
+            const { icon, ...rest } = link;
+            return rest;
+          }
+          return link;
+        });
+
         const response = await fetch('/api/storage', {
             method: 'POST',
             headers: buildAuthHeaders(token, {
                 'Content-Type': 'application/json',
             }),
-            body: JSON.stringify({ links: newLinks, categories: newCategories })
+            body: JSON.stringify({ links: linksWithoutIcons, categories: newCategories })
         });
 
         if (response.status === 401) {
@@ -474,13 +517,28 @@ function App() {
   };
 
   const updateData = (newLinks: LinkItem[], newCategories: Category[]) => {
+      // 提取 base64 图标到内存缓存，并从 link 对象中剥离
+      const cleanedLinks = newLinks.map(link => {
+        if (link.icon && link.icon.startsWith('data:') && link.url) {
+          try {
+            let url = link.url;
+            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+            const domain = new URL(url).hostname;
+            iconCache.current.set(domain, link.icon);
+          } catch {}
+          const { icon, ...rest } = link;
+          return rest as LinkItem;
+        }
+        return link;
+      });
+
       // 1. Optimistic UI Update
-      setLinks(newLinks);
+      setLinks(cleanedLinks);
       setCategories(newCategories);
 
       // 2. Sync to Cloud (if authenticated)
       if (authToken) {
-          syncToCloud(newLinks, newCategories, authToken);
+          syncToCloud(cleanedLinks, newCategories, authToken);
       }
   };
 
@@ -548,7 +606,7 @@ function App() {
     if (!contextMenu.link) return;
     if (!requireAuth()) return;
     
-    setEditingLink(contextMenu.link);
+    setEditingLink({ ...contextMenu.link, icon: getLinkIcon(contextMenu.link) || '' });
     setIsModalOpen(true);
     closeContextMenu();
   };
@@ -602,15 +660,14 @@ function App() {
     closeContextMenu();
   };
 
-  // 加载链接图标缓存
+  // 加载链接图标缓存（存入内存 iconCache，不再回写 link.icon）
   const loadLinkIcons = async (linksToLoad: LinkItem[], categoriesToUse: Category[]) => {
     if (!authToken) return; // 只有在已登录状态下才加载图标缓存
     
-    const updatedLinks = [...linksToLoad];
     const domainsToFetch = new Set<string>();
     
-    // 收集所有链接的域名（包括已有图标的链接）
-    for (const link of updatedLinks) {
+    // 收集所有缺少图标的域名
+    for (const link of linksToLoad) {
       if (link.url) {
         try {
           let domain = link.url;
@@ -621,7 +678,8 @@ function App() {
           if (domain.startsWith('http://') || domain.startsWith('https://')) {
             const urlObj = new URL(domain);
             domain = urlObj.hostname;
-            if (!link.icon || !link.icon.startsWith('data:')) {
+            // 内存缓存中没有才需要请求
+            if (!iconCache.current.has(domain)) {
               domainsToFetch.add(domain);
             }
           }
@@ -650,44 +708,18 @@ function App() {
       
       const iconResults = await Promise.all(iconPromises);
       
-      // 更新链接的图标
-      let hasChanges = false;
-
+      // 将图标存入内存缓存
+      let hasNewIcons = false;
       iconResults.forEach(result => {
-        if (result) {
-          updatedLinks.forEach(linkToUpdate => {
-            if (!linkToUpdate.url) return;
-
-            try {
-              let domain = linkToUpdate.url;
-              if (!linkToUpdate.url.startsWith('http://') && !linkToUpdate.url.startsWith('https://')) {
-                domain = 'https://' + linkToUpdate.url;
-              }
-
-              if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
-                return;
-              }
-
-              const urlObj = new URL(domain);
-              if (urlObj.hostname !== result.domain) {
-                return;
-              }
-
-              if (linkToUpdate.icon !== result.icon) {
-                linkToUpdate.icon = result.icon;
-                hasChanges = true;
-              }
-            } catch (e) {
-              return;
-            }
-          });
+        if (result && result.icon) {
+          iconCache.current.set(result.domain, result.icon);
+          hasNewIcons = true;
         }
       });
       
-      if (hasChanges) {
-        setLinks(updatedLinks);
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: updatedLinks, categories: categoriesToUse }));
-        syncToCloud(updatedLinks, categoriesToUse, authToken);
+      // 触发 UI 刷新以显示新加载的图标
+      if (hasNewIcons) {
+        setLinks(prev => [...prev]);
       }
     }
   };
@@ -819,14 +851,28 @@ function App() {
 
         // 处理云端数据（直接使用云端数据，避免本地缓存导致数据不同步）
         if (cloudData) {
-            setLinks(cloudData.links || []);
+            // 迁移：将已有数据中的 base64 图标提取到内存缓存，并从 links 中剥离
+            const migratedLinks = (cloudData.links || []).map((link: LinkItem) => {
+              if (link.icon && link.icon.startsWith('data:') && link.url) {
+                try {
+                  let url = link.url;
+                  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+                  const domain = new URL(url).hostname;
+                  iconCache.current.set(domain, link.icon);
+                } catch {}
+                const { icon, ...rest } = link;
+                return rest as LinkItem;
+              }
+              return link;
+            });
+            setLinks(migratedLinks);
             const loadedCats = cloudData.categories && cloudData.categories.length > 0
                 ? cloudData.categories
                 : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
             setCategories(loadedCats);
             setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-            if (cloudData.links && cloudData.links.length > 0) {
-                loadLinkIcons(cloudData.links, loadedCats);
+            if (migratedLinks.length > 0) {
+                loadLinkIcons(migratedLinks, loadedCats);
             }
         } else {
             // 请求失败时回退本地缓存（仅用于离线场景）
@@ -1110,14 +1156,28 @@ function App() {
                     const data = await res.json();
                     // 如果服务器有数据，使用服务器数据
                     if (data.links && data.links.length > 0) {
-                        setLinks(data.links);
+                        // 迁移：将已有数据中的 base64 图标提取到内存缓存
+                        const migratedLinks = data.links.map((link: LinkItem) => {
+                          if (link.icon && link.icon.startsWith('data:') && link.url) {
+                            try {
+                              let url = link.url;
+                              if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
+                              const domain = new URL(url).hostname;
+                              iconCache.current.set(domain, link.icon);
+                            } catch {}
+                            const { icon, ...rest } = link;
+                            return rest as LinkItem;
+                          }
+                          return link;
+                        });
+                        setLinks(migratedLinks);
                         const loadedCats = data.categories || DEFAULT_CATEGORIES;
                         setCategories(loadedCats);
                         setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(data));
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: migratedLinks, categories: loadedCats }));
                         
                         // 加载链接图标缓存
-                        loadLinkIcons(data.links, loadedCats);
+                        loadLinkIcons(migratedLinks, loadedCats);
                     } else {
                         // 如果服务器没有数据，使用本地数据
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links, categories }));
@@ -1322,7 +1382,9 @@ function App() {
       processedUrl = 'https://' + processedUrl;
     }
     
-    const updated = links.map(l => l.id === editingLink.id ? { ...l, ...data, url: processedUrl } : l);
+    // 如果弹窗未返回图标，保留原有图标（从缓存中查找）
+    const finalIcon = data.icon || getLinkIcon(editingLink) || '';
+    const updated = links.map(l => l.id === editingLink.id ? { ...l, ...data, url: processedUrl, icon: finalIcon } : l);
     updateData(updated, categories);
     setEditingLink(undefined);
   };
@@ -2217,7 +2279,7 @@ function App() {
             <div className={`text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold uppercase shrink-0 ${
               isDetailedView ? 'w-8 h-8 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800' : 'w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700'
             }`}>
-                {link.icon ? <img src={link.icon} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
+                {getLinkIcon(link) ? <img src={getLinkIcon(link)} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
             </div>
             
             {/* 标题 */}
@@ -2279,7 +2341,7 @@ function App() {
               <div className={`text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold uppercase shrink-0 ${
                 isDetailedView ? 'w-8 h-8 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800' : 'w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700'
               }`}>
-                  {link.icon ? <img src={link.icon} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
+                  {getLinkIcon(link) ? <img src={getLinkIcon(link)} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
               </div>
               
               {/* 标题 */}
@@ -2313,7 +2375,7 @@ function App() {
               <div className={`text-blue-600 dark:text-blue-400 flex items-center justify-center text-sm font-bold uppercase shrink-0 ${
                 isDetailedView ? 'w-8 h-8 rounded-xl bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-700 dark:to-slate-800' : 'w-8 h-8 rounded-lg bg-slate-50 dark:bg-slate-700'
               }`}>
-                  {link.icon ? <img src={link.icon} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
+                  {getLinkIcon(link) ? <img src={getLinkIcon(link)} alt="" className="w-5 h-5"/> : link.title.charAt(0)}
               </div>
               
               {/* 标题 */}
@@ -2355,7 +2417,7 @@ function App() {
                   <Star size={18} fill={link.favorite ? 'currentColor' : 'none'} />
               </button>
               <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(!requireAuth()) return; setEditingLink(link); setIsModalOpen(true); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(!requireAuth()) return; setEditingLink({ ...link, icon: getLinkIcon(link) || '' }); setIsModalOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
                   title="编辑"
               >
