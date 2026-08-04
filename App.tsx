@@ -49,8 +49,6 @@ const GITHUB_REPO_URL = 'https://github.com/Aaowu/CloudNav-Oorz';
 const IS_DEV = import.meta.env.DEV === true;
 
 const LOCAL_STORAGE_KEY = 'cloudnav_data_cache';
-const AUTH_KEY = 'cloudnav_auth_token';
-const AUTH_TIME_KEY = 'lastLoginTime';
 const WEBDAV_CONFIG_KEY = 'cloudnav_webdav_config';
 const AI_CONFIG_KEY = 'cloudnav_ai_config';
 const SEARCH_CONFIG_KEY = 'cloudnav_search_config';
@@ -292,6 +290,7 @@ function App() {
   // Sync State
   const [syncStatus, setSyncStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const [authToken, setAuthToken] = useState<string>('');
+  const [authIssuedAt, setAuthIssuedAt] = useState<number>(0);
   const [requiresAuth, setRequiresAuth] = useState<boolean | null>(null); // null表示未检查，true表示需要认证，false表示不需要
   const [hasPassword, setHasPassword] = useState<boolean | null>(null); // 服务器是否设置了密码
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
@@ -358,14 +357,13 @@ function App() {
 
   const buildAuthHeaders = (token?: string | null, extraHeaders: Record<string, string> = {}) => {
     const headers: Record<string, string> = { ...extraHeaders };
-    const resolvedToken = token ?? authToken ?? sessionStorage.getItem(AUTH_KEY);
-    const authIssuedAt = sessionStorage.getItem(AUTH_TIME_KEY);
+    const resolvedToken = token ?? authToken;
 
     if (resolvedToken) {
       headers['x-auth-password'] = resolvedToken;
     }
     if (authIssuedAt) {
-      headers['x-auth-issued-at'] = authIssuedAt;
+      headers['x-auth-issued-at'] = String(authIssuedAt);
     }
 
     return headers;
@@ -373,8 +371,7 @@ function App() {
 
   const clearAuthSession = () => {
     setAuthToken('');
-    sessionStorage.removeItem(AUTH_KEY)
-    sessionStorage.removeItem(AUTH_TIME_KEY)
+    setAuthIssuedAt(0);
   };
   
   // --- Helpers & Sync Logic ---
@@ -478,7 +475,6 @@ function App() {
             }
             
             setAuthToken('');
-            sessionStorage.removeItem(AUTH_KEY)
             setIsAuthOpen(true);
             setSyncStatus('error');
             return false;
@@ -635,28 +631,7 @@ function App() {
     }
 
     // Load Token and check expiry
-    const savedToken = sessionStorage.getItem(AUTH_KEY);
-    const lastLoginTime = sessionStorage.getItem(AUTH_TIME_KEY);
-    
-    if (savedToken) {
-      const currentTime = Date.now();
-      
-      if (lastLoginTime) {
-        const lastLogin = parseInt(lastLoginTime);
-        const timeDiff = currentTime - lastLogin;
-        
-        const expiryDays = siteSettings.passwordExpiryDays || 7;
-        const expiryTimeMs = expiryDays > 0 ? expiryDays * 24 * 60 * 60 * 1000 : 0;
-        
-        if (expiryTimeMs > 0 && timeDiff > expiryTimeMs) {
-          clearAuthSession();
-        } else {
-          setAuthToken(savedToken);
-        }
-      } else {
-        setAuthToken(savedToken);
-      }
-    }
+    // 密码仅保存在 React 内存中，页面刷新后需重新输入
 
     // Load WebDAV Config
     const savedWebDav = localStorage.getItem(WEBDAV_CONFIG_KEY);
@@ -727,11 +702,11 @@ function App() {
         if (authData) {
             setRequiresAuth(authData.requiresAuth);
             setHasPassword(authData.hasPassword);
-            if (authData.hasPassword && savedToken) {
+            if (authData.hasPassword && authToken) {
                 try {
                     const validateRes = await fetch('/api/storage', {
                         method: 'POST',
-                        headers: buildAuthHeaders(savedToken, { 'Content-Type': 'application/json' }),
+                        headers: buildAuthHeaders(authToken, { 'Content-Type': 'application/json' }),
                         body: JSON.stringify({ authOnly: true })
                     });
                     if (!validateRes.ok) {
@@ -739,8 +714,7 @@ function App() {
                     } else {
                         const validateData = await validateRes.json();
                         if (validateData?.authenticatedAt) {
-                            sessionStorage.setItem(AUTH_TIME_KEY, String(validateData.authenticatedAt));
-                            setAuthToken(savedToken);
+                            setAuthIssuedAt(validateData.authenticatedAt);
                         }
                     }
                 } catch {}
@@ -993,8 +967,9 @@ function App() {
         
         if (authResponse.ok) {
             const authPayload = await authResponse.json();
+            const now = authPayload.authenticatedAt || Date.now();
             setAuthToken(password);
-            sessionStorage.setItem(AUTH_KEY, password);
+            setAuthIssuedAt(now);
             setIsAuthOpen(false);
             setSyncStatus('saved');
             
@@ -1020,12 +995,10 @@ function App() {
             }
             
             // 检查密码是否过期
-            const lastLoginTime = sessionStorage.getItem(AUTH_TIME_KEY);
             const currentTime = Date.now();
             
-            if (lastLoginTime) {
-                const lastLogin = parseInt(lastLoginTime);
-                const timeDiff = currentTime - lastLogin;
+            if (authIssuedAt) {
+                const timeDiff = currentTime - authIssuedAt;
                 
                 const expiryTimeMs = (siteSettings.passwordExpiryDays || 7) > 0 ? (siteSettings.passwordExpiryDays || 7) * 24 * 60 * 60 * 1000 : 0;
                 
@@ -1036,8 +1009,6 @@ function App() {
                     return false;
                 }
             }
-            
-            sessionStorage.setItem(AUTH_TIME_KEY, String(authPayload.authenticatedAt || currentTime));
             
             // 登录成功后，从服务器获取数据
             try {
@@ -2375,6 +2346,8 @@ function App() {
         onRestoreSearchConfig={handleRestoreSearchConfig}
         aiConfig={aiConfig}
         onRestoreAIConfig={handleRestoreAIConfig}
+        authToken={authToken}
+        authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
       />
 
       <ImportModal
@@ -2398,6 +2371,7 @@ function App() {
         categories={categories}
         onUpdateLinks={(newLinks) => updateData(newLinks, categories)}
         authToken={authToken}
+        authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
       />
 
       <SearchConfigModal

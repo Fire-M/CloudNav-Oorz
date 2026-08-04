@@ -22,10 +22,8 @@ type ProxyResult = {
 
 // Helper to call our Cloudflare Proxy
 // This solves the CORS issue by delegating the request to the backend
-const callWebDavProxy = async (operation: 'check' | 'upload' | 'download', config: WebDavConfig, payload?: any, filename?: string): Promise<ProxyResult> => {
+const callWebDavProxy = async (operation: 'check' | 'upload' | 'download', config: WebDavConfig, payload?: any, filename?: string, authToken?: string, authIssuedAt?: string): Promise<ProxyResult> => {
     try {
-        const authToken = sessionStorage.getItem('cloudnav_auth_token');
-        const authIssuedAt = sessionStorage.getItem('lastLoginTime');
         const response = await fetch('/api/webdav', {
             method: 'POST',
             headers: {
@@ -61,30 +59,30 @@ const callWebDavProxy = async (operation: 'check' | 'upload' | 'download', confi
     }
 }
 
-export const checkWebDavConnection = async (config: WebDavConfig): Promise<{ success: boolean; error?: string }> => {
+export const checkWebDavConnection = async (config: WebDavConfig, authToken?: string, authIssuedAt?: string): Promise<{ success: boolean; error?: string }> => {
     if (!config.url || !config.username || !config.password) {
         return { success: false, error: '请先填完整 WebDAV 配置' };
     }
-    const result = await callWebDavProxy('check', config);
+    const result = await callWebDavProxy('check', config, undefined, undefined, authToken, authIssuedAt);
     return {
         success: result?.success === true,
         error: result?.success === true ? undefined : result?.error || '连接失败'
     };
 };
 
-export const uploadBackup = async (config: WebDavConfig, data: BackupPayload): Promise<{ success: boolean; error?: string }> => {
-    const result = await callWebDavProxy('upload', config, data);
+export const uploadBackup = async (config: WebDavConfig, data: BackupPayload, authToken?: string, authIssuedAt?: string): Promise<{ success: boolean; error?: string }> => {
+    const result = await callWebDavProxy('upload', config, data, undefined, authToken, authIssuedAt);
     return {
         success: result?.success === true,
         error: result?.success === true ? undefined : result?.error || '上传失败'
     };
 };
 
-export const uploadBackupWithTimestamp = async (config: WebDavConfig, data: BackupPayload): Promise<{ success: boolean; filename: string; error?: string }> => {
+export const uploadBackupWithTimestamp = async (config: WebDavConfig, data: BackupPayload, authToken?: string, authIssuedAt?: string): Promise<{ success: boolean; filename: string; error?: string }> => {
     const now = new Date();
     const timestamp = now.toISOString().replace(/[:.]/g, '-').replace('T', '_').split('.')[0];
     const filename = `cloudnav_backup_${timestamp}.json`;
-    const result = await callWebDavProxy('upload', config, data, filename);
+    const result = await callWebDavProxy('upload', config, data, filename, authToken, authIssuedAt);
     return {
         success: result?.success === true,
         filename,
@@ -92,8 +90,8 @@ export const uploadBackupWithTimestamp = async (config: WebDavConfig, data: Back
     };
 };
 
-export const downloadBackup = async (config: WebDavConfig): Promise<ProxyResult> => {
-    const result = await callWebDavProxy('download', config);
+export const downloadBackup = async (config: WebDavConfig, authToken?: string, authIssuedAt?: string): Promise<ProxyResult> => {
+    const result = await callWebDavProxy('download', config, undefined, undefined, authToken, authIssuedAt);
     
     // Check if the result looks like valid backup data
     if (result && Array.isArray(result.links) && Array.isArray(result.categories)) {

@@ -18,10 +18,12 @@ interface BackupModalProps {
   onRestoreSearchConfig: (searchConfig: SearchConfig) => void;
   aiConfig: AIConfig;
   onRestoreAIConfig: (aiConfig: AIConfig) => void;
+  authToken?: string;
+  authIssuedAt?: string;
 }
 
 const BackupModal: React.FC<BackupModalProps> = ({ 
-  isOpen, onClose, links, categories, onRestore, webDavConfig, onSaveWebDavConfig, onRestoreWebDavConfig, searchConfig, onRestoreSearchConfig, aiConfig, onRestoreAIConfig 
+  isOpen, onClose, links, categories, onRestore, webDavConfig, onSaveWebDavConfig, onRestoreWebDavConfig, searchConfig, onRestoreSearchConfig, aiConfig, onRestoreAIConfig, authToken, authIssuedAt 
 }) => {
   const [config, setConfig] = useState<WebDavConfig>(webDavConfig);
   const [isTesting, setIsTesting] = useState(false);
@@ -55,7 +57,7 @@ const BackupModal: React.FC<BackupModalProps> = ({
     setIsTesting(true);
     setTestResult(null);
     setTestMessage('');
-    const result = await checkWebDavConnection(config);
+    const result = await checkWebDavConnection(config, authToken, authIssuedAt);
     setTestResult(result.success ? 'success' : 'fail');
     setTestMessage(result.success ? '连接成功' : (result.error || '连接失败'));
     setIsTesting(false);
@@ -72,7 +74,7 @@ const BackupModal: React.FC<BackupModalProps> = ({
   const handleBackupToCloud = async () => {
     setSyncStatus('uploading');
     setStatusMsg('正在上传...');
-    const result = await uploadBackup(config, buildBackupPayload());
+    const result = await uploadBackup(config, buildBackupPayload(), authToken, authIssuedAt);
     if (result.success) {
         setSyncStatus('success');
         setStatusMsg('备份成功！');
@@ -85,7 +87,7 @@ const BackupModal: React.FC<BackupModalProps> = ({
   const handleBackupToCloudWithTimestamp = async () => {
     setSyncStatus('uploading');
     setStatusMsg('正在上传...');
-    const result = await uploadBackupWithTimestamp(config, buildBackupPayload());
+    const result = await uploadBackupWithTimestamp(config, buildBackupPayload(), authToken, authIssuedAt);
     if (result.success) {
         setSyncStatus('success');
         setStatusMsg(`备份成功！文件名: ${result.filename}`);
@@ -106,7 +108,7 @@ const BackupModal: React.FC<BackupModalProps> = ({
 
     setSyncStatus('downloading');
     setStatusMsg('正在下载...');
-    const data = await downloadBackup(config);
+    const data = await downloadBackup(config, authToken, authIssuedAt);
     
     if (data.success !== false && data.links && data.categories) {
         onRestore(data.links, data.categories);

@@ -15,11 +15,12 @@ interface SettingsModalProps {
   categories: Category[];
   onUpdateLinks: (links: LinkItem[]) => void;
   authToken: string | null;
+  authIssuedAt?: string;
 }
 
 
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
-    isOpen, onClose, config, siteSettings, onSave, links, categories, onUpdateLinks, authToken 
+    isOpen, onClose, config, siteSettings, onSave, links, categories, onUpdateLinks, authToken, authIssuedAt 
 }) => {
   const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'tools'>('site');
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
@@ -63,7 +64,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       setProgress({ current: 0, total: 0 });
       shouldStopRef.current = false;
       setDomain(window.location.origin);
-      const storedToken = sessionStorage.getItem('cloudnav_auth_token');
+      const storedToken = authToken;
       if (storedToken) setPassword(storedToken);
     }
   }, [isOpen, config, siteSettings]);
@@ -88,7 +89,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // 保存网站配置到 KV 空间
   const saveWebsiteConfigToKV = async (siteSettings: SiteSettings) => {
     try {
-        const authIssuedAt = sessionStorage.getItem('lastLoginTime');
         const response = await fetch('/api/storage', {
             method: 'POST',
             headers: {
@@ -254,7 +254,7 @@ const extBackgroundJs = `// background.js - ${localSiteSettings.navTitle || 'Clo
 const CONFIG = {
   apiBase: "${domain}",
   password: "${password}",
-  authTimestamp: "${sessionStorage.getItem('lastLoginTime') || ''}",
+  authTimestamp: "${authIssuedAt || ''}",
   siteName: "${(localSiteSettings.navTitle || 'CloudNav').replace(/"/g, '\\"')}"
 };
 const MODE_KEY = 'cloudnav_ui_mode';
@@ -582,7 +582,7 @@ function notify(title, message) {
 const extSidebarJs = `const CONFIG = {
   apiBase: "${domain}",
   password: "${password}",
-  authTimestamp: "${sessionStorage.getItem('lastLoginTime') || ''}"
+  authTimestamp: "${authIssuedAt || ''}"
 };
 const CACHE_KEY = 'cloudnav_data';
 
@@ -857,7 +857,7 @@ const extPopupHtml = `<!DOCTYPE html>
 const extPopupJs = `const CONFIG = {
   apiBase: "${domain}",
   password: "${password}",
-  authTimestamp: "${sessionStorage.getItem('lastLoginTime') || ''}"
+  authTimestamp: "${authIssuedAt || ''}"
 };
 const CACHE_KEY = 'cloudnav_data';
 
