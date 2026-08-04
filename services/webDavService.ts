@@ -24,8 +24,8 @@ type ProxyResult = {
 // This solves the CORS issue by delegating the request to the backend
 const callWebDavProxy = async (operation: 'check' | 'upload' | 'download', config: WebDavConfig, payload?: any, filename?: string): Promise<ProxyResult> => {
     try {
-        const authToken = localStorage.getItem('cloudnav_auth_token');
-        const authIssuedAt = localStorage.getItem('lastLoginTime');
+        const authToken = sessionStorage.getItem('cloudnav_auth_token');
+        const authIssuedAt = sessionStorage.getItem('lastLoginTime');
         const response = await fetch('/api/webdav', {
             method: 'POST',
             headers: {

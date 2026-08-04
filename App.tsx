@@ -358,8 +358,8 @@ function App() {
 
   const buildAuthHeaders = (token?: string | null, extraHeaders: Record<string, string> = {}) => {
     const headers: Record<string, string> = { ...extraHeaders };
-    const resolvedToken = token ?? authToken ?? localStorage.getItem(AUTH_KEY);
-    const authIssuedAt = localStorage.getItem(AUTH_TIME_KEY);
+    const resolvedToken = token ?? authToken ?? sessionStorage.getItem(AUTH_KEY);
+    const authIssuedAt = sessionStorage.getItem(AUTH_TIME_KEY);
 
     if (resolvedToken) {
       headers['x-auth-password'] = resolvedToken;
@@ -373,8 +373,8 @@ function App() {
 
   const clearAuthSession = () => {
     setAuthToken('');
-    localStorage.removeItem(AUTH_KEY);
-    localStorage.removeItem(AUTH_TIME_KEY);
+    sessionStorage.removeItem(AUTH_KEY)
+    sessionStorage.removeItem(AUTH_TIME_KEY)
   };
   
   // --- Helpers & Sync Logic ---
@@ -478,7 +478,7 @@ function App() {
             }
             
             setAuthToken('');
-            localStorage.removeItem(AUTH_KEY);
+            sessionStorage.removeItem(AUTH_KEY)
             setIsAuthOpen(true);
             setSyncStatus('error');
             return false;
@@ -635,8 +635,8 @@ function App() {
     }
 
     // Load Token and check expiry
-    const savedToken = localStorage.getItem(AUTH_KEY);
-    const lastLoginTime = localStorage.getItem(AUTH_TIME_KEY);
+    const savedToken = sessionStorage.getItem(AUTH_KEY);
+    const lastLoginTime = sessionStorage.getItem(AUTH_TIME_KEY);
     
     if (savedToken) {
       const currentTime = Date.now();
@@ -739,7 +739,7 @@ function App() {
                     } else {
                         const validateData = await validateRes.json();
                         if (validateData?.authenticatedAt) {
-                            localStorage.setItem(AUTH_TIME_KEY, String(validateData.authenticatedAt));
+                            sessionStorage.setItem(AUTH_TIME_KEY, String(validateData.authenticatedAt));
                             setAuthToken(savedToken);
                         }
                     }
@@ -994,7 +994,7 @@ function App() {
         if (authResponse.ok) {
             const authPayload = await authResponse.json();
             setAuthToken(password);
-            localStorage.setItem(AUTH_KEY, password);
+            sessionStorage.setItem(AUTH_KEY, password);
             setIsAuthOpen(false);
             setSyncStatus('saved');
             
@@ -1020,7 +1020,7 @@ function App() {
             }
             
             // 检查密码是否过期
-            const lastLoginTime = localStorage.getItem(AUTH_TIME_KEY);
+            const lastLoginTime = sessionStorage.getItem(AUTH_TIME_KEY);
             const currentTime = Date.now();
             
             if (lastLoginTime) {
@@ -1037,7 +1037,7 @@ function App() {
                 }
             }
             
-            localStorage.setItem(AUTH_TIME_KEY, String(authPayload.authenticatedAt || currentTime));
+            sessionStorage.setItem(AUTH_TIME_KEY, String(authPayload.authenticatedAt || currentTime));
             
             // 登录成功后，从服务器获取数据
             try {
