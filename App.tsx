@@ -3,7 +3,7 @@ import React, { useState, useEffect, useMemo, useRef } from 'react';
 import {
   Search, Plus, Upload, Moon, Sun, Menu,
   Trash2, Edit2, Loader2, Cloud, CheckCircle2, AlertCircle,
-  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X, ChevronRight, Star, PanelLeftClose, PanelLeftOpen
+  Pin, Settings, Lock, CloudCog, Github, GitFork, GripVertical, Save, CheckSquare, LogOut, ExternalLink, X, ChevronRight, Star, PanelLeftClose, PanelLeftOpen, Share2
 } from 'lucide-react';
 import {
   DndContext,
@@ -39,6 +39,7 @@ import CategoryTreeSelect from './components/CategoryTreeSelect';
 import SearchConfigModal from './components/SearchConfigModal';
 import ContextMenu from './components/ContextMenu';
 import QRCodeModal from './components/QRCodeModal';
+import ShareModal from './components/ShareModal';
 
 // --- 配置项 ---
 // 项目核心仓库地址
@@ -278,6 +279,7 @@ function App() {
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSearchConfigModalOpen, setIsSearchConfigModalOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [catAuthModalData, setCatAuthModalData] = useState<Category | null>(null);
   const [pendingProtectedCategoryId, setPendingProtectedCategoryId] = useState<string | null>(null);
   // 多级导航：记录用户原本想点击的子分类，解锁祖先后选中它而不是祖先本身
@@ -2381,6 +2383,14 @@ function App() {
         onSave={handleSearchConfigModalSave}
       />
 
+      <ShareModal
+        isOpen={isShareModalOpen}
+        onClose={() => setIsShareModalOpen(false)}
+        links={links}
+        authToken={authToken}
+        authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
+      />
+
       {/* Sidebar Mobile Overlay */}
       {sidebarOpen && (
         <div 
@@ -2542,6 +2552,15 @@ function App() {
                 >
                     <CloudCog size={14} />
                     <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>备份</span>
+                </button>
+
+                <button
+                    onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsShareModalOpen(true); }}
+                    className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+                    title="分享书签合集"
+                >
+                    <Share2 size={14} />
+                    <span className={`${sidebarCollapsed ? 'lg:hidden' : ''}`}>分享</span>
                 </button>
 
                 <button

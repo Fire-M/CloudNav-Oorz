@@ -77,6 +77,16 @@ export interface SearchConfig {
   selectedSource?: ExternalSearchSource | null; // 选中的搜索源
 }
 
+// 分享合集
+export interface SharedCollection {
+  id: string;          // token
+  title: string;
+  description?: string;
+  links: Pick<LinkItem, 'title' | 'url' | 'icon' | 'description'>[];
+  createdAt: number;
+  expiresAt: number;
+}
+
 export const DEFAULT_CATEGORIES: Category[] = [
   { id: 'common', name: '常用推荐', icon: 'Star' },
   { id: 'dev', name: '开发工具', icon: 'Code' },
