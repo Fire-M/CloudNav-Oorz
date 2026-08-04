@@ -67,6 +67,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
       return;
     }
 
+    console.log('Creating share:', { title, description, linkCount: checkedIds.size, expiresIn, hasAuth: !!authToken });
+
     setIsCreating(true);
     try {
       const selectedLinksData = links
@@ -86,6 +88,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
         headers['x-auth-issued-at'] = authIssuedAt;
       }
 
+      console.log('Sending request to /api/share...');
       const res = await fetch('/api/share', {
         method: 'POST',
         headers,
@@ -97,15 +100,20 @@ const ShareModal: React.FC<ShareModalProps> = ({
         })
       });
 
+      console.log('Response status:', res.status);
+
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: '创建失败' }));
+        console.error('API error:', err);
         throw new Error(err.error || '创建失败');
       }
 
       const data = await res.json();
+      console.log('Share created:', data);
       setShareUrl(data.url);
       setStep('result');
     } catch (e: any) {
+      console.error('Share creation failed:', e);
       alertDialog({ message: e.message || '创建分享失败', variant: 'danger', title: '错误' });
     } finally {
       setIsCreating(false);
