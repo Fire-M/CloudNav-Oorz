@@ -33,6 +33,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
   const [newLinksCount, setNewLinksCount] = useState(0);
   const [duplicateCount, setDuplicateCount] = useState(0);
   const [newCategoriesCount, setNewCategoriesCount] = useState(0);
+  const [mappedCategoriesCount, setMappedCategoriesCount] = useState(0);
   
   // Staging Data
   const [parsedLinks, setParsedLinks] = useState<LinkItem[]>([]);
@@ -108,14 +109,26 @@ const ImportModal: React.FC<ImportModalProps> = ({
             result = await parseJsonBackup(selectedFile);
         }
         
-        // 2. Diff Logic
-        const existingUrls = new Set(existingLinks.map(l => l.url.trim().replace(/\/$/, ''))); // Normalize URLs slightly
+        // 2. Diff Logic - URL 归一化
+        const normalizeUrl = (rawUrl: string): string => {
+            let u = rawUrl.trim().replace(/\/+$/, '');
+            if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+            try {
+                const urlObj = new URL(u);
+                urlObj.hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+                return urlObj.toString().replace(/\/+$/, '');
+            } catch {
+                return u.toLowerCase();
+            }
+        };
+
+        const existingUrls = new Set(existingLinks.map(l => normalizeUrl(l.url)));
         
         const uniqueNewLinks: LinkItem[] = [];
         let duplicates = 0;
 
         result.links.forEach(link => {
-            const normalizedUrl = link.url.trim().replace(/\/$/, '');
+            const normalizedUrl = normalizeUrl(link.url);
             if (existingUrls.has(normalizedUrl)) {
                 duplicates++;
             } else {
@@ -123,9 +136,28 @@ const ImportModal: React.FC<ImportModalProps> = ({
             }
         });
 
-        // 3. Category Diff
-        const existingCategoryNames = new Set(categories.map(c => c.name));
-        const uniqueNewCategories = result.categories.filter(c => !existingCategoryNames.has(c.name));
+        // 3. Category Diff - 模糊匹配
+        // 构建已有分类的小写名称映射
+        const existingCatLowerMap = new Map<string, string>(); // lowercase name -> id
+        categories.forEach(c => existingCatLowerMap.set(c.name.toLowerCase(), c.id));
+
+        let mappedCount = 0;
+        const uniqueNewCategories = result.categories.filter(c => {
+            const lowerName = c.name.toLowerCase();
+            // 精确匹配（忽略大小写）
+            if (existingCatLowerMap.has(lowerName)) {
+                mappedCount++;
+                return false;
+            }
+            // 包含关系匹配：已有分类包含新分类名，或新分类名包含已有分类名
+            for (const existingLower of existingCatLowerMap.keys()) {
+                if (existingLower.includes(lowerName) || lowerName.includes(existingLower)) {
+                    mappedCount++;
+                    return false;
+                }
+            }
+            return true;
+        });
 
         setParsedLinks(uniqueNewLinks);
         setParsedCategories(uniqueNewCategories);
@@ -135,6 +167,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
         setNewLinksCount(uniqueNewLinks.length);
         setDuplicateCount(duplicates);
         setNewCategoriesCount(uniqueNewCategories.length);
+        setMappedCategoriesCount(mappedCount);
         
         setStep('preview');
     } catch (error) {
@@ -162,23 +195,37 @@ const ImportModal: React.FC<ImportModalProps> = ({
           finalCategories = []; 
       } else {
           // Keep structure mode
-          // We need to merge categories carefully.
-          // Since parseBookmarks generates IDs for categories, if a category name already exists in `categories`, 
-          // we should remap the links to the existing category ID instead of creating a new duplicate-named category.
-          
+          // 模糊匹配：将导入的分类名映射到已有分类 ID
           const nameToIdMap = new Map<string, string>();
           categories.forEach(c => nameToIdMap.set(c.name, c.id));
+
+          // 模糊匹配函数：返回匹配的已有分类 ID，无则返回 null
+          const findExistingCategoryId = (catName: string): string | null => {
+              // 精确匹配（忽略大小写）
+              const exactMatch = categories.find(c => c.name.toLowerCase() === catName.toLowerCase());
+              if (exactMatch) return exactMatch.id;
+              // 包含关系匹配
+              const lowerName = catName.toLowerCase();
+              for (const c of categories) {
+                  const existingLower = c.name.toLowerCase();
+                  if (existingLower.includes(lowerName) || lowerName.includes(existingLower)) {
+                      return c.id;
+                  }
+              }
+              return null;
+          };
 
           // Valid new categories to add
           const categoriesToAdd: Category[] = [];
 
           parsedCategories.forEach(pc => {
-              if (nameToIdMap.has(pc.name)) {
-                  // Category exists, we don't add it.
-                  // But we need to know its ID to remap links.
+              const existingId = findExistingCategoryId(pc.name);
+              if (existingId) {
+                  // 分类已存在，映射到已有分类
+                  nameToIdMap.set(pc.name, existingId);
               } else {
                   categoriesToAdd.push(pc);
-                  nameToIdMap.set(pc.name, pc.id); // Add new one to map
+                  nameToIdMap.set(pc.name, pc.id);
               }
           });
 
@@ -299,7 +346,7 @@ const ImportModal: React.FC<ImportModalProps> = ({
             {step === 'preview' && (
                 <div className="space-y-6">
                     {/* Stats */}
-                    <div className="grid grid-cols-3 gap-2">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2">
                         <div className="p-3 bg-green-50 dark:bg-green-900/20 rounded-lg text-center border border-green-100 dark:border-green-900/30">
                             <div className="text-xl font-bold text-green-600 dark:text-green-400">{newLinksCount}</div>
                             <div className="text-xs text-green-700 dark:text-green-500">新增链接</div>
@@ -311,6 +358,10 @@ const ImportModal: React.FC<ImportModalProps> = ({
                          <div className="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center border border-purple-100 dark:border-purple-900/30">
                             <div className="text-xl font-bold text-purple-600 dark:text-purple-400">{importMode === 'original' ? newCategoriesCount : 0}</div>
                             <div className="text-xs text-purple-700 dark:text-purple-500">新增分类</div>
+                        </div>
+                        <div className="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center border border-blue-100 dark:border-blue-900/30">
+                            <div className="text-xl font-bold text-blue-600 dark:text-blue-400">{importMode === 'original' ? mappedCategoriesCount : 0}</div>
+                            <div className="text-xs text-blue-700 dark:text-blue-500">已映射分类</div>
                         </div>
                     </div>
 

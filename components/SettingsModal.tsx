@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { X, Save, Bot, Key, Globe, Sparkles, PauseCircle, Wrench, Box, Copy, Check, LayoutTemplate, Info, Download, Sidebar, Keyboard, MousePointerClick, AlertTriangle, Package, Zap, Menu, Upload, Link2, Shield, Trash2, Archive, Play, Square, RefreshCw } from 'lucide-react';
+import { X, Save, Bot, Key, Globe, Sparkles, PauseCircle, Wrench, Box, Copy, Check, LayoutTemplate, Info, Download, Sidebar, Keyboard, MousePointerClick, AlertTriangle, Package, Zap, Menu, Upload, Link2, Shield, Trash2, Archive, Play, Square, RefreshCw, Search } from 'lucide-react';
 import { AIConfig, LinkItem, Category, SiteSettings } from '../types';
 import { generateLinkDescription } from '../services/geminiService';
 import { confirmDialog, alertDialog } from './ConfirmDialog';
@@ -55,6 +55,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const linkCheckAbortRef = useRef(false);
   const linkCheckPauseRef = useRef(false);
 
+  // 重复书签检测状态
+  type DuplicateGroup = { normalizedUrl: string; links: LinkItem[] };
+  const [duplicateGroups, setDuplicateGroups] = useState<DuplicateGroup[]>([]);
+  const [hasScannedDuplicates, setHasScannedDuplicates] = useState(false);
+
   useEffect(() => {
     if (isOpen) {
       setLocalConfig(config);
@@ -81,6 +86,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       setLinkCheckResults([]);
       setLinkCheckProgress({ current: 0, total: 0 });
       setCurrentCheckingUrl('');
+      // 重置重复检测状态
+      setDuplicateGroups([]);
+      setHasScannedDuplicates(false);
     }
   }, [isOpen, config, siteSettings]);
 
@@ -1287,6 +1295,74 @@ document.addEventListener('DOMContentLoaded', async () => {
     setLinkCheckResults(prev => prev.filter(r => r.alive));
   };
 
+  // --- 重复书签检测逻辑 ---
+  const normalizeUrlForDedup = (rawUrl: string): string => {
+    let u = rawUrl.trim().replace(/\/+$/, '');
+    if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+    try {
+      const urlObj = new URL(u);
+      urlObj.hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+      return urlObj.toString().replace(/\/+$/, '');
+    } catch {
+      return u.toLowerCase();
+    }
+  };
+
+  const handleScanDuplicates = () => {
+    const urlMap = new Map<string, LinkItem[]>();
+    links.forEach(link => {
+      const normalized = normalizeUrlForDedup(link.url);
+      const existing = urlMap.get(normalized) || [];
+      existing.push(link);
+      urlMap.set(normalized, existing);
+    });
+    const groups: DuplicateGroup[] = [];
+    urlMap.forEach((groupLinks, normalizedUrl) => {
+      if (groupLinks.length > 1) {
+        // 按创建时间排序，最早的在前
+        groupLinks.sort((a, b) => (a.createdAt || 0) - (b.createdAt || 0));
+        groups.push({ normalizedUrl, links: groupLinks });
+      }
+    });
+    setDuplicateGroups(groups);
+    setHasScannedDuplicates(true);
+  };
+
+  const handleAutoCleanDuplicates = async () => {
+    if (duplicateGroups.length === 0) return;
+    const totalToRemove = duplicateGroups.reduce((sum, g) => sum + (g.links.length - 1), 0);
+    const confirmed = await confirmDialog({
+      title: '自动清理重复链接',
+      message: `发现 ${duplicateGroups.length} 组重复，将保留每组最早的一个，删除其余 ${totalToRemove} 个。确认？`,
+      confirmText: '确认清理',
+      variant: 'warning'
+    });
+    if (!confirmed) return;
+    const idsToRemove = new Set<string>();
+    duplicateGroups.forEach(group => {
+      // 保留第一个（最早的），删除其余
+      group.links.slice(1).forEach(l => idsToRemove.add(l.id));
+    });
+    const updatedLinks = links.filter(l => !idsToRemove.has(l.id));
+    onUpdateLinks(updatedLinks);
+    // 重新扫描
+    handleScanDuplicates();
+  };
+
+  const handleRemoveDuplicate = (groupId: string, linkId: string) => {
+    const updatedLinks = links.filter(l => l.id !== linkId);
+    onUpdateLinks(updatedLinks);
+    // 更新本地分组
+    setDuplicateGroups(prev => {
+      const newGroups = prev.map(g => {
+        if (g.normalizedUrl !== groupId) return g;
+        const newLinks = g.links.filter(l => l.id !== linkId);
+        return { ...g, links: newLinks };
+      }).filter(g => g.links.length > 1);
+      return newGroups;
+    });
+  };
+
   if (!isOpen) return null;
 
   const tabs = [
@@ -1813,6 +1889,99 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 )}
                             </div>
                         )}
+
+                        {/* 重复书签检测 */}
+                        <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-700 mt-6">
+                            <h4 className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
+                                <AlertTriangle size={18} className="text-amber-500" />
+                                重复书签检测
+                            </h4>
+                            <p className="text-xs text-slate-500 dark:text-slate-400">
+                                扫描所有书签，找出 URL 相同的重复项并清理。
+                            </p>
+
+                            {!hasScannedDuplicates ? (
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <div className="flex items-center justify-between">
+                                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                                            共 <span className="font-bold text-slate-800 dark:text-slate-200">{links.length}</span> 个书签待扫描
+                                        </div>
+                                        <button
+                                            onClick={handleScanDuplicates}
+                                            disabled={links.length === 0}
+                                            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                                        >
+                                            <Search size={14} /> 扫描重复
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {/* 扫描结果摘要 */}
+                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                                        <div className="flex items-center justify-between mb-2">
+                                            <div className="text-sm text-slate-600 dark:text-slate-400">
+                                                {duplicateGroups.length > 0
+                                                    ? `发现 ${duplicateGroups.length} 组重复，共 ${duplicateGroups.reduce((s, g) => s + g.links.length - 1, 0)} 个冗余链接`
+                                                    : '未发现重复链接'}
+                                            </div>
+                                            <button
+                                                onClick={() => { setHasScannedDuplicates(false); setDuplicateGroups([]); }}
+                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg transition-colors"
+                                            >
+                                                <RefreshCw size={12} /> 重新扫描
+                                            </button>
+                                        </div>
+                                        {duplicateGroups.length > 0 && (
+                                            <button
+                                                onClick={handleAutoCleanDuplicates}
+                                                className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-white bg-amber-600 hover:bg-amber-700 rounded-lg transition-colors"
+                                            >
+                                                自动保留最早的，删除其余
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {/* 重复组列表 */}
+                                    {duplicateGroups.map((group, idx) => (
+                                        <div key={group.normalizedUrl} className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg p-3 space-y-2">
+                                            <div className="text-xs text-slate-400 truncate mb-1">
+                                                第 {idx + 1} 组: {group.normalizedUrl}
+                                            </div>
+                                            {group.links.map((link, linkIdx) => (
+                                                <div key={link.id} className="flex items-center justify-between py-1.5 px-2 rounded bg-slate-50 dark:bg-slate-700/50">
+                                                    <div className="flex-1 min-w-0 mr-2">
+                                                        <div className="text-sm text-slate-700 dark:text-slate-300 truncate">
+                                                            {link.title}
+                                                            {linkIdx === 0 && <span className="ml-1.5 text-xs text-green-500">(最早)</span>}
+                                                        </div>
+                                                        <div className="text-xs text-slate-400">
+                                                            {link.createdAt ? new Date(link.createdAt).toLocaleDateString() : ''}
+                                                        </div>
+                                                    </div>
+                                                    {linkIdx > 0 && (
+                                                        <button
+                                                            onClick={() => handleRemoveDuplicate(group.normalizedUrl, link.id)}
+                                                            className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded transition-colors shrink-0"
+                                                        >
+                                                            <Trash2 size={10} /> 删除
+                                                        </button>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ))}
+
+                                    {/* 无重复 */}
+                                    {duplicateGroups.length === 0 && (
+                                        <div className="text-center py-6 text-sm text-green-600 dark:text-green-400">
+                                            <Check size={24} className="mx-auto mb-2" />
+                                            没有重复书签！
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
                     </div>
                 )}
 

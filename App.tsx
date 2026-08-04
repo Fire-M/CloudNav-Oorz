@@ -3159,6 +3159,7 @@ function App() {
             initialData={editingLink || (prefillLink as LinkItem)}
             aiConfig={aiConfig}
             defaultCategoryId={selectedCategory !== 'all' ? selectedCategory : undefined}
+            existingLinks={links}
           />
 
           {/* 右键菜单 */}

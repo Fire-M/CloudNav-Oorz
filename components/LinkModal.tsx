@@ -1,8 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { X, Sparkles, Loader2, Pin, Wand2, Trash2 } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import { X, Sparkles, Loader2, Pin, Wand2, Trash2, Lightbulb } from 'lucide-react';
 import { LinkItem, Category, AIConfig } from '../types';
 import { generateLinkDescription, suggestCategory } from '../services/geminiService';
-import { alertDialog } from './ConfirmDialog';
+import { alertDialog, confirmDialog } from './ConfirmDialog';
 import CategoryTreeSelect from './CategoryTreeSelect';
 
 interface LinkModalProps {
@@ -14,9 +14,10 @@ interface LinkModalProps {
   initialData?: LinkItem;
   aiConfig: AIConfig;
   defaultCategoryId?: string;
+  existingLinks?: LinkItem[];
 }
 
-const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete, categories, initialData, aiConfig, defaultCategoryId }) => {
+const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete, categories, initialData, aiConfig, defaultCategoryId, existingLinks = [] }) => {
   const [title, setTitle] = useState('');
   const [url, setUrl] = useState('');
   const [description, setDescription] = useState('');
@@ -28,6 +29,9 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
   const [autoFetchIcon, setAutoFetchIcon] = useState(true);
   const [batchMode, setBatchMode] = useState(false);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
+  const [aiSuggestedCategory, setAiSuggestedCategory] = useState<string | null>(null);
+  const [isSuggestingCategory, setIsSuggestingCategory] = useState(false);
+  const suggestTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   
   // 当模态框关闭时，重置批量模式为默认关闭状态
   useEffect(() => {
@@ -68,6 +72,40 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
       }
     }
   }, [isOpen, initialData, categories, defaultCategoryId]);
+
+  // URL 归一化：去尾部 /、忽略 www.、统一小写域名
+  const normalizeUrl = (rawUrl: string): string => {
+    let u = rawUrl.trim().replace(/\/+$/, '');
+    if (!u.startsWith('http://') && !u.startsWith('https://')) u = 'https://' + u;
+    try {
+      const urlObj = new URL(u);
+      urlObj.hostname = urlObj.hostname.toLowerCase().replace(/^www\./, '');
+      return urlObj.toString().replace(/\/+$/, '');
+    } catch {
+      return u.toLowerCase();
+    }
+  };
+
+  // URL 失焦时自动触发分类建议
+  const handleUrlBlur = () => {
+    if (!url || !title || initialData) return; // 仅新增模式
+    if (!aiConfig.apiKey) return;
+
+    if (suggestTimerRef.current) clearTimeout(suggestTimerRef.current);
+    suggestTimerRef.current = setTimeout(async () => {
+      setIsSuggestingCategory(true);
+      try {
+        const cat = await suggestCategory(title, url, categories, aiConfig);
+        if (cat && categories.find(c => c.id === cat)) {
+          setAiSuggestedCategory(cat);
+        }
+      } catch {
+        // ignore
+      } finally {
+        setIsSuggestingCategory(false);
+      }
+    }, 600);
+  };
 
   // 当URL变化且启用自动获取图标时，自动获取图标
   useEffect(() => {
@@ -118,6 +156,22 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
     let finalUrl = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       finalUrl = 'https://' + url;
+    }
+
+    // 重复检测（仅新增模式）
+    if (!initialData && existingLinks.length > 0) {
+      const normalizedNew = normalizeUrl(finalUrl);
+      const duplicate = existingLinks.find(l => normalizeUrl(l.url) === normalizedNew);
+      if (duplicate) {
+        const confirmed = await confirmDialog({
+          title: '发现重复链接',
+          message: `已存在相同链接「${duplicate.title}」，是否仍要添加？`,
+          confirmText: '仍要添加',
+          cancelText: '取消',
+          variant: 'warning'
+        });
+        if (!confirmed) return;
+      }
     }
 
     onSave({
@@ -249,6 +303,7 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
                 required
                 value={url}
                 onChange={(e) => setUrl(e.target.value)}
+                onBlur={handleUrlBlur}
                 className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none transition-all"
                 placeholder="example.com 或 https://..."
                 />
@@ -333,7 +388,30 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
           </div>
 
           <div>
-            <label className="block text-sm font-medium mb-1 dark:text-slate-300">分类</label>
+            <label className="block text-sm font-medium mb-1 dark:text-slate-300">
+              分类
+              {isSuggestingCategory && <span className="ml-2 text-xs text-purple-500 animate-pulse">AI 正在推荐...</span>}
+              {aiSuggestedCategory && !isSuggestingCategory && (
+                <span className="ml-2 text-xs text-purple-500 flex items-center gap-1 inline-flex">
+                  <Lightbulb size={12} />
+                  AI 建议: {categories.find(c => c.id === aiSuggestedCategory)?.name}
+                  <button
+                    type="button"
+                    onClick={() => { setCategoryId(aiSuggestedCategory); setAiSuggestedCategory(null); }}
+                    className="underline hover:text-purple-700"
+                  >
+                    采用
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAiSuggestedCategory(null)}
+                    className="text-slate-400 hover:text-slate-600"
+                  >
+                    忽略
+                  </button>
+                </span>
+              )}
+            </label>
             <CategoryTreeSelect
               categories={categories}
               value={categoryId}
