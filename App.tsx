@@ -2535,7 +2535,7 @@ function App() {
         <div className={`border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0 ${sidebarCollapsed ? 'lg:p-2' : 'p-4'}`}>
 
             {!needsEditAuth() && (
-            <div className={`grid grid-cols-3 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-1 lg:gap-1.5' : ''}`}>
+            <div className={`grid grid-cols-4 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-2 lg:gap-1.5' : ''}`}>
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
                     className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
