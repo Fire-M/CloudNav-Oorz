@@ -86,68 +86,45 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
     onClose();
   };
 
-  // 缓存自定义图标到KV空间
-  const cacheCustomIcon = async (url: string, iconUrl: string) => {
+  const handleFetchIcon = async () => {
+    if (!url) return;
+    
+    setIsFetchingIcon(true);
     try {
       let domain = url;
+      if (!domain.startsWith('http://') && !domain.startsWith('https://')) {
+        domain = 'https://' + domain;
+      }
+      
       if (domain.startsWith('http://') || domain.startsWith('https://')) {
         const urlObj = new URL(domain);
         domain = urlObj.hostname;
       }
       
-      // 将自定义图标保存到KV缓存
-      const authToken = localStorage.getItem('cloudnav_auth_token');
-      if (authToken) {
-        const authIssuedAt = localStorage.getItem('lastLoginTime');
-        const response = await fetch('/api/storage', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'x-auth-password': authToken,
-            ...(authIssuedAt ? { 'x-auth-issued-at': authIssuedAt } : {})
-          },
-          body: JSON.stringify({
-            saveConfig: 'favicon',
-            domain: domain,
-            icon: iconUrl
-          })
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          return data.icon || iconUrl;
-        }
-      }
-    } catch (error) {
-      console.log("Failed to cache custom icon", error);
+      const iconUrl = `https://www.faviconextractor.com/favicon/${encodeURIComponent(domain)}?larger=true`;
+      setIcon(iconUrl);
+    } catch (e) {
+      console.error("Failed to fetch icon", e);
+      alertDialog({ message: "无法获取图标，请检查URL是否正确", variant: 'warning', title: '获取图标失败' });
+    } finally {
+      setIsFetchingIcon(false);
     }
-
-    return iconUrl;
   };
 
   const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
-    
     if (!title || !url) return;
     
-    // 确保URL有协议前缀
     let finalUrl = url;
     if (!url.startsWith('http://') && !url.startsWith('https://')) {
       finalUrl = 'https://' + url;
     }
 
-    let finalIcon = icon;
-    if (finalIcon) {
-      finalIcon = await cacheCustomIcon(finalUrl, finalIcon);
-      setIcon(finalIcon);
-    }
-    
-    // 保存链接数据
     onSave({
       id: initialData?.id || '',
       title,
       url: finalUrl,
-      icon: finalIcon,
+      icon: icon,
       description,
       categoryId,
       pinned
@@ -156,13 +133,11 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
     // 批量模式下不关闭窗口，只显示成功提示
     if (batchMode) {
       setShowSuccessMessage(true);
-      // 重置表单，但保留分类和批量模式设置
       setTitle('');
       setUrl('');
       setIcon('');
       setDescription('');
       setPinned(false);
-      // 如果开启自动获取图标，尝试获取新图标
       if (autoFetchIcon && finalUrl) {
         handleFetchIcon();
       }
@@ -194,72 +169,6 @@ const LinkModal: React.FC<LinkModalProps> = ({ isOpen, onClose, onSave, onDelete
         console.error("AI Assist failed", e);
     } finally {
         setIsGenerating(false);
-    }
-  };
-
-  const handleFetchIcon = async () => {
-    if (!url) return;
-    
-    setIsFetchingIcon(true);
-    try {
-      // 提取域名
-      let domain = url;
-      // 如果URL没有协议前缀，添加https://作为默认协议
-      if (!url.startsWith('http://') && !url.startsWith('https://')) {
-        domain = 'https://' + url;
-      }
-      
-      if (domain.startsWith('http://') || domain.startsWith('https://')) {
-        const urlObj = new URL(domain);
-        domain = urlObj.hostname;
-      }
-      
-      // 先尝试从KV缓存获取图标
-      try {
-        const response = await fetch(`/api/storage?getConfig=favicon&domain=${encodeURIComponent(domain)}&fetch=true`);
-        if (response.ok) {
-          const data = await response.json();
-          if (data.cached && data.icon) {
-            setIcon(data.icon);
-            setIsFetchingIcon(false);
-            return;
-          }
-        }
-      } catch (error) {
-        console.log("Failed to fetch cached icon, will generate new one", error);
-      }
-      
-      // 如果缓存中没有，则生成新图标
-      const iconUrl = `https://www.faviconextractor.com/favicon/${domain}?larger=true`;
-      setIcon(iconUrl);
-      
-      // 将图标保存到KV缓存
-      try {
-        const authToken = localStorage.getItem('cloudnav_auth_token');
-        if (authToken) {
-          const authIssuedAt = localStorage.getItem('lastLoginTime');
-          await fetch('/api/storage', {
-            method: 'POST',
-            headers: {
-              'Content-Type': 'application/json',
-              'x-auth-password': authToken,
-              ...(authIssuedAt ? { 'x-auth-issued-at': authIssuedAt } : {})
-            },
-            body: JSON.stringify({
-              saveConfig: 'favicon',
-              domain: domain,
-              icon: iconUrl
-            })
-          });
-        }
-      } catch (error) {
-        console.log("Failed to cache icon", error);
-      }
-    } catch (e) {
-      console.error("Failed to fetch icon", e);
-      alertDialog({ message: "无法获取图标，请检查URL是否正确", variant: 'warning', title: '获取图标失败' });
-    } finally {
-      setIsFetchingIcon(false);
     }
   };
 

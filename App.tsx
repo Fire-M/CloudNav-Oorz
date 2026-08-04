@@ -190,22 +190,17 @@ function App() {
   const themeButtonRef = useRef<HTMLButtonElement | null>(null);
   const themeTransitionTimerRef = useRef<number | null>(null);
 
-  // 图标缓存：domain → base64 data URL，避免将大体积图标存入 app_data
-  const iconCache = useRef<Map<string, string>>(new Map());
-
-  // 根据链接获取图标：优先内存缓存，其次 link.icon（兼容非 base64 的外部 URL）
+  // 根据链接获取图标：优先 link.icon（URL），否则用 favicon 服务兜底
   const getLinkIcon = (link: LinkItem): string | undefined => {
+    if (link.icon) return link.icon;
     if (link.url) {
       try {
         let url = link.url;
         if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
         const domain = new URL(url).hostname;
-        const cached = iconCache.current.get(domain);
-        if (cached) return cached;
+        return `https://www.faviconextractor.com/favicon/${encodeURIComponent(domain)}?larger=true`;
       } catch {}
     }
-    // 兼容：非 base64 的图标（如外部 URL）直接返回
-    if (link.icon && !link.icon.startsWith('data:')) return link.icon;
     return undefined;
   };
 
@@ -429,15 +424,9 @@ function App() {
           return link;
         });
 
-        // 迁移：将本地缓存中的 base64 图标提取到内存缓存
+        // 迁移：将本地缓存中的 base64 图标清除
         loadedLinks = loadedLinks.map(link => {
-          if (link.icon && link.icon.startsWith('data:') && link.url) {
-            try {
-              let url = link.url;
-              if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-              const domain = new URL(url).hostname;
-              iconCache.current.set(domain, link.icon);
-            } catch {}
+          if (link.icon && link.icon.startsWith('data:')) {
             const { icon, ...rest } = link;
             return rest as LinkItem;
           }
@@ -468,21 +457,12 @@ function App() {
     }
     setSyncStatus('saving');
     try {
-        // 保存前剥离 base64 图标，大幅减小请求体积
-        const linksWithoutIcons = newLinks.map(link => {
-          if (link.icon && link.icon.startsWith('data:')) {
-            const { icon, ...rest } = link;
-            return rest;
-          }
-          return link;
-        });
-
         const response = await fetch('/api/storage', {
             method: 'POST',
             headers: buildAuthHeaders(token, {
                 'Content-Type': 'application/json',
             }),
-            body: JSON.stringify({ links: linksWithoutIcons, categories: newCategories })
+            body: JSON.stringify({ links: newLinks, categories: newCategories })
         });
 
         if (response.status === 401) {
@@ -517,28 +497,13 @@ function App() {
   };
 
   const updateData = (newLinks: LinkItem[], newCategories: Category[]) => {
-      // 提取 base64 图标到内存缓存，并从 link 对象中剥离
-      const cleanedLinks = newLinks.map(link => {
-        if (link.icon && link.icon.startsWith('data:') && link.url) {
-          try {
-            let url = link.url;
-            if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-            const domain = new URL(url).hostname;
-            iconCache.current.set(domain, link.icon);
-          } catch {}
-          const { icon, ...rest } = link;
-          return rest as LinkItem;
-        }
-        return link;
-      });
-
       // 1. Optimistic UI Update
-      setLinks(cleanedLinks);
+      setLinks(newLinks);
       setCategories(newCategories);
 
       // 2. Sync to Cloud (if authenticated)
       if (authToken) {
-          syncToCloud(cleanedLinks, newCategories, authToken);
+          syncToCloud(newLinks, newCategories, authToken);
       }
   };
 
@@ -606,7 +571,7 @@ function App() {
     if (!contextMenu.link) return;
     if (!requireAuth()) return;
     
-    setEditingLink({ ...contextMenu.link, icon: getLinkIcon(contextMenu.link) || '' });
+    setEditingLink(contextMenu.link);
     setIsModalOpen(true);
     closeContextMenu();
   };
@@ -660,70 +625,7 @@ function App() {
     closeContextMenu();
   };
 
-  // 加载链接图标缓存（存入内存 iconCache，不再回写 link.icon）
-  const loadLinkIcons = async (linksToLoad: LinkItem[], categoriesToUse: Category[]) => {
-    
-    const domainsToFetch = new Set<string>();
-    
-    // 收集所有缺少图标的域名
-    for (const link of linksToLoad) {
-      if (link.url) {
-        try {
-          let domain = link.url;
-          if (!link.url.startsWith('http://') && !link.url.startsWith('https://')) {
-            domain = 'https://' + link.url;
-          }
-          
-          if (domain.startsWith('http://') || domain.startsWith('https://')) {
-            const urlObj = new URL(domain);
-            domain = urlObj.hostname;
-            // 内存缓存中没有才需要请求
-            if (!iconCache.current.has(domain)) {
-              domainsToFetch.add(domain);
-            }
-          }
-        } catch (e) {
-          console.error("Failed to parse URL for icon loading", e);
-        }
-      }
-    }
-    
-    // 批量获取图标
-    if (domainsToFetch.size > 0) {
-      const iconPromises = Array.from(domainsToFetch).map(async (domain) => {
-        try {
-          const response = await fetch(`/api/storage?getConfig=favicon&domain=${encodeURIComponent(domain)}&fetch=true`);
-          if (response.ok) {
-            const data = await response.json();
-            if (data.cached && data.icon) {
-              return { domain, icon: data.icon };
-            }
-          }
-        } catch (error) {
-          console.log(`Failed to fetch cached icon for ${domain}`, error);
-        }
-        return null;
-      });
-      
-      const iconResults = await Promise.all(iconPromises);
-      
-      // 将图标存入内存缓存
-      let hasNewIcons = false;
-      iconResults.forEach(result => {
-        if (result && result.icon) {
-          iconCache.current.set(result.domain, result.icon);
-          hasNewIcons = true;
-        }
-      });
-      
-      // 触发 UI 刷新以显示新加载的图标
-      if (hasNewIcons) {
-        setLinks(prev => [...prev]);
-      }
-    }
-  };
-
-  // --- Effects ---
+  // --- Context Menu Functions ---
 
   useEffect(() => {
     // Theme init
@@ -850,29 +752,20 @@ function App() {
 
         // 处理云端数据（直接使用云端数据，避免本地缓存导致数据不同步）
         if (cloudData) {
-            // 迁移：将已有数据中的 base64 图标提取到内存缓存，并从 links 中剥离
-            const migratedLinks = (cloudData.links || []).map((link: LinkItem) => {
-              if (link.icon && link.icon.startsWith('data:') && link.url) {
-                try {
-                  let url = link.url;
-                  if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-                  const domain = new URL(url).hostname;
-                  iconCache.current.set(domain, link.icon);
-                } catch {}
+            // 清除旧数据中残留的 base64 图标
+            const cleanedLinks = (cloudData.links || []).map((link: LinkItem) => {
+              if (link.icon && link.icon.startsWith('data:')) {
                 const { icon, ...rest } = link;
                 return rest as LinkItem;
               }
               return link;
             });
-            setLinks(migratedLinks);
+            setLinks(cleanedLinks);
             const loadedCats = cloudData.categories && cloudData.categories.length > 0
                 ? cloudData.categories
                 : [{ id: 'common', name: '常用推荐', icon: 'Star' }];
             setCategories(loadedCats);
             setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-            if (migratedLinks.length > 0) {
-                loadLinkIcons(migratedLinks, loadedCats);
-            }
         } else {
             // 请求失败时回退本地缓存（仅用于离线场景）
             loadFromLocal();
@@ -1155,36 +1048,24 @@ function App() {
                     const data = await res.json();
                     // 如果服务器有数据，使用服务器数据
                     if (data.links && data.links.length > 0) {
-                        // 迁移：将已有数据中的 base64 图标提取到内存缓存
-                        const migratedLinks = data.links.map((link: LinkItem) => {
-                          if (link.icon && link.icon.startsWith('data:') && link.url) {
-                            try {
-                              let url = link.url;
-                              if (!url.startsWith('http://') && !url.startsWith('https://')) url = 'https://' + url;
-                              const domain = new URL(url).hostname;
-                              iconCache.current.set(domain, link.icon);
-                            } catch {}
+                        // 清除旧数据中残留的 base64 图标
+                        const cleanedLinks = data.links.map((link: LinkItem) => {
+                          if (link.icon && link.icon.startsWith('data:')) {
                             const { icon, ...rest } = link;
                             return rest as LinkItem;
                           }
                           return link;
                         });
-                        setLinks(migratedLinks);
+                        setLinks(cleanedLinks);
                         const loadedCats = data.categories || DEFAULT_CATEGORIES;
                         setCategories(loadedCats);
                         setSelectedCategory(prev => prev === 'all' ? loadedCats.find(c => !c.parentId)?.id || 'common' : prev);
-                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: migratedLinks, categories: loadedCats }));
-                        
-                        // 加载链接图标缓存
-                        loadLinkIcons(migratedLinks, loadedCats);
+                        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links: cleanedLinks, categories: loadedCats }));
                     } else {
                         // 如果服务器没有数据，使用本地数据
                         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify({ links, categories }));
                         // 并将本地数据同步到服务器
                         syncToCloud(links, categories, password);
-                        
-                        // 加载链接图标缓存
-                        loadLinkIcons(links, categories);
                     }
                 } 
             } catch (e) {
@@ -1381,9 +1262,7 @@ function App() {
       processedUrl = 'https://' + processedUrl;
     }
     
-    // 如果弹窗未返回图标，保留原有图标（从缓存中查找）
-    const finalIcon = data.icon || getLinkIcon(editingLink) || '';
-    const updated = links.map(l => l.id === editingLink.id ? { ...l, ...data, url: processedUrl, icon: finalIcon } : l);
+    const updated = links.map(l => l.id === editingLink.id ? { ...l, ...data, url: processedUrl } : l);
     updateData(updated, categories);
     setEditingLink(undefined);
   };
@@ -2416,7 +2295,7 @@ function App() {
                   <Star size={18} fill={link.favorite ? 'currentColor' : 'none'} />
               </button>
               <button
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(!requireAuth()) return; setEditingLink({ ...link, icon: getLinkIcon(link) || '' }); setIsModalOpen(true); }}
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); if(!requireAuth()) return; setEditingLink(link); setIsModalOpen(true); }}
                   className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-md"
                   title="编辑"
               >
