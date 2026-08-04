@@ -22,7 +22,7 @@ interface SettingsModalProps {
 const SettingsModal: React.FC<SettingsModalProps> = ({ 
     isOpen, onClose, config, siteSettings, onSave, links, categories, onUpdateLinks, authToken, authIssuedAt 
 }) => {
-  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'tools'>('site');
+  const [activeTab, setActiveTab] = useState<'site' | 'ai' | 'tools' | 'linkcheck'>('site');
   const [localConfig, setLocalConfig] = useState<AIConfig>(config);
   
   const [localSiteSettings, setLocalSiteSettings] = useState<SiteSettings>(() => ({
@@ -1293,6 +1293,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     { id: 'site', label: '网站设置', icon: LayoutTemplate },
     { id: 'ai', label: 'AI 设置', icon: Bot },
     { id: 'tools', label: '扩展工具', icon: Wrench },
+    { id: 'linkcheck', label: '死链检测', icon: Shield },
   ];
 
   return (
@@ -1637,180 +1638,181 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 {renderCodeBlock('sidebar.js', extSidebarJs)}
                             </div>
                         </div>
+                    </div>
+                )}
 
-                        {/* 死链检测 */}
-                        <div className="space-y-4 pt-6 border-t border-slate-200 dark:border-slate-700">
-                            <h4 className="font-medium text-slate-800 dark:text-slate-200 flex items-center gap-2">
-                                <Shield size={18} className="text-red-500" />
-                                死链检测
-                            </h4>
-                            <p className="text-xs text-slate-500 dark:text-slate-400">
-                                检测所有书签是否可访问，死链可自动修复为 Wayback Machine 归档版本。
-                            </p>
+                {activeTab === 'linkcheck' && (
+                    <div className="space-y-4 animate-in fade-in duration-300">
+                        <div className="flex items-center gap-2 mb-2">
+                            <Shield size={20} className="text-red-500" />
+                            <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-200">死链检测</h3>
+                        </div>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                            检测所有书签是否可访问，死链可自动修复为 Wayback Machine 归档版本。
+                        </p>
 
-                            {/* 空闲态 */}
-                            {linkCheckStatus === 'idle' && (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                                            共 <span className="font-bold text-slate-800 dark:text-slate-200">{links.length}</span> 个书签待检测
-                                        </div>
-                                        <button
-                                            onClick={handleStartLinkCheck}
-                                            disabled={links.length === 0}
-                                            className="flex items-center gap-2 px-4 py-2 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
-                                        >
-                                            <Play size={14} /> 开始检测
+                        {/* 空闲态 */}
+                        {linkCheckStatus === 'idle' && (
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                        共 <span className="font-bold text-slate-800 dark:text-slate-200">{links.length}</span> 个书签待检测
+                                    </div>
+                                    <button
+                                        onClick={handleStartLinkCheck}
+                                        disabled={links.length === 0}
+                                        className="flex items-center gap-2 px-5 py-2.5 bg-red-600 hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm font-medium rounded-lg transition-colors"
+                                    >
+                                        <Play size={16} /> 开始检测
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* 检测中 / 暂停 */}
+                        {(linkCheckStatus === 'running' || linkCheckStatus === 'paused') && (
+                            <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-4">
+                                <div className="flex items-center justify-between">
+                                    <div className="text-sm text-slate-600 dark:text-slate-400">
+                                        已检测 <span className="font-bold text-slate-800 dark:text-slate-200">{linkCheckProgress.current}</span> / {linkCheckProgress.total}
+                                    </div>
+                                    <div className="flex gap-2">
+                                        {linkCheckStatus === 'running' ? (
+                                            <button onClick={handlePauseLinkCheck} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg transition-colors">
+                                                <PauseCircle size={14} /> 暂停
+                                            </button>
+                                        ) : (
+                                            <button onClick={handleResumeLinkCheck} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-lg transition-colors">
+                                                <Play size={14} /> 继续
+                                            </button>
+                                        )}
+                                        <button onClick={handleCancelLinkCheck} className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 rounded-lg transition-colors">
+                                            <Square size={14} /> 取消
                                         </button>
                                     </div>
                                 </div>
-                            )}
-
-                            {/* 检测中 / 暂停 */}
-                            {(linkCheckStatus === 'running' || linkCheckStatus === 'paused') && (
-                                <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700 space-y-3">
-                                    <div className="flex items-center justify-between">
-                                        <div className="text-sm text-slate-600 dark:text-slate-400">
-                                            已检测 <span className="font-bold text-slate-800 dark:text-slate-200">{linkCheckProgress.current}</span> / {linkCheckProgress.total}
-                                        </div>
-                                        <div className="flex gap-2">
-                                            {linkCheckStatus === 'running' ? (
-                                                <button onClick={handlePauseLinkCheck} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-600 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg transition-colors">
-                                                    <PauseCircle size={12} /> 暂停
-                                                </button>
-                                            ) : (
-                                                <button onClick={handleResumeLinkCheck} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-green-600 bg-green-50 hover:bg-green-100 dark:bg-green-900/30 dark:text-green-400 rounded-lg transition-colors">
-                                                    <Play size={12} /> 继续
-                                                </button>
-                                            )}
-                                            <button onClick={handleCancelLinkCheck} className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-slate-600 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-400 rounded-lg transition-colors">
-                                                <Square size={12} /> 取消
-                                            </button>
-                                        </div>
-                                    </div>
-                                    {/* 进度条 */}
-                                    <div className="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-red-500 transition-all duration-300"
-                                            style={{ width: `${linkCheckProgress.total > 0 ? (linkCheckProgress.current / linkCheckProgress.total) * 100 : 0}%` }}
-                                        />
-                                    </div>
-                                    {currentCheckingUrl && (
-                                        <div className="text-xs text-slate-400 truncate">
-                                            正在检测: {currentCheckingUrl}
-                                        </div>
-                                    )}
-                                    {/* 实时死链计数 */}
-                                    {linkCheckResults.filter(r => !r.alive).length > 0 && (
-                                        <div className="text-xs text-red-500">
-                                            已发现 {linkCheckResults.filter(r => !r.alive).length} 个死链
-                                        </div>
-                                    )}
+                                {/* 进度条 */}
+                                <div className="w-full h-2.5 bg-slate-200 dark:bg-slate-700 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full bg-red-500 transition-all duration-300"
+                                        style={{ width: `${linkCheckProgress.total > 0 ? (linkCheckProgress.current / linkCheckProgress.total) * 100 : 0}%` }}
+                                    />
                                 </div>
-                            )}
-
-                            {/* 完成态 */}
-                            {linkCheckStatus === 'done' && (
-                                <div className="space-y-3">
-                                    {/* 统计摘要 */}
-                                    <div className="bg-slate-50 dark:bg-slate-800/50 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
-                                        <div className="flex items-center justify-between mb-2">
-                                            <div className="text-sm text-slate-600 dark:text-slate-400">
-                                                检测完成，共 {linkCheckProgress.total} 个链接
-                                            </div>
-                                            <button
-                                                onClick={handleStartLinkCheck}
-                                                className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg transition-colors"
-                                            >
-                                                <RefreshCw size={12} /> 重新检测
-                                            </button>
-                                        </div>
-                                        <div className="flex gap-4 text-xs">
-                                            <span className="text-green-600 dark:text-green-400">
-                                                存活: {linkCheckResults.filter(r => r.alive).length}
-                                            </span>
-                                            <span className="text-red-600 dark:text-red-400">
-                                                死链: {linkCheckResults.filter(r => !r.alive).length}
-                                            </span>
-                                            <span className="text-amber-600 dark:text-amber-400">
-                                                有归档: {linkCheckResults.filter(r => !r.alive && r.archiveUrl).length}
-                                            </span>
-                                        </div>
+                                {currentCheckingUrl && (
+                                    <div className="text-xs text-slate-400 truncate">
+                                        正在检测: {currentCheckingUrl}
                                     </div>
+                                )}
+                                {/* 实时死链计数 */}
+                                {linkCheckResults.filter(r => !r.alive).length > 0 && (
+                                    <div className="text-sm text-red-500 font-medium">
+                                        已发现 {linkCheckResults.filter(r => !r.alive).length} 个死链
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
-                                    {/* 死链列表 */}
-                                    {linkCheckResults.filter(r => !r.alive).length > 0 && (
-                                        <div className="space-y-2">
-                                            {/* 批量操作 */}
-                                            {linkCheckResults.filter(r => !r.alive && r.archiveUrl).length > 0 && (
-                                                <div className="flex gap-2">
-                                                    <button
-                                                        onClick={handleBatchUpdateArchive}
-                                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg transition-colors"
-                                                    >
-                                                        <Archive size={12} /> 全部更新为归档链接
-                                                    </button>
-                                                    <button
-                                                        onClick={handleBatchDeleteDead}
-                                                        className="flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded-lg transition-colors"
-                                                    >
-                                                        <Trash2 size={12} /> 全部删除
-                                                    </button>
-                                                </div>
-                                            )}
+                        {/* 完成态 */}
+                        {linkCheckStatus === 'done' && (
+                            <div className="space-y-4">
+                                {/* 统计摘要 */}
+                                <div className="bg-slate-50 dark:bg-slate-800/50 p-5 rounded-xl border border-slate-200 dark:border-slate-700">
+                                    <div className="flex items-center justify-between mb-3">
+                                        <div className="text-sm text-slate-600 dark:text-slate-400">
+                                            检测完成，共 {linkCheckProgress.total} 个链接
+                                        </div>
+                                        <button
+                                            onClick={handleStartLinkCheck}
+                                            className="flex items-center gap-1.5 px-3 py-2 text-xs font-medium text-blue-600 bg-blue-50 hover:bg-blue-100 dark:bg-blue-900/30 dark:text-blue-400 rounded-lg transition-colors"
+                                        >
+                                            <RefreshCw size={14} /> 重新检测
+                                        </button>
+                                    </div>
+                                    <div className="flex gap-6 text-sm">
+                                        <span className="text-green-600 dark:text-green-400 font-medium">
+                                            存活: {linkCheckResults.filter(r => r.alive).length}
+                                        </span>
+                                        <span className="text-red-600 dark:text-red-400 font-medium">
+                                            死链: {linkCheckResults.filter(r => !r.alive).length}
+                                        </span>
+                                        <span className="text-amber-600 dark:text-amber-400 font-medium">
+                                            有归档: {linkCheckResults.filter(r => !r.alive && r.archiveUrl).length}
+                                        </span>
+                                    </div>
+                                </div>
 
-                                            {/* 单个死链项 */}
-                                            <div className="max-h-64 overflow-y-auto space-y-2 pr-1">
-                                                {linkCheckResults.filter(r => !r.alive).map(result => (
-                                                    <div key={result.linkId} className="flex items-center justify-between p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
-                                                        <div className="flex-1 min-w-0 mr-3">
-                                                            <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{result.title}</div>
-                                                            <div className="text-xs text-slate-400 truncate">{result.url}</div>
-                                                            <div className="text-xs mt-1">
-                                                                {result.error ? (
-                                                                    <span className="text-red-500">{result.error === 'Timeout' ? '超时' : result.error === 'Connection failed' ? '无法连接' : result.error}</span>
-                                                                ) : (
-                                                                    <span className="text-red-500">HTTP {result.status}</span>
-                                                                )}
-                                                                {result.archiveUrl && (
-                                                                    <span className="text-amber-500 ml-2">有归档</span>
-                                                                )}
-                                                            </div>
-                                                        </div>
-                                                        <div className="flex gap-1.5 shrink-0">
-                                                            {result.archiveUrl && (
-                                                                <button
-                                                                    onClick={() => handleUpdateToArchive(result)}
-                                                                    className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded transition-colors"
-                                                                    title="更新为归档链接"
-                                                                >
-                                                                    <Archive size={10} />
-                                                                </button>
+                                {/* 死链列表 */}
+                                {linkCheckResults.filter(r => !r.alive).length > 0 && (
+                                    <div className="space-y-3">
+                                        {/* 批量操作 */}
+                                        {linkCheckResults.filter(r => !r.alive && r.archiveUrl).length > 0 && (
+                                            <div className="flex gap-2">
+                                                <button
+                                                    onClick={handleBatchUpdateArchive}
+                                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded-lg transition-colors"
+                                                >
+                                                    <Archive size={14} /> 全部更新为归档链接
+                                                </button>
+                                                <button
+                                                    onClick={handleBatchDeleteDead}
+                                                    className="flex items-center gap-1.5 px-4 py-2 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded-lg transition-colors"
+                                                >
+                                                    <Trash2 size={14} /> 全部删除
+                                                </button>
+                                            </div>
+                                        )}
+
+                                        {/* 单个死链项 */}
+                                        <div className="max-h-96 overflow-y-auto space-y-2 pr-1">
+                                            {linkCheckResults.filter(r => !r.alive).map(result => (
+                                                <div key={result.linkId} className="flex items-center justify-between p-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+                                                    <div className="flex-1 min-w-0 mr-3">
+                                                        <div className="text-sm font-medium text-slate-800 dark:text-slate-200 truncate">{result.title}</div>
+                                                        <div className="text-xs text-slate-400 truncate">{result.url}</div>
+                                                        <div className="text-xs mt-1.5">
+                                                            {result.error ? (
+                                                                <span className="text-red-500">{result.error === 'Timeout' ? '超时' : result.error === 'Connection failed' ? '无法连接' : result.error}</span>
+                                                            ) : (
+                                                                <span className="text-red-500">HTTP {result.status}</span>
                                                             )}
-                                                            <button
-                                                                onClick={() => handleDeleteDeadLink(result)}
-                                                                className="flex items-center gap-1 px-2 py-1 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded transition-colors"
-                                                                title="删除此链接"
-                                                            >
-                                                                <Trash2 size={10} />
-                                                            </button>
+                                                            {result.archiveUrl && (
+                                                                <span className="text-amber-500 ml-2">有归档</span>
+                                                            )}
                                                         </div>
                                                     </div>
-                                                ))}
-                                            </div>
+                                                    <div className="flex gap-1.5 shrink-0">
+                                                        {result.archiveUrl && (
+                                                            <button
+                                                                onClick={() => handleUpdateToArchive(result)}
+                                                                className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-amber-700 bg-amber-50 hover:bg-amber-100 dark:bg-amber-900/30 dark:text-amber-400 rounded transition-colors"
+                                                                title="更新为归档链接"
+                                                            >
+                                                                <Archive size={12} />
+                                                            </button>
+                                                        )}
+                                                        <button
+                                                            onClick={() => handleDeleteDeadLink(result)}
+                                                            className="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium text-red-700 bg-red-50 hover:bg-red-100 dark:bg-red-900/30 dark:text-red-400 rounded transition-colors"
+                                                            title="删除此链接"
+                                                        >
+                                                            <Trash2 size={12} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            ))}
                                         </div>
-                                    )}
+                                    </div>
+                                )}
 
-                                    {/* 无死链 */}
-                                    {linkCheckResults.filter(r => !r.alive).length === 0 && linkCheckResults.length > 0 && (
-                                        <div className="text-center py-6 text-sm text-green-600 dark:text-green-400">
-                                            <Check size={24} className="mx-auto mb-2" />
-                                            所有链接均正常！
-                                        </div>
-                                    )}
-                                </div>
-                            )}
-                        </div>
+                                {/* 无死链 */}
+                                {linkCheckResults.filter(r => !r.alive).length === 0 && linkCheckResults.length > 0 && (
+                                    <div className="text-center py-8 text-sm text-green-600 dark:text-green-400">
+                                        <Check size={32} className="mx-auto mb-2" />
+                                        所有链接均正常！
+                                    </div>
+                                )}
+                            </div>
+                        )}
                     </div>
                 )}
 
