@@ -1593,10 +1593,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                                 </div>
                             </div>
                             {/* 透明度调节 */}
-                            {localSiteSettings.backgroundImage && (
                             <div>
                                 <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    背景透明度 <span className="text-xs text-slate-500">({localSiteSettings.backgroundOpacity || 40}%)</span>
+                                    背景透明度 <span className="text-xs text-slate-500">({localSiteSettings.backgroundOpacity ?? 40}%)</span>
                                 </label>
                                 <div className="flex items-center gap-3">
                                     <span className="text-xs text-slate-500">透明</span>
@@ -1610,9 +1609,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     />
                                     <span className="text-xs text-slate-500">不透明</span>
                                 </div>
-                                <p className="text-xs text-slate-500 mt-1">数值越小，背景图越清晰</p>
+                                <p className="text-xs text-slate-500 mt-1">设置背景图后生效，数值越小背景图越清晰</p>
                             </div>
-                            )}
                             <div>
                                 <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 px-4 py-3">
                                     <div>
