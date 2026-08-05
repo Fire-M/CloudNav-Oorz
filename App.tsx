@@ -2113,7 +2113,9 @@ function App() {
         className={`group relative transition-all duration-200 cursor-grab active:cursor-grabbing min-w-0 max-w-full overflow-hidden hover:shadow-lg hover:shadow-green-100/50 dark:hover:shadow-green-900/20 ${
           isSortingMode || isSortingPinned
             ? 'bg-green-20 dark:bg-green-900/30 border-green-200 dark:border-green-800' 
-            : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
+            : backgroundImage
+              ? 'bg-white/60 dark:bg-slate-800/60 backdrop-blur-sm border-slate-200 dark:border-slate-700'
+              : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
         } ${isDragging ? 'shadow-2xl scale-105' : ''} ${
           isDetailedView 
             ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-green-400 dark:hover:border-green-500' 
@@ -2426,7 +2428,10 @@ function App() {
       <aside 
         className={`
           fixed lg:static inset-y-0 left-0 z-30 transform transition-all duration-300 ease-in-out
-          bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col
+          ${backgroundImage 
+            ? 'bg-white/70 dark:bg-slate-800/70 backdrop-blur-xl' 
+            : 'bg-white dark:bg-slate-800'}
+          border-r border-slate-200 dark:border-slate-700 flex flex-col
           ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
         `}
@@ -2674,7 +2679,11 @@ function App() {
       })()}
 
       {/* Main Content */}
-      <main className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-900 overflow-hidden relative">
+      <main className={`flex-1 flex flex-col h-full overflow-hidden relative ${
+        backgroundImage 
+          ? 'bg-slate-50/70 dark:bg-slate-900/70 backdrop-blur-xl' 
+          : 'bg-slate-50 dark:bg-slate-900'
+      }`}>
         
         {/* Header */}
         <header className="h-16 px-4 lg:px-8 flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shrink-0">
