@@ -1449,6 +1449,23 @@ function App() {
       if (newSiteSettings) {
           setSiteSettings(newSiteSettings);
           localStorage.setItem('cloudnav_site_settings', JSON.stringify(newSiteSettings));
+
+          console.log('newSiteSettings received:', {
+              backgroundImage: newSiteSettings.backgroundImage?.substring(0, 100),
+              backgroundImageType: newSiteSettings.backgroundImageType,
+              backgroundOpacity: newSiteSettings.backgroundOpacity
+          });
+
+          // 背景图保存到 localStorage（不需要登录，始终执行）
+          if (newSiteSettings.backgroundImage) {
+              localStorage.setItem(BACKGROUND_IMAGE_KEY, newSiteSettings.backgroundImage);
+              setBackgroundImage(newSiteSettings.backgroundImage);
+              console.log('Background image saved to localStorage, length:', newSiteSettings.backgroundImage.length);
+          } else {
+              localStorage.removeItem(BACKGROUND_IMAGE_KEY);
+              setBackgroundImage('');
+              console.log('Background image removed from localStorage (empty)');
+          }
       }
       
       if (authToken) {
@@ -1473,24 +1490,7 @@ function App() {
           
           if (newSiteSettings) {
               try {
-                  console.log('newSiteSettings received:', {
-                      backgroundImage: newSiteSettings.backgroundImage?.substring(0, 100),
-                      backgroundImageType: newSiteSettings.backgroundImageType,
-                      backgroundOpacity: newSiteSettings.backgroundOpacity
-                  });
-
-                  // 背景图保存到 localStorage（不再使用 KV）
-                  if (newSiteSettings.backgroundImage) {
-                      localStorage.setItem(BACKGROUND_IMAGE_KEY, newSiteSettings.backgroundImage);
-                      setBackgroundImage(newSiteSettings.backgroundImage);
-                      console.log('Background image saved to localStorage, length:', newSiteSettings.backgroundImage.length);
-                  } else {
-                      localStorage.removeItem(BACKGROUND_IMAGE_KEY);
-                      setBackgroundImage('');
-                      console.log('Background image removed from localStorage (empty)');
-                  }
-
-                  // 保存网站配置（不再包含背景图数据，只保存透明度和类型）
+                  // 保存网站配置到 KV（需要登录，只保存透明度等设置）
                   const configToSave = {
                       ...newSiteSettings,
                       backgroundImage: undefined, // 不存背景图到 KV
