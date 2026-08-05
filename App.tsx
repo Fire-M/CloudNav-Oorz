@@ -2387,6 +2387,7 @@ function App() {
         isOpen={isShareModalOpen}
         onClose={() => setIsShareModalOpen(false)}
         links={links}
+        categories={categories}
         authToken={authToken}
         authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
       />

@@ -7,6 +7,9 @@ interface SharedLink {
   url: string;
   icon?: string;
   description?: string;
+  categoryId?: string;
+  categoryName?: string;
+  categoryIcon?: string;
 }
 
 interface SharedCollection {
@@ -18,6 +21,43 @@ interface SharedCollection {
   expiresAt: number;
   viewCount?: number;
 }
+
+// 按分类分组
+const groupByCategory = (links: SharedLink[]): Map<string, { name: string; icon: string; links: SharedLink[] }> => {
+  const groups = new Map<string, { name: string; icon: string; links: SharedLink[] }>();
+  
+  links.forEach(link => {
+    const catId = link.categoryId || 'uncategorized';
+    const catName = link.categoryName || '未分类';
+    const catIcon = link.categoryIcon || 'Folder';
+    
+    if (!groups.has(catId)) {
+      groups.set(catId, { name: catName, icon: catIcon, links: [] });
+    }
+    groups.get(catId)!.links.push(link);
+  });
+  
+  return groups;
+};
+
+// 获取分类图标 emoji
+const getCategoryEmoji = (icon: string): string => {
+  const iconMap: Record<string, string> = {
+    'Star': '⭐', 'Code': '💻', 'Layout': '📐', 'Server': '🖥️', 'Cloud': '☁️',
+    'Atom': '⚛️', 'Box': '📦', 'FlaskConical': '🧪', 'Palette': '🎨',
+    'MousePointerClick': '👆', 'BookOpen': '📖', 'FileText': '📄', 'PenLine': '✍️',
+    'Gamepad2': '🎮', 'Film': '🎬', 'Music': '🎵', 'Bot': '🤖', 'MessageCircle': '💬',
+    'Image': '🖼️', 'Terminal': '💻', 'Folder': '📁', 'Heart': '❤️', 'Globe': '🌐',
+    'ShoppingBag': '🛍️', 'Briefcase': '💼', 'GraduationCap': '🎓', 'Home': '🏠',
+    'Coffee': '☕', 'Pizza': '🍕', 'Plane': '✈️', 'Car': '🚗', 'Bicycle': '🚲',
+    'Dumbbell': '🏋️', 'Camera': '📷', 'Headphones': '🎧', 'Tv': '📺', 'Smartphone': '📱',
+    'Laptop': '💻', 'Watch': '⌚', 'Key': '🔑', 'Lock': '🔒', 'Shield': '🛡️',
+    'Zap': '⚡', 'Fire': '🔥', 'Sun': '☀️', 'Moon': '🌙',
+    'Umbrella': '☂️', 'Map': '🗺️', 'Compass': '🧭',
+    'Anchor': '⚓', 'Rocket': '🚀', 'Sparkles': '✨', 'Crown': '👑'
+  };
+  return iconMap[icon] || '📁';
+};
 
 // 渲染分享页面 HTML
 const renderHtml = (collection: SharedCollection | null, error?: string): string => {
@@ -55,17 +95,37 @@ const renderHtml = (collection: SharedCollection | null, error?: string): string
 </html>`;
   }
 
-  const linksHtml = collection.links.map(link => `
-    <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="card">
-      <div class="card-icon">
-        ${link.icon ? `<img src="${escapeHtml(link.icon)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="icon-fallback" style="display:none">${getInitial(link.title)}</div>` : `<div class="icon-fallback">${getInitial(link.title)}</div>`}
+  // 按分类分组
+  const categoryGroups = groupByCategory(collection.links);
+  
+  // 生成分类和链接的 HTML
+  let contentHtml = '';
+  categoryGroups.forEach((group, catId) => {
+    const linksHtml = group.links.map(link => `
+      <a href="${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" class="card">
+        <div class="card-icon">
+          ${link.icon ? `<img src="${escapeHtml(link.icon)}" alt="" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="icon-fallback" style="display:none">${getInitial(link.title)}</div>` : `<div class="icon-fallback">${getInitial(link.title)}</div>`}
+        </div>
+        <div class="card-content">
+          <div class="card-title">${escapeHtml(link.title)}</div>
+          ${link.description ? `<div class="card-desc">${escapeHtml(link.description)}</div>` : ''}
+        </div>
+      </a>
+    `).join('');
+
+    contentHtml += `
+      <div class="category-section">
+        <div class="category-header">
+          <span class="category-icon">${getCategoryEmoji(group.icon)}</span>
+          <span class="category-name">${escapeHtml(group.name)}</span>
+          <span class="category-count">${group.links.length}</span>
+        </div>
+        <div class="grid">
+          ${linksHtml}
+        </div>
       </div>
-      <div class="card-content">
-        <div class="card-title">${escapeHtml(link.title)}</div>
-        ${link.description ? `<div class="card-desc">${escapeHtml(link.description)}</div>` : ''}
-      </div>
-    </a>
-  `).join('');
+    `;
+  });
 
   const expiresIn = collection.expiresAt - Math.floor(Date.now() / 1000);
   const expiresInText = expiresIn > 3600 
@@ -94,6 +154,9 @@ const renderHtml = (collection: SharedCollection | null, error?: string): string
       .card-desc { color: #94a3b8; }
       .footer { color: #64748b; }
       .meta { color: #64748b; background: rgba(255,255,255,0.1); }
+      .category-header { background: #1e293b; border-color: #334155; }
+      .category-name { color: #f1f5f9; }
+      .category-count { background: #334155; color: #94a3b8; }
     }
     .header {
       background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 100%);
@@ -127,6 +190,39 @@ const renderHtml = (collection: SharedCollection | null, error?: string): string
       max-width: 800px;
       margin: 0 auto;
       padding: 1.5rem;
+    }
+    .category-section {
+      margin-bottom: 2rem;
+    }
+    .category-section:last-child {
+      margin-bottom: 0;
+    }
+    .category-header {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      padding: 0.75rem 1rem;
+      background: white;
+      border: 1px solid #e2e8f0;
+      border-radius: 12px;
+      margin-bottom: 1rem;
+    }
+    .category-icon {
+      font-size: 1.25rem;
+    }
+    .category-name {
+      font-weight: 600;
+      font-size: 0.95rem;
+      color: #1e293b;
+      flex: 1;
+    }
+    .category-count {
+      font-size: 0.7rem;
+      font-weight: 600;
+      padding: 0.2rem 0.5rem;
+      background: #f1f5f9;
+      color: #64748b;
+      border-radius: 1rem;
     }
     .grid {
       display: grid;
@@ -209,18 +305,6 @@ const renderHtml = (collection: SharedCollection | null, error?: string): string
     .footer a:hover {
       text-decoration: underline;
     }
-    .count-badge {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      min-width: 1.2rem;
-      height: 1.2rem;
-      padding: 0 0.4rem;
-      background: rgba(255,255,255,0.2);
-      border-radius: 1rem;
-      font-size: 0.7rem;
-      font-weight: 600;
-    }
   </style>
 </head>
 <body>
@@ -230,14 +314,13 @@ const renderHtml = (collection: SharedCollection | null, error?: string): string
     <div class="meta">
       <span>${collection.links.length} 个链接</span>
       <span>·</span>
+      <span>${categoryGroups.size} 个分类</span>
+      <span>·</span>
       <span>${expiresInText}后过期</span>
-      ${collection.viewCount ? `<span>·</span><span>${collection.viewCount} 次访问</span>` : ''}
     </div>
   </div>
   <div class="container">
-    <div class="grid">
-      ${linksHtml}
-    </div>
+    ${contentHtml}
   </div>
   <div class="footer">
     由 <a href="https://github.com/Fire-M/CloudNav-Oorz" target="_blank">CloudNav</a> 生成
