@@ -2794,8 +2794,10 @@ function App() {
             <div className={`grid grid-cols-4 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-2 lg:gap-1.5' : ''}`}>
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
-                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
-                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs rounded-lg border transition-all ${
+                      backgroundImage 
+                        ? 'bg-white/80 dark:bg-slate-700/80 shadow-sm border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700' 
+                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
                     }`}
                     title="导入书签"
                 >
@@ -2805,8 +2807,10 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
-                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
-                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs rounded-lg border transition-all ${
+                      backgroundImage 
+                        ? 'bg-white/80 dark:bg-slate-700/80 shadow-sm border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700' 
+                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
                     }`}
                     title="备份与恢复"
                 >
@@ -2816,8 +2820,10 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsShareModalOpen(true); }}
-                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
-                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs rounded-lg border transition-all ${
+                      backgroundImage 
+                        ? 'bg-white/80 dark:bg-slate-700/80 shadow-sm border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700' 
+                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
                     }`}
                     title="分享书签合集"
                 >
@@ -2827,8 +2833,10 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
-                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
-                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs rounded-lg border transition-all ${
+                      backgroundImage 
+                        ? 'bg-white/80 dark:bg-slate-700/80 shadow-sm border-slate-300 dark:border-slate-500 text-slate-700 dark:text-slate-200 hover:bg-white dark:hover:bg-slate-700' 
+                        : 'border-slate-200 dark:border-slate-600 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700'
                     }`}
                     title="AI 设置"
                 >
@@ -2925,7 +2933,7 @@ function App() {
         
         {/* Header */}
         <header 
-          className={`h-16 px-4 lg:px-8 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shrink-0 ${!backgroundImage ? 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-md' : ''}`}
+          className={`h-16 px-4 lg:px-8 flex items-center justify-between border-b sticky top-0 z-10 shrink-0 ${!backgroundImage ? 'border-slate-200 dark:border-slate-700 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md' : 'border-transparent'}`}
           style={backgroundImage ? {
             backgroundColor: `rgba(255, 255, 255, ${(siteSettings.backgroundOpacity ?? 40) / 100})`,
             backdropFilter: (siteSettings.backgroundOpacity ?? 40) > 0 ? `blur(${Math.min((siteSettings.backgroundOpacity ?? 40) / 5, 12)}px)` : 'none'
@@ -3070,7 +3078,7 @@ function App() {
                       handleExternalSearch();
                     }
                   }}
-                  className="w-full pl-9 pr-4 py-2 rounded-full bg-slate-100 dark:bg-slate-700/50 border-none text-sm focus:ring-2 focus:ring-blue-500 dark:text-white placeholder-slate-400 outline-none transition-all"
+                  className={`w-full pl-9 pr-4 py-2 rounded-full border-none text-sm focus:ring-2 focus:ring-blue-500 dark:text-white placeholder-slate-400 outline-none transition-all ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md' : 'bg-slate-100 dark:bg-slate-700/50'}`}
                   // 移动端优化：防止页面缩放
                   style={{ fontSize: '16px' }}
                   inputMode="search"
@@ -3102,7 +3110,7 @@ function App() {
 
           <div className="flex items-center gap-2">
             {/* 视图切换控制器 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
-            <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex items-center bg-slate-100 dark:bg-slate-700 rounded-full p-1`}>
+            <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex items-center ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md' : 'bg-slate-100 dark:bg-slate-700'} rounded-full p-1`}>
               <button
                 onClick={() => handleViewModeChange('simple')}
                 className={`px-3 py-1 text-xs font-medium rounded-full transition-all ${
@@ -3128,14 +3136,14 @@ function App() {
             </div>
 
             {/* 主题切换按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
-            <button ref={themeButtonRef} onClick={toggleTheme} className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}>
+            <button ref={themeButtonRef} onClick={toggleTheme} className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md text-slate-700 dark:text-slate-200' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}>
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
             </button>
 
             {/* 背景图设置按钮 - 不需要登录 */}
             <button 
               onClick={() => setIsBgSettingsOpen(true)} 
-              className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}
+              className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md text-slate-700 dark:text-slate-200' : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700'}`}
               title="背景图设置"
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -3148,11 +3156,11 @@ function App() {
             {/* 登录/退出按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
             <div className={`${isMobileSearchOpen ? 'hidden' : 'flex'}`}>
               {!authToken ? (
-                  <button onClick={() => setIsAuthOpen(true)} className="flex items-center gap-2 bg-slate-200 dark:bg-slate-700 px-3 py-1.5 rounded-full text-xs font-medium">
+                  <button onClick={() => setIsAuthOpen(true)} className={`flex items-center gap-2 ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md text-slate-700 dark:text-slate-200' : 'bg-slate-200 dark:bg-slate-700'} px-3 py-1.5 rounded-full text-xs font-medium`}>
                       <Cloud size={14} /> <span className="hidden sm:inline">登录</span>
                   </button>
               ) : (
-                  <button onClick={handleLogout} className="flex items-center gap-2 bg-slate-200 dark:bg-slate-700 px-3 py-1.5 rounded-full text-xs font-medium">
+                  <button onClick={handleLogout} className={`flex items-center gap-2 ${backgroundImage ? 'bg-white/90 dark:bg-slate-700/90 shadow-md text-slate-700 dark:text-slate-200' : 'bg-slate-200 dark:bg-slate-700'} px-3 py-1.5 rounded-full text-xs font-medium`}>
                       <LogOut size={14} /> <span className="hidden sm:inline">退出</span>
                   </button>
               )}
