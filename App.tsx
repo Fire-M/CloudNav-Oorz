@@ -780,12 +780,27 @@ function App() {
                     backgroundOpacity: wc.backgroundOpacity ?? 40
                 }));
 
-                // 背景图（现在包含在 allConfig.website 中）
+                // 背景图
                 if (wc.backgroundImage) {
-                    console.log('Setting background image, length:', wc.backgroundImage.length);
+                    // URL 类型直接在配置中
+                    console.log('Setting background image from config, length:', wc.backgroundImage.length);
                     setBackgroundImage(wc.backgroundImage);
+                } else if (wc.backgroundImageType === 'upload' && authToken) {
+                    // 上传类型需要单独获取
+                    console.log('Fetching uploaded background image separately...');
+                    fetch('/api/storage?getConfig=background', {
+                        headers: buildAuthHeaders(authToken, {})
+                    })
+                        .then(r => r.ok ? r.json() : null)
+                        .then(bgData => {
+                            if (bgData?.image) {
+                                console.log('Background image loaded, length:', bgData.image.length);
+                                setBackgroundImage(bgData.image);
+                            }
+                        })
+                        .catch(err => console.error('Failed to load background image:', err));
                 } else {
-                    console.log('No background image in config, type:', wc.backgroundImageType);
+                    console.log('No background image, type:', wc.backgroundImageType);
                 }
             }
 

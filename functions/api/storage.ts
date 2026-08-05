@@ -225,12 +225,10 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
         ...websiteConfig,
       };
 
-      // 如果是上传的背景图，一起返回
+      // 背景图不在此处返回，由客户端单独请求（避免大数据量导致响应慢）
+      // 清除可能存在的 backgroundImage 字段（上传类型时为空字符串）
       if (websiteConfig?.backgroundImageType === 'upload') {
-        const bgImage = await env.CLOUDNAV_KV.get('background_image');
-        if (bgImage) {
-          websiteData.backgroundImage = bgImage;
-        }
+        websiteData.backgroundImage = ''; // 不在此返回，需要时单独请求
       }
 
       // WebDAV 配置需要认证
