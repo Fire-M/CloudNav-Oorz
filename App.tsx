@@ -2463,7 +2463,9 @@ function App() {
                {!needsEditAuth() && (
                <button 
                   onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsCatManagerOpen(true); }}
-                  className="p-1 text-slate-400 hover:text-blue-500 hover:bg-slate-100 dark:hover:bg-slate-700 rounded"
+                  className={`p-1 text-slate-400 hover:text-blue-500 rounded ${
+                    backgroundImage ? 'hover:bg-slate-100/50 dark:hover:bg-slate-700/50' : 'hover:bg-slate-100 dark:hover:bg-slate-700'
+                  }`}
                   title="管理分类"
                >
                   <Settings size={14} />
@@ -2538,7 +2540,13 @@ function App() {
                       ) : (
                         <span className={`w-3.5 inline-block ${sidebarCollapsed ? 'lg:hidden' : ''}`}></span>
                       )}
-                      <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center shrink-0 ${selectedCategory === cat.id ? 'bg-blue-100 dark:bg-blue-800' : 'bg-slate-100 dark:bg-slate-800'}`}>
+                      <div className={`p-1.5 rounded-lg transition-colors flex items-center justify-center shrink-0 ${
+                        selectedCategory === cat.id 
+                          ? 'bg-blue-100 dark:bg-blue-800' 
+                          : backgroundImage
+                            ? 'bg-slate-100/50 dark:bg-slate-800/50'
+                            : 'bg-slate-100 dark:bg-slate-800'
+                      }`}>
                         {isLocked ? <Lock size={16} className="text-amber-500" /> : <Icon name={cat.icon} size={16} />}
                       </div>
                       <span className={`truncate flex-1 text-left ${sidebarCollapsed ? 'lg:hidden' : ''}`}>{cat.name}</span>
@@ -2560,13 +2568,19 @@ function App() {
         </div>
 
         {/* Footer Actions */}
-        <div className={`border-t border-slate-100 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-800/50 shrink-0 ${sidebarCollapsed ? 'lg:p-2' : 'p-4'}`}>
+        <div className={`border-t border-slate-100 dark:border-slate-700 shrink-0 ${
+          backgroundImage 
+            ? 'bg-slate-50/30 dark:bg-slate-800/30' 
+            : 'bg-slate-50/50 dark:bg-slate-800/50'
+        } ${sidebarCollapsed ? 'lg:p-2' : 'p-4'}`}>
 
             {!needsEditAuth() && (
             <div className={`grid grid-cols-4 gap-2 mb-2 ${sidebarCollapsed ? 'lg:grid-cols-2 lg:gap-1.5' : ''}`}>
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsImportModalOpen(true); }}
-                    className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
+                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title="导入书签"
                 >
                     <Upload size={14} />
@@ -2575,7 +2589,9 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsBackupModalOpen(true); }}
-                    className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
+                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title="备份与恢复"
                 >
                     <CloudCog size={14} />
@@ -2584,7 +2600,9 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsShareModalOpen(true); }}
-                    className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
+                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title="分享书签合集"
                 >
                     <Share2 size={14} />
@@ -2593,7 +2611,9 @@ function App() {
 
                 <button
                     onClick={() => { if(needsEditAuth()) setIsAuthOpen(true); else setIsSettingsModalOpen(true); }}
-                    className="flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-700 rounded-lg border border-slate-200 dark:border-slate-600 transition-all"
+                    className={`flex flex-col items-center justify-center gap-1 p-2 text-xs text-slate-600 dark:text-slate-300 rounded-lg border border-slate-200 dark:border-slate-600 transition-all ${
+                      backgroundImage ? 'hover:bg-white/50 dark:hover:bg-slate-700/50' : 'hover:bg-white dark:hover:bg-slate-700'
+                    }`}
                     title="AI 设置"
                 >
                     <Settings size={14} />
@@ -2686,7 +2706,11 @@ function App() {
       }`}>
         
         {/* Header */}
-        <header className="h-16 px-4 lg:px-8 flex items-center justify-between bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shrink-0">
+        <header className={`h-16 px-4 lg:px-8 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shrink-0 ${
+          backgroundImage 
+            ? 'bg-white/60 dark:bg-slate-800/60 backdrop-blur-xl' 
+            : 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-md'
+        }`}>
           <div className="flex items-center gap-4 flex-1">
             <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 -ml-2 text-slate-600 dark:text-slate-300">
               <Menu size={24} />
