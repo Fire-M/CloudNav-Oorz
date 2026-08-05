@@ -134,11 +134,13 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
     setIsCreating(true);
     try {
+      console.log('ShareModal handleCreate:', { displayLinksCount: displayLinks.length, categoriesCount: categories.length, sampleLink: displayLinks[0] });
       // 构建带分类信息的数据结构
       const selectedLinksData = displayLinks
         .filter(l => checkedIds.has(l.id))
         .map(l => {
           const cat = categories.find(c => c.id === l.categoryId);
+          console.log('Link category lookup:', { linkTitle: l.title, categoryId: l.categoryId, foundCat: cat });
           return {
             title: l.title,
             url: l.url,
