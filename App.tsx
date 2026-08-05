@@ -2111,13 +2111,16 @@ function App() {
         ref={setNodeRef}
         style={{
           ...style,
-          ...(backgroundImage && !isSortingMode && !isSortingPinned ? { backgroundColor: `rgba(255, 255, 255, ${(siteSettings.backgroundOpacity ?? 40) / 100})`, backdropFilter: 'blur(4px)' } : {})
+          ...(backgroundImage && !isSortingMode && !isSortingPinned ? { 
+            backgroundColor: `rgba(255, 255, 255, ${(siteSettings.backgroundOpacity ?? 40) / 100})`,
+            ...(siteSettings.backgroundOpacity ?? 40) > 0 ? { backdropFilter: 'blur(4px)' } : {}
+          } : {})
         }}
         className={`group relative transition-all duration-200 cursor-grab active:cursor-grabbing min-w-0 max-w-full overflow-hidden hover:shadow-lg hover:shadow-green-100/50 dark:hover:shadow-green-900/20 ${
           isSortingMode || isSortingPinned
             ? 'bg-green-20 dark:bg-green-900/30 border-green-200 dark:border-green-800' 
             : backgroundImage
-              ? 'backdrop-blur-sm border-slate-200 dark:border-slate-700'
+              ? 'border-slate-200 dark:border-slate-700'
               : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700'
         } ${isDragging ? 'shadow-2xl scale-105' : ''} ${
           isDetailedView 
@@ -2431,9 +2434,10 @@ function App() {
       <aside 
         className={`
           fixed lg:static inset-y-0 left-0 z-30 transform transition-all duration-300 ease-in-out
-          ${backgroundImage 
+          ${backgroundImage && (siteSettings.backgroundOpacity ?? 40) > 0
             ? 'backdrop-blur-xl' 
-            : 'bg-white dark:bg-slate-800'}
+            : ''}
+          ${!backgroundImage ? 'bg-white dark:bg-slate-800' : ''}
           border-r border-slate-200 dark:border-slate-700 flex flex-col
           ${sidebarCollapsed ? 'lg:w-20' : 'lg:w-64'} w-64
           ${sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
@@ -2705,20 +2709,20 @@ function App() {
       {/* Main Content */}
       <main 
         className={`flex-1 flex flex-col h-full overflow-hidden relative ${
-          backgroundImage 
+          backgroundImage && (siteSettings.backgroundOpacity ?? 40) > 0
             ? 'backdrop-blur-xl' 
-            : 'bg-slate-50 dark:bg-slate-900'
-        }`}
+            : ''
+        } ${!backgroundImage ? 'bg-slate-50 dark:bg-slate-900' : ''}`}
         style={backgroundImage ? { backgroundColor: `rgba(248, 250, 252, ${(siteSettings.backgroundOpacity ?? 40) / 100})` } : undefined}
       >
         
         {/* Header */}
         <header 
           className={`h-16 px-4 lg:px-8 flex items-center justify-between border-b border-slate-200 dark:border-slate-700 sticky top-0 z-10 shrink-0 ${
-            backgroundImage 
+            backgroundImage && (siteSettings.backgroundOpacity ?? 40) > 0
               ? 'backdrop-blur-xl' 
-              : 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-md'
-          }`}
+              : ''
+          } ${!backgroundImage ? 'bg-white/80 dark:bg-slate-800/80 backdrop-blur-md' : ''}`}
           style={backgroundImage ? { backgroundColor: `rgba(255, 255, 255, ${(siteSettings.backgroundOpacity ?? 40) / 100})` } : undefined}
         >
           <div className="flex items-center gap-4 flex-1">
