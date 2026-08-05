@@ -347,6 +347,7 @@ function App() {
   const [isSettingsModalOpen, setIsSettingsModalOpen] = useState(false);
   const [isSearchConfigModalOpen, setIsSearchConfigModalOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [isBgSettingsOpen, setIsBgSettingsOpen] = useState(false);
   const [catAuthModalData, setCatAuthModalData] = useState<Category | null>(null);
   const [pendingProtectedCategoryId, setPendingProtectedCategoryId] = useState<string | null>(null);
   // 多级导航：记录用户原本想点击的子分类，解锁祖先后选中它而不是祖先本身
@@ -2519,6 +2520,116 @@ function App() {
         authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
       />
 
+      {/* 背景图设置弹窗 */}
+      {isBgSettingsOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm" onClick={() => setIsBgSettingsOpen(false)}>
+          <div className="bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-md p-6" onClick={e => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-lg font-bold text-slate-800 dark:text-white">背景图设置</h3>
+              <button onClick={() => setIsBgSettingsOpen(false)} className="p-1 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                <X size={20} className="text-slate-500" />
+              </button>
+            </div>
+            
+            {/* 背景图预览 */}
+            {backgroundImage && (
+              <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600 mb-4">
+                <img src={backgroundImage} alt="背景预览" className="w-full h-full object-cover" />
+                <button
+                  onClick={() => {
+                    removeBgImageFromIDB().then(() => {
+                      setBackgroundImage('');
+                    });
+                  }}
+                  className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                  title="删除背景图"
+                >
+                  <X size={14} />
+                </button>
+              </div>
+            )}
+
+            {/* URL 输入 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">图片 URL</label>
+              <input
+                type="text"
+                defaultValue={backgroundImage?.startsWith('http') ? backgroundImage : ''}
+                placeholder="输入图片 URL"
+                className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                onBlur={(e) => {
+                  if (e.target.value) {
+                    saveBgImageToIDB(e.target.value).then(() => {
+                      setBackgroundImage(e.target.value);
+                    });
+                  }
+                }}
+              />
+            </div>
+
+            {/* 上传按钮 */}
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">或上传本地图片</label>
+              <input
+                type="file"
+                accept="image/*"
+                className="hidden"
+                id="bg-upload-input"
+                onChange={(e) => {
+                  const file = e.target.files?.[0];
+                  if (!file) return;
+                  if (!file.type.startsWith('image/')) return;
+                  if (file.size > 50 * 1024 * 1024) {
+                    alert('图片大小不能超过 50MB');
+                    return;
+                  }
+                  const reader = new FileReader();
+                  reader.onload = () => {
+                    if (typeof reader.result === 'string') {
+                      saveBgImageToIDB(reader.result).then(() => {
+                        setBackgroundImage(reader.result);
+                      });
+                    }
+                  };
+                  reader.readAsDataURL(file);
+                  e.target.value = '';
+                }}
+              />
+              <label
+                htmlFor="bg-upload-input"
+                className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-sm text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors cursor-pointer"
+              >
+                <Upload size={14} />
+                选择图片
+              </label>
+            </div>
+
+            {/* 透明度调节 */}
+            <div>
+              <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
+                透明度 <span className="text-xs text-slate-500">({siteSettings.backgroundOpacity ?? 40}%)</span>
+              </label>
+              <div className="flex items-center gap-3">
+                <span className="text-xs text-slate-500">透明</span>
+                <input
+                  type="range"
+                  min="0"
+                  max="100"
+                  value={siteSettings.backgroundOpacity ?? 40}
+                  onChange={(e) => {
+                    const opacity = parseInt(e.target.value);
+                    setSiteSettings(prev => ({ ...prev, backgroundOpacity: opacity }));
+                    localStorage.setItem('cloudnav_site_settings', JSON.stringify({ ...siteSettings, backgroundOpacity: opacity }));
+                  }}
+                  className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+                <span className="text-xs text-slate-500">不透明</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Sidebar Mobile Overlay */}
       {sidebarOpen && (
         <div 
@@ -3019,6 +3130,19 @@ function App() {
             {/* 主题切换按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}
             <button ref={themeButtonRef} onClick={toggleTheme} className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}>
               {darkMode ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
+
+            {/* 背景图设置按钮 - 不需要登录 */}
+            <button 
+              onClick={() => setIsBgSettingsOpen(true)} 
+              className={`${isMobileSearchOpen ? 'hidden' : 'flex'} lg:flex p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700`}
+              title="背景图设置"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <rect width="18" height="18" x="3" y="3" rx="2" ry="2"/>
+                <circle cx="9" cy="9" r="2"/>
+                <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>
+              </svg>
             </button>
 
             {/* 登录/退出按钮 - 移动端：搜索框展开时隐藏，桌面端始终显示 */}

@@ -45,7 +45,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [browserType, setBrowserType] = useState<'chrome' | 'firefox'>('chrome');
   const [isZipping, setIsZipping] = useState(false);
   const faviconUploadRef = useRef<HTMLInputElement>(null);
-  const bgUploadRef = useRef<HTMLInputElement>(null);
   
   const [copiedStates, setCopiedStates] = useState<{[key: string]: boolean}>({});
 
@@ -267,61 +266,6 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       reader.onload = () => {
           if (typeof reader.result === 'string') {
               handleSiteChange('favicon', reader.result);
-          }
-      };
-      reader.readAsDataURL(file);
-      e.target.value = '';
-  };
-
-  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-
-      if (!file.type.startsWith('image/')) {
-          alertDialog({ message: '请上传图片文件', variant: 'warning' });
-          e.target.value = '';
-          return;
-      }
-
-      // 检查文件大小（限制 10MB）
-      if (file.size > 10 * 1024 * 1024) {
-          alertDialog({ message: '图片大小不能超过 10MB', variant: 'warning' });
-          e.target.value = '';
-          return;
-      }
-
-      // 压缩图片后保存
-      const reader = new FileReader();
-      reader.onload = () => {
-          if (typeof reader.result === 'string') {
-              // 使用 Image 对象压缩图片
-              const img = new Image();
-              img.onload = () => {
-                  const canvas = document.createElement('canvas');
-                  let width = img.width;
-                  let height = img.height;
-                  
-                  // 限制最大宽度为 1920px
-                  const maxWidth = 1920;
-                  if (width > maxWidth) {
-                      height = (height * maxWidth) / width;
-                      width = maxWidth;
-                  }
-                  
-                  canvas.width = width;
-                  canvas.height = height;
-                  
-                  const ctx = canvas.getContext('2d');
-                  if (ctx) {
-                      ctx.drawImage(img, 0, 0, width, height);
-                      // 压缩为 JPEG，质量 0.8
-                      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
-                      handleSiteChange('backgroundImage', compressedDataUrl);
-                      handleSiteChange('backgroundImageType', 'upload');
-                      console.log('Image compressed, original size:', file.size, 'compressed length:', compressedDataUrl.length);
-                  }
-              };
-              img.src = reader.result;
           }
       };
       reader.readAsDataURL(file);
@@ -1575,83 +1519,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     </button>
                                     <p className="text-xs text-slate-500">会直接存成图片数据，不用图床。</p>
                                 </div>
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">背景图片</label>
-                                <div className="space-y-3">
-                                    {/* 背景图预览 */}
-                                    {localSiteSettings.backgroundImage && (
-                                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
-                                            <img 
-                                                src={localSiteSettings.backgroundImage} 
-                                                alt="背景预览" 
-                                                className="w-full h-full object-cover"
-                                            />
-                                            <button
-                                                type="button"
-                                                onClick={() => {
-                                                    handleSiteChange('backgroundImage', '');
-                                                    handleSiteChange('backgroundImageType', 'url');
-                                                }}
-                                                className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
-                                                title="删除背景图"
-                                            >
-                                                <X size={14} />
-                                            </button>
-                                        </div>
-                                    )}
-                                    {/* URL 输入 */}
-                                    <div>
-                                        <input 
-                                            type="text" 
-                                            value={localSiteSettings.backgroundImageType === 'url' ? localSiteSettings.backgroundImage : ''}
-                                            onChange={(e) => {
-                                                handleSiteChange('backgroundImage', e.target.value);
-                                                handleSiteChange('backgroundImageType', 'url');
-                                            }}
-                                            placeholder="输入图片 URL 或上传本地图片"
-                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
-                                        />
-                                    </div>
-                                    {/* 上传按钮 */}
-                                    <div className="flex items-center gap-2">
-                                        <input
-                                            ref={bgUploadRef}
-                                            type="file"
-                                            accept="image/*"
-                                            className="hidden"
-                                            onChange={handleBackgroundUpload}
-                                        />
-                                        <button
-                                            type="button"
-                                            onClick={() => bgUploadRef.current?.click()}
-                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                                        >
-                                            <Upload size={12} />
-                                            上传本地图片
-                                        </button>
-                                        <p className="text-xs text-slate-500">支持 JPG/PNG，最大 10MB</p>
-                                    </div>
-                                </div>
-                            </div>
-                            {/* 透明度调节 */}
-                            <div>
-                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">
-                                    背景透明度 <span className="text-xs text-slate-500">({localSiteSettings.backgroundOpacity ?? 40}%)</span>
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs text-slate-500">透明</span>
-                                    <input 
-                                        type="range" 
-                                        min="0" 
-                                        max="100" 
-                                        value={localSiteSettings.backgroundOpacity ?? 40}
-                                        onChange={(e) => handleSiteChange('backgroundOpacity', parseInt(e.target.value))}
-                                        className="flex-1 h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer accent-blue-500"
-                                    />
-                                    <span className="text-xs text-slate-500">不透明</span>
-                                </div>
-                                <p className="text-xs text-slate-500 mt-1">设置背景图后生效，数值越小背景图越清晰</p>
                             </div>
                             <div>
                                 <div className="flex items-center justify-between gap-4 rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/80 dark:bg-slate-900/40 px-4 py-3">
