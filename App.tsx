@@ -778,18 +778,8 @@ function App() {
                     backgroundImageType: wc.backgroundImageType || 'url'
                 }));
 
-                // 如果是上传的背景图，从单独接口获取
-                if (wc.backgroundImageType === 'upload') {
-                    fetch('/api/storage?getConfig=background')
-                        .then(r => r.ok ? r.json() : null)
-                        .then(bgData => {
-                            if (bgData?.image) {
-                                setBackgroundImage(bgData.image);
-                            }
-                        })
-                        .catch(() => {});
-                } else if (wc.backgroundImage) {
-                    // URL 类型直接使用
+                // 背景图（现在包含在 allConfig.website 中）
+                if (wc.backgroundImage) {
                     setBackgroundImage(wc.backgroundImage);
                 }
             }

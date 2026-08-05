@@ -10,6 +10,8 @@ interface WebsiteConfig {
   cardStyle?: 'detailed' | 'simple';
   requirePasswordOnVisit?: boolean;
   passwordExpiryDays?: number;
+  backgroundImage?: string;
+  backgroundImageType?: 'url' | 'upload';
 }
 
 const AUTH_TIME_HEADER = 'x-auth-issued-at';
@@ -222,6 +224,14 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
         passwordExpiryDays: 7,
         ...websiteConfig,
       };
+
+      // 如果是上传的背景图，一起返回
+      if (websiteConfig?.backgroundImageType === 'upload') {
+        const bgImage = await env.CLOUDNAV_KV.get('background_image');
+        if (bgImage) {
+          websiteData.backgroundImage = bgImage;
+        }
+      }
 
       // WebDAV 配置需要认证
       let webDavData = null;
