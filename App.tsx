@@ -1473,6 +1473,12 @@ function App() {
           
           if (newSiteSettings) {
               try {
+                  console.log('newSiteSettings received:', {
+                      backgroundImage: newSiteSettings.backgroundImage?.substring(0, 100),
+                      backgroundImageType: newSiteSettings.backgroundImageType,
+                      backgroundOpacity: newSiteSettings.backgroundOpacity
+                  });
+
                   // 背景图保存到 localStorage（不再使用 KV）
                   if (newSiteSettings.backgroundImage) {
                       localStorage.setItem(BACKGROUND_IMAGE_KEY, newSiteSettings.backgroundImage);
@@ -1481,7 +1487,7 @@ function App() {
                   } else {
                       localStorage.removeItem(BACKGROUND_IMAGE_KEY);
                       setBackgroundImage('');
-                      console.log('Background image removed from localStorage');
+                      console.log('Background image removed from localStorage (empty)');
                   }
 
                   // 保存网站配置（不再包含背景图数据，只保存透明度和类型）

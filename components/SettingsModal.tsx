@@ -172,6 +172,11 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   };
 
   const handleSave = () => {
+    console.log('SettingsModal handleSave, localSiteSettings:', {
+      backgroundImage: localSiteSettings.backgroundImage?.substring(0, 100),
+      backgroundImageType: localSiteSettings.backgroundImageType,
+      backgroundOpacity: localSiteSettings.backgroundOpacity
+    });
     onSave(localConfig, localSiteSettings);
     onClose();
   };
