@@ -39,7 +39,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
         setCheckedIds(new Set(links.map(l => l.id)));
       }
     }
-  }, [isOpen, links, selectedLinks]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen]);
 
   const toggleLink = (id: string) => {
     setCheckedIds(prev => {
@@ -67,8 +68,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
       return;
     }
 
-    console.log('Creating share:', { title, description, linkCount: checkedIds.size, expiresIn, hasAuth: !!authToken });
-
     setIsCreating(true);
     try {
       const selectedLinksData = links
@@ -88,7 +87,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
         headers['x-auth-issued-at'] = authIssuedAt;
       }
 
-      console.log('Sending request to /api/share...');
       const res = await fetch('/api/share', {
         method: 'POST',
         headers,
@@ -100,23 +98,15 @@ const ShareModal: React.FC<ShareModalProps> = ({
         })
       });
 
-      console.log('Response status:', res.status);
-
       if (!res.ok) {
         const err = await res.json().catch(() => ({ error: '创建失败' }));
-        console.error('API error:', err);
         throw new Error(err.error || '创建失败');
       }
 
       const data = await res.json();
-      console.log('Share created:', data);
-      console.log('Setting shareUrl to:', data.url);
-      console.log('Setting step to result');
       setShareUrl(data.url);
       setStep('result');
-      console.log('State updated, current step should be result');
     } catch (e: any) {
-      console.error('Share creation failed:', e);
       alertDialog({ message: e.message || '创建分享失败', variant: 'danger', title: '错误' });
     } finally {
       setIsCreating(false);
@@ -142,8 +132,6 @@ const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   if (!isOpen) return null;
-
-  console.log('Rendering ShareModal, step:', step, 'shareUrl:', shareUrl);
 
   const expiryOptions = [
     { value: 3600, label: '1 小时' },
