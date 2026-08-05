@@ -1466,6 +1466,29 @@ function App() {
           
           if (newSiteSettings) {
               try {
+                  // 如果有上传的背景图，单独保存
+                  if (newSiteSettings.backgroundImageType === 'upload' && newSiteSettings.backgroundImage) {
+                      const bgResponse = await fetch('/api/storage', {
+                          method: 'POST',
+                          headers: buildAuthHeaders(authToken, {
+                              'Content-Type': 'application/json',
+                          }),
+                          body: JSON.stringify({
+                              saveConfig: 'background',
+                              image: newSiteSettings.backgroundImage
+                          })
+                      });
+                      if (!bgResponse.ok) {
+                          console.error('Failed to save background image to KV:', bgResponse.statusText);
+                      }
+                  }
+
+                  // 保存网站配置（背景图字段只存类型，不存 base64 数据）
+                  const configToSave = {
+                      ...newSiteSettings,
+                      backgroundImage: newSiteSettings.backgroundImageType === 'upload' ? '' : newSiteSettings.backgroundImage
+                  };
+
                   const response = await fetch('/api/storage', {
                       method: 'POST',
                       headers: buildAuthHeaders(authToken, {
@@ -1473,7 +1496,7 @@ function App() {
                       }),
                       body: JSON.stringify({
                           saveConfig: 'website',
-                          config: newSiteSettings
+                          config: configToSave
                       })
                   });
                   
