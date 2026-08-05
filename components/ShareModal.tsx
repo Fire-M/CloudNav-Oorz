@@ -31,6 +31,11 @@ const ShareModal: React.FC<ShareModalProps> = ({
   const [shareUrl, setShareUrl] = useState('');
   const [copied, setCopied] = useState(false);
 
+  // 判断是否从批量编辑模式传入
+  const isFromBatchEdit = selectedLinks.length > 0;
+  // 实际要显示的链接（如果从批量编辑传入，只显示选中的）
+  const displayLinks = isFromBatchEdit ? selectedLinks : links;
+
   // 按分类分组
   const categoryGroups = useMemo<CategoryGroup[]>(() => {
     const groups = new Map<string, LinkItem[]>();
@@ -41,10 +46,9 @@ const ShareModal: React.FC<ShareModalProps> = ({
     });
     
     // 将链接分配到对应分类
-    links.forEach(link => {
+    displayLinks.forEach(link => {
       const catId = link.categoryId || 'uncategorized';
       if (!groups.has(catId)) {
-        // 如果分类不存在，创建一个"未分类"
         groups.set(catId, []);
       }
       groups.get(catId)!.push(link);
@@ -57,7 +61,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
         category: cat,
         links: groups.get(cat.id) || []
       }));
-  }, [links, categories]);
+  }, [displayLinks, categories]);
 
   useEffect(() => {
     if (isOpen) {
@@ -69,8 +73,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
       setExpiresIn(3600);
       // 默认展开所有分类
       setExpandedCats(new Set(categoryGroups.map(g => g.category.id)));
-      // 默认选中所有链接
-      setCheckedIds(new Set(links.map(l => l.id)));
+      // 默认选中所有显示的链接
+      setCheckedIds(new Set(displayLinks.map(l => l.id)));
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen]);
@@ -115,7 +119,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   const selectAll = () => {
-    setCheckedIds(new Set(links.map(l => l.id)));
+    setCheckedIds(new Set(displayLinks.map(l => l.id)));
   };
 
   const deselectAll = () => {
@@ -131,7 +135,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
     setIsCreating(true);
     try {
       // 构建带分类信息的数据结构
-      const selectedLinksData = links
+      const selectedLinksData = displayLinks
         .filter(l => checkedIds.has(l.id))
         .map(l => {
           const cat = categories.find(c => c.id === l.categoryId);
@@ -207,7 +211,7 @@ const ShareModal: React.FC<ShareModalProps> = ({
   ];
 
   const selectedCount = checkedIds.size;
-  const totalCount = links.length;
+  const totalCount = displayLinks.length;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">

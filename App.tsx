@@ -2388,6 +2388,7 @@ function App() {
         onClose={() => setIsShareModalOpen(false)}
         links={links}
         categories={categories}
+        selectedLinks={links.filter(l => selectedLinks.has(l.id))}
         authToken={authToken}
         authIssuedAt={authIssuedAt ? String(authIssuedAt) : undefined}
       />
@@ -3058,6 +3059,20 @@ function App() {
                                          >
                                              <Upload size={14} />
                                              <span>批量移动</span>
+                                         </button>
+                                         <button
+                                             onClick={() => {
+                                               if (selectedLinks.size === 0) {
+                                                 alertDialog({ message: '请先选择要分享的链接', variant: 'warning' });
+                                                 return;
+                                               }
+                                               setIsShareModalOpen(true);
+                                             }}
+                                             className="flex items-center gap-1 px-3 py-1.5 bg-purple-600 hover:bg-purple-700 text-white text-xs font-medium rounded-full transition-colors"
+                                             title="分享选中"
+                                         >
+                                             <Share2 size={14} />
+                                             <span>分享选中</span>
                                          </button>
                                      </>
                                  ) : (
