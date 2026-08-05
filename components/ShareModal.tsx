@@ -110,8 +110,11 @@ const ShareModal: React.FC<ShareModalProps> = ({
 
       const data = await res.json();
       console.log('Share created:', data);
+      console.log('Setting shareUrl to:', data.url);
+      console.log('Setting step to result');
       setShareUrl(data.url);
       setStep('result');
+      console.log('State updated, current step should be result');
     } catch (e: any) {
       console.error('Share creation failed:', e);
       alertDialog({ message: e.message || '创建分享失败', variant: 'danger', title: '错误' });
@@ -139,6 +142,8 @@ const ShareModal: React.FC<ShareModalProps> = ({
   };
 
   if (!isOpen) return null;
+
+  console.log('Rendering ShareModal, step:', step, 'shareUrl:', shareUrl);
 
   const expiryOptions = [
     { value: 3600, label: '1 小时' },
