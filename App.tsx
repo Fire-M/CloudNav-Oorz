@@ -785,12 +785,10 @@ function App() {
                     // URL 类型直接在配置中
                     console.log('Setting background image from config, length:', wc.backgroundImage.length);
                     setBackgroundImage(wc.backgroundImage);
-                } else if (wc.backgroundImageType === 'upload' && authToken) {
-                    // 上传类型需要单独获取
+                } else if (wc.backgroundImageType === 'upload') {
+                    // 上传类型需要单独获取（不需要认证）
                     console.log('Fetching uploaded background image separately...');
-                    fetch('/api/storage?getConfig=background', {
-                        headers: buildAuthHeaders(authToken, {})
-                    })
+                    fetch('/api/storage?getConfig=background')
                         .then(r => r.ok ? r.json() : null)
                         .then(bgData => {
                             if (bgData?.image) {
