@@ -29,6 +29,7 @@ export interface SiteSettings {
   passwordExpiryDays: number; // 密码过期天数，0表示永久不退出
   backgroundImage?: string; // 背景图 URL 或 base64
   backgroundImageType?: 'url' | 'upload'; // 背景图类型
+  backgroundOpacity?: number; // 背景透明度 0-100，默认 40
 }
 
 export interface AppState {
