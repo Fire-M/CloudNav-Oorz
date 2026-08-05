@@ -27,6 +27,8 @@ export interface SiteSettings {
   cardStyle: 'detailed' | 'simple';
   requirePasswordOnVisit: boolean;
   passwordExpiryDays: number; // 密码过期天数，0表示永久不退出
+  backgroundImage?: string; // 背景图 URL 或 base64
+  backgroundImageType?: 'url' | 'upload'; // 背景图类型
 }
 
 export interface AppState {

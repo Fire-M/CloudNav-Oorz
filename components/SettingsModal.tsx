@@ -31,7 +31,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       favicon: siteSettings?.favicon || '',
       cardStyle: siteSettings?.cardStyle || 'detailed',
       requirePasswordOnVisit: siteSettings?.requirePasswordOnVisit ?? false,
-      passwordExpiryDays: siteSettings?.passwordExpiryDays ?? 7
+      passwordExpiryDays: siteSettings?.passwordExpiryDays ?? 7,
+      backgroundImage: siteSettings?.backgroundImage || '',
+      backgroundImageType: siteSettings?.backgroundImageType || 'url'
   }));
   
   const [isProcessing, setIsProcessing] = useState(false);
@@ -43,6 +45,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [browserType, setBrowserType] = useState<'chrome' | 'firefox'>('chrome');
   const [isZipping, setIsZipping] = useState(false);
   const faviconUploadRef = useRef<HTMLInputElement>(null);
+  const bgUploadRef = useRef<HTMLInputElement>(null);
   
   const [copiedStates, setCopiedStates] = useState<{[key: string]: boolean}>({});
 
@@ -69,7 +72,9 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           favicon: siteSettings?.favicon || '',
           cardStyle: siteSettings?.cardStyle || 'detailed',
           requirePasswordOnVisit: siteSettings?.requirePasswordOnVisit ?? false,
-          passwordExpiryDays: siteSettings?.passwordExpiryDays ?? 7
+          passwordExpiryDays: siteSettings?.passwordExpiryDays ?? 7,
+          backgroundImage: siteSettings?.backgroundImage || '',
+          backgroundImageType: siteSettings?.backgroundImageType || 'url'
       };
       setLocalSiteSettings(safeSettings);
 
@@ -112,6 +117,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   // 保存网站配置到 KV 空间
   const saveWebsiteConfigToKV = async (siteSettings: SiteSettings) => {
     try {
+        // 如果有上传的背景图，单独保存
+        if (siteSettings.backgroundImageType === 'upload' && siteSettings.backgroundImage) {
+            const bgResponse = await fetch('/api/storage', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'x-auth-password': authToken || '',
+                    ...(authIssuedAt ? { 'x-auth-issued-at': authIssuedAt } : {})
+                },
+                body: JSON.stringify({
+                    saveConfig: 'background',
+                    image: siteSettings.backgroundImage
+                })
+            });
+            if (!bgResponse.ok) {
+                console.error('Failed to save background image to KV:', bgResponse.statusText);
+            }
+        }
+
+        // 保存网站配置（背景图字段只存类型，不存 base64 数据）
+        const configToSave = {
+            ...siteSettings,
+            // 如果是上传的图片，不存 base64 到 website_config，只存类型标记
+            backgroundImage: siteSettings.backgroundImageType === 'upload' ? '' : siteSettings.backgroundImage
+        };
+
         const response = await fetch('/api/storage', {
             method: 'POST',
             headers: {
@@ -121,7 +152,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             },
             body: JSON.stringify({
                 saveConfig: 'website',
-                config: siteSettings
+                config: configToSave
             })
         });
         
@@ -203,6 +234,34 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       reader.onload = () => {
           if (typeof reader.result === 'string') {
               handleSiteChange('favicon', reader.result);
+          }
+      };
+      reader.readAsDataURL(file);
+      e.target.value = '';
+  };
+
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+      const file = e.target.files?.[0];
+      if (!file) return;
+
+      if (!file.type.startsWith('image/')) {
+          alertDialog({ message: '请上传图片文件', variant: 'warning' });
+          e.target.value = '';
+          return;
+      }
+
+      // 检查文件大小（限制 10MB）
+      if (file.size > 10 * 1024 * 1024) {
+          alertDialog({ message: '图片大小不能超过 10MB', variant: 'warning' });
+          e.target.value = '';
+          return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = () => {
+          if (typeof reader.result === 'string') {
+              handleSiteChange('backgroundImage', reader.result);
+              handleSiteChange('backgroundImageType', 'upload');
           }
       };
       reader.readAsDataURL(file);
@@ -1455,6 +1514,64 @@ document.addEventListener('DOMContentLoaded', async () => {
                                         本地上传
                                     </button>
                                     <p className="text-xs text-slate-500">会直接存成图片数据，不用图床。</p>
+                                </div>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">背景图片</label>
+                                <div className="space-y-3">
+                                    {/* 背景图预览 */}
+                                    {localSiteSettings.backgroundImage && (
+                                        <div className="relative w-full h-32 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-600">
+                                            <img 
+                                                src={localSiteSettings.backgroundImage} 
+                                                alt="背景预览" 
+                                                className="w-full h-full object-cover"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    handleSiteChange('backgroundImage', '');
+                                                    handleSiteChange('backgroundImageType', 'url');
+                                                }}
+                                                className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 text-white rounded-full transition-colors"
+                                                title="删除背景图"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    )}
+                                    {/* URL 输入 */}
+                                    <div>
+                                        <input 
+                                            type="text" 
+                                            value={localSiteSettings.backgroundImageType === 'url' ? localSiteSettings.backgroundImage : ''}
+                                            onChange={(e) => {
+                                                handleSiteChange('backgroundImage', e.target.value);
+                                                handleSiteChange('backgroundImageType', 'url');
+                                            }}
+                                            placeholder="输入图片 URL 或上传本地图片"
+                                            className="w-full p-2 rounded-lg border border-slate-300 dark:border-slate-600 dark:bg-slate-700 dark:text-white outline-none focus:ring-2 focus:ring-blue-500"
+                                        />
+                                    </div>
+                                    {/* 上传按钮 */}
+                                    <div className="flex items-center gap-2">
+                                        <input
+                                            ref={bgUploadRef}
+                                            type="file"
+                                            accept="image/*"
+                                            className="hidden"
+                                            onChange={handleBackgroundUpload}
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => bgUploadRef.current?.click()}
+                                            className="inline-flex items-center gap-1 rounded-lg border border-slate-200 dark:border-slate-600 px-3 py-1.5 text-xs text-slate-600 dark:text-slate-300 hover:border-blue-500 hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
+                                        >
+                                            <Upload size={12} />
+                                            上传本地图片
+                                        </button>
+                                        <p className="text-xs text-slate-500">支持 JPG/PNG，最大 10MB</p>
+                                    </div>
                                 </div>
                             </div>
                             <div>

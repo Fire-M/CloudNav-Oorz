@@ -267,9 +267,14 @@ function App() {
           favicon: '',
           cardStyle: 'detailed' as const,
           requirePasswordOnVisit: false,
-          passwordExpiryDays: 7
+          passwordExpiryDays: 7,
+          backgroundImage: '',
+          backgroundImageType: 'url' as const
       };
   });
+
+  // 背景图状态
+  const [backgroundImage, setBackgroundImage] = useState<string>('');
   
   // Modals
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -768,8 +773,25 @@ function App() {
                     favicon: wc.favicon || prev.favicon,
                     cardStyle: wc.cardStyle || prev.cardStyle,
                     requirePasswordOnVisit: wc.requirePasswordOnVisit !== undefined ? wc.requirePasswordOnVisit : prev.requirePasswordOnVisit,
-                    passwordExpiryDays: wc.passwordExpiryDays !== undefined ? wc.passwordExpiryDays : prev.passwordExpiryDays
+                    passwordExpiryDays: wc.passwordExpiryDays !== undefined ? wc.passwordExpiryDays : prev.passwordExpiryDays,
+                    backgroundImage: wc.backgroundImage || '',
+                    backgroundImageType: wc.backgroundImageType || 'url'
                 }));
+
+                // 如果是上传的背景图，从单独接口获取
+                if (wc.backgroundImageType === 'upload') {
+                    fetch('/api/storage?getConfig=background')
+                        .then(r => r.ok ? r.json() : null)
+                        .then(bgData => {
+                            if (bgData?.image) {
+                                setBackgroundImage(bgData.image);
+                            }
+                        })
+                        .catch(() => {});
+                } else if (wc.backgroundImage) {
+                    // URL 类型直接使用
+                    setBackgroundImage(wc.backgroundImage);
+                }
             }
 
             // WebDAV 配置（需要登录）
@@ -2291,7 +2313,16 @@ function App() {
   }
 
   return (
-    <div className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-50">
+    <div 
+      className="flex h-screen overflow-hidden text-slate-900 dark:text-slate-50"
+      style={backgroundImage ? {
+        backgroundImage: `url(${backgroundImage})`,
+        backgroundSize: 'cover',
+        backgroundPosition: 'center',
+        backgroundAttachment: 'fixed',
+        backgroundRepeat: 'no-repeat'
+      } : undefined}
+    >
       <div
         aria-hidden="true"
         className="pointer-events-none fixed inset-0 z-[120] will-change-[clip-path,opacity,background-color] transition-[clip-path,opacity,background-color] duration-[620ms]"

@@ -283,6 +283,14 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
+
+    // 获取背景图
+    if (getConfig === 'background') {
+      const bgData = await env.CLOUDNAV_KV.get('background_image');
+      return new Response(JSON.stringify({ image: bgData }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
     
     // 从 KV 中读取数据（首页开放访问，不需要认证）
     let data = await env.CLOUDNAV_KV.get('app_data');
@@ -458,6 +466,35 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     // 如果是保存网站配置
     if (body.saveConfig === 'website') {
       await env.CLOUDNAV_KV.put('website_config', JSON.stringify(body.config));
+      return new Response(JSON.stringify({ success: true }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
+    // 如果是保存背景图
+    if (body.saveConfig === 'background') {
+      const { image } = body;
+      if (!serverPassword || providedPassword !== serverPassword) {
+        const authCheck = await validateAuth(request, env, corsHeaders, { requireSession: true });
+        if (!authCheck.ok) {
+          return authCheck.response;
+        }
+      }
+      
+      if (image) {
+        // 检查图片大小（限制 10MB）
+        const sizeInBytes = Math.ceil((image.length * 3) / 4);
+        if (sizeInBytes > 10 * 1024 * 1024) {
+          return new Response(JSON.stringify({ error: '图片大小不能超过 10MB' }), {
+            status: 400,
+            headers: { 'Content-Type': 'application/json', ...corsHeaders },
+          });
+        }
+        await env.CLOUDNAV_KV.put('background_image', image);
+      } else {
+        // 删除背景图
+        await env.CLOUDNAV_KV.delete('background_image');
+      }
       return new Response(JSON.stringify({ success: true }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
