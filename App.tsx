@@ -766,11 +766,7 @@ function App() {
             // 网站配置
             if (allConfig.website) {
                 const wc = allConfig.website;
-                console.log('Loaded website config:', { 
-                    backgroundImage: wc.backgroundImage?.substring(0, 50) + '...', 
-                    backgroundImageType: wc.backgroundImageType,
-                    backgroundOpacity: wc.backgroundOpacity 
-                });
+                console.log('Raw website config from API:', JSON.stringify(wc).substring(0, 500));
                 setSiteSettings(prev => ({
                     ...prev,
                     title: wc.title || prev.title,
@@ -786,10 +782,10 @@ function App() {
 
                 // 背景图（现在包含在 allConfig.website 中）
                 if (wc.backgroundImage) {
-                    console.log('Setting background image');
+                    console.log('Setting background image, length:', wc.backgroundImage.length);
                     setBackgroundImage(wc.backgroundImage);
                 } else {
-                    console.log('No background image in config');
+                    console.log('No background image in config, type:', wc.backgroundImageType);
                 }
             }
 
@@ -1475,6 +1471,12 @@ function App() {
           
           if (newSiteSettings) {
               try {
+                  console.log('Saving site settings:', { 
+                      backgroundImageType: newSiteSettings.backgroundImageType,
+                      backgroundImageLength: newSiteSettings.backgroundImage?.length,
+                      backgroundOpacity: newSiteSettings.backgroundOpacity
+                  });
+
                   // 如果有上传的背景图，单独保存
                   if (newSiteSettings.backgroundImageType === 'upload' && newSiteSettings.backgroundImage) {
                       const bgResponse = await fetch('/api/storage', {
@@ -1497,6 +1499,10 @@ function App() {
                       ...newSiteSettings,
                       backgroundImage: newSiteSettings.backgroundImageType === 'upload' ? '' : newSiteSettings.backgroundImage
                   };
+                  console.log('Config to save:', { 
+                      backgroundImage: configToSave.backgroundImage?.substring(0, 100),
+                      backgroundImageType: configToSave.backgroundImageType 
+                  });
 
                   const response = await fetch('/api/storage', {
                       method: 'POST',
@@ -1511,6 +1517,8 @@ function App() {
                   
                   if (!response.ok) {
                       console.error('Failed to save website config to KV:', response.statusText);
+                  } else {
+                      console.log('Website config saved successfully');
                   }
               } catch (error) {
                   console.error('Error saving website config to KV:', error);
