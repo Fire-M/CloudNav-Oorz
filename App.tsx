@@ -766,6 +766,11 @@ function App() {
             // 网站配置
             if (allConfig.website) {
                 const wc = allConfig.website;
+                console.log('Loaded website config:', { 
+                    backgroundImage: wc.backgroundImage?.substring(0, 50) + '...', 
+                    backgroundImageType: wc.backgroundImageType,
+                    backgroundOpacity: wc.backgroundOpacity 
+                });
                 setSiteSettings(prev => ({
                     ...prev,
                     title: wc.title || prev.title,
@@ -775,12 +780,16 @@ function App() {
                     requirePasswordOnVisit: wc.requirePasswordOnVisit !== undefined ? wc.requirePasswordOnVisit : prev.requirePasswordOnVisit,
                     passwordExpiryDays: wc.passwordExpiryDays !== undefined ? wc.passwordExpiryDays : prev.passwordExpiryDays,
                     backgroundImage: wc.backgroundImage || '',
-                    backgroundImageType: wc.backgroundImageType || 'url'
+                    backgroundImageType: wc.backgroundImageType || 'url',
+                    backgroundOpacity: wc.backgroundOpacity ?? 40
                 }));
 
                 // 背景图（现在包含在 allConfig.website 中）
                 if (wc.backgroundImage) {
+                    console.log('Setting background image');
                     setBackgroundImage(wc.backgroundImage);
+                } else {
+                    console.log('No background image in config');
                 }
             }
 
