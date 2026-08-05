@@ -53,6 +53,7 @@ const LOCAL_STORAGE_KEY = 'cloudnav_data_cache';
 const WEBDAV_CONFIG_KEY = 'cloudnav_webdav_config';
 const AI_CONFIG_KEY = 'cloudnav_ai_config';
 const SEARCH_CONFIG_KEY = 'cloudnav_search_config';
+const BACKGROUND_IMAGE_KEY = 'cloudnav_background_image';
 
 // --- 树形分类工具函数 ---
 interface CategoryTreeNode {
@@ -780,25 +781,13 @@ function App() {
                     backgroundOpacity: wc.backgroundOpacity ?? 40
                 }));
 
-                // 背景图
-                if (wc.backgroundImage) {
-                    // URL 类型直接在配置中
-                    console.log('Setting background image from config, length:', wc.backgroundImage.length);
-                    setBackgroundImage(wc.backgroundImage);
-                } else if (wc.backgroundImageType === 'upload') {
-                    // 上传类型需要单独获取（不需要认证）
-                    console.log('Fetching uploaded background image separately...');
-                    fetch('/api/storage?getConfig=background')
-                        .then(r => r.ok ? r.json() : null)
-                        .then(bgData => {
-                            if (bgData?.image) {
-                                console.log('Background image loaded, length:', bgData.image.length);
-                                setBackgroundImage(bgData.image);
-                            }
-                        })
-                        .catch(err => console.error('Failed to load background image:', err));
+                // 背景图：从 localStorage 加载（不再使用 KV 存储）
+                const savedBgImage = localStorage.getItem(BACKGROUND_IMAGE_KEY);
+                if (savedBgImage) {
+                    console.log('Loading background image from localStorage, length:', savedBgImage.length);
+                    setBackgroundImage(savedBgImage);
                 } else {
-                    console.log('No background image, type:', wc.backgroundImageType);
+                    console.log('No background image in localStorage');
                 }
             }
 
@@ -1484,38 +1473,23 @@ function App() {
           
           if (newSiteSettings) {
               try {
-                  console.log('Saving site settings:', { 
-                      backgroundImageType: newSiteSettings.backgroundImageType,
-                      backgroundImageLength: newSiteSettings.backgroundImage?.length,
-                      backgroundOpacity: newSiteSettings.backgroundOpacity
-                  });
-
-                  // 如果有上传的背景图，单独保存
-                  if (newSiteSettings.backgroundImageType === 'upload' && newSiteSettings.backgroundImage) {
-                      const bgResponse = await fetch('/api/storage', {
-                          method: 'POST',
-                          headers: buildAuthHeaders(authToken, {
-                              'Content-Type': 'application/json',
-                          }),
-                          body: JSON.stringify({
-                              saveConfig: 'background',
-                              image: newSiteSettings.backgroundImage
-                          })
-                      });
-                      if (!bgResponse.ok) {
-                          console.error('Failed to save background image to KV:', bgResponse.statusText);
-                      }
+                  // 背景图保存到 localStorage（不再使用 KV）
+                  if (newSiteSettings.backgroundImage) {
+                      localStorage.setItem(BACKGROUND_IMAGE_KEY, newSiteSettings.backgroundImage);
+                      setBackgroundImage(newSiteSettings.backgroundImage);
+                      console.log('Background image saved to localStorage, length:', newSiteSettings.backgroundImage.length);
+                  } else {
+                      localStorage.removeItem(BACKGROUND_IMAGE_KEY);
+                      setBackgroundImage('');
+                      console.log('Background image removed from localStorage');
                   }
 
-                  // 保存网站配置（背景图字段只存类型，不存 base64 数据）
+                  // 保存网站配置（不再包含背景图数据，只保存透明度和类型）
                   const configToSave = {
                       ...newSiteSettings,
-                      backgroundImage: newSiteSettings.backgroundImageType === 'upload' ? '' : newSiteSettings.backgroundImage
+                      backgroundImage: undefined, // 不存背景图到 KV
+                      backgroundImageType: undefined // 也不需要存类型
                   };
-                  console.log('Config to save:', { 
-                      backgroundImage: configToSave.backgroundImage?.substring(0, 100),
-                      backgroundImageType: configToSave.backgroundImageType 
-                  });
 
                   const response = await fetch('/api/storage', {
                       method: 'POST',

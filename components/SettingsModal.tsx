@@ -79,21 +79,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       };
       setLocalSiteSettings(safeSettings);
 
-      // 如果是上传的背景图，从 API 获取
-      if (safeSettings.backgroundImageType === 'upload' && authToken) {
-        fetch('/api/storage?getConfig=background', {
-          headers: {
-            'x-auth-password': authToken || '',
-            ...(authIssuedAt ? { 'x-auth-issued-at': authIssuedAt } : {})
-          }
-        })
-          .then(r => r.ok ? r.json() : null)
-          .then(bgData => {
-            if (bgData?.image) {
-              setLocalSiteSettings(prev => ({ ...prev, backgroundImage: bgData.image }));
-            }
-          })
-          .catch(() => {});
+      // 从 localStorage 加载背景图
+      const savedBgImage = localStorage.getItem('cloudnav_background_image');
+      if (savedBgImage) {
+        setLocalSiteSettings(prev => ({ ...prev, backgroundImage: savedBgImage }));
       }
 
       setIsProcessing(false);
