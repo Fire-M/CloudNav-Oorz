@@ -269,11 +269,38 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           return;
       }
 
+      // 压缩图片后保存
       const reader = new FileReader();
       reader.onload = () => {
           if (typeof reader.result === 'string') {
-              handleSiteChange('backgroundImage', reader.result);
-              handleSiteChange('backgroundImageType', 'upload');
+              // 使用 Image 对象压缩图片
+              const img = new Image();
+              img.onload = () => {
+                  const canvas = document.createElement('canvas');
+                  let width = img.width;
+                  let height = img.height;
+                  
+                  // 限制最大宽度为 1920px
+                  const maxWidth = 1920;
+                  if (width > maxWidth) {
+                      height = (height * maxWidth) / width;
+                      width = maxWidth;
+                  }
+                  
+                  canvas.width = width;
+                  canvas.height = height;
+                  
+                  const ctx = canvas.getContext('2d');
+                  if (ctx) {
+                      ctx.drawImage(img, 0, 0, width, height);
+                      // 压缩为 JPEG，质量 0.8
+                      const compressedDataUrl = canvas.toDataURL('image/jpeg', 0.8);
+                      handleSiteChange('backgroundImage', compressedDataUrl);
+                      handleSiteChange('backgroundImageType', 'upload');
+                      console.log('Image compressed, original size:', file.size, 'compressed length:', compressedDataUrl.length);
+                  }
+              };
+              img.src = reader.result;
           }
       };
       reader.readAsDataURL(file);
