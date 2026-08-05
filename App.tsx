@@ -53,7 +53,68 @@ const LOCAL_STORAGE_KEY = 'cloudnav_data_cache';
 const WEBDAV_CONFIG_KEY = 'cloudnav_webdav_config';
 const AI_CONFIG_KEY = 'cloudnav_ai_config';
 const SEARCH_CONFIG_KEY = 'cloudnav_search_config';
-const BACKGROUND_IMAGE_KEY = 'cloudnav_background_image';
+
+// IndexedDB 存储背景图（支持大数据）
+const DB_NAME = 'cloudnav_db';
+const STORE_NAME = 'background';
+const BG_IMAGE_KEY = 'backgroundImage';
+
+const openDB = (): Promise<IDBDatabase> => {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, 1);
+    request.onerror = () => reject(request.error);
+    request.onsuccess = () => resolve(request.result);
+    request.onupgradeneeded = () => {
+      const db = request.result;
+      if (!db.objectStoreNames.contains(STORE_NAME)) {
+        db.createObjectStore(STORE_NAME);
+      }
+    };
+  });
+};
+
+const saveBgImageToIDB = async (image: string) => {
+  try {
+    const db = await openDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).put(image, BG_IMAGE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error('Failed to save background image to IndexedDB:', err);
+  }
+};
+
+const loadBgImageFromIDB = async (): Promise<string | null> => {
+  try {
+    const db = await openDB();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readonly');
+      const request = tx.objectStore(STORE_NAME).get(BG_IMAGE_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+    });
+  } catch (err) {
+    console.error('Failed to load background image from IndexedDB:', err);
+    return null;
+  }
+};
+
+const removeBgImageFromIDB = async () => {
+  try {
+    const db = await openDB();
+    return new Promise<void>((resolve, reject) => {
+      const tx = db.transaction(STORE_NAME, 'readwrite');
+      tx.objectStore(STORE_NAME).delete(BG_IMAGE_KEY);
+      tx.oncomplete = () => resolve();
+      tx.onerror = () => reject(tx.error);
+    });
+  } catch (err) {
+    console.error('Failed to remove background image from IndexedDB:', err);
+  }
+};
 
 // --- 树形分类工具函数 ---
 interface CategoryTreeNode {
@@ -781,14 +842,15 @@ function App() {
                     backgroundOpacity: wc.backgroundOpacity ?? 40
                 }));
 
-                // 背景图：从 localStorage 加载（不再使用 KV 存储）
-                const savedBgImage = localStorage.getItem(BACKGROUND_IMAGE_KEY);
-                if (savedBgImage) {
-                    console.log('Loading background image from localStorage, length:', savedBgImage.length);
-                    setBackgroundImage(savedBgImage);
-                } else {
-                    console.log('No background image in localStorage');
-                }
+                // 背景图：从 IndexedDB 加载
+                loadBgImageFromIDB().then(savedBgImage => {
+                    if (savedBgImage) {
+                        console.log('Loading background image from IndexedDB, length:', savedBgImage.length);
+                        setBackgroundImage(savedBgImage);
+                    } else {
+                        console.log('No background image in IndexedDB');
+                    }
+                });
             }
 
             // WebDAV 配置（需要登录）
@@ -1456,15 +1518,17 @@ function App() {
               backgroundOpacity: newSiteSettings.backgroundOpacity
           });
 
-          // 背景图保存到 localStorage（不需要登录，始终执行）
+          // 背景图保存到 IndexedDB（不需要登录，始终执行）
           if (newSiteSettings.backgroundImage) {
-              localStorage.setItem(BACKGROUND_IMAGE_KEY, newSiteSettings.backgroundImage);
-              setBackgroundImage(newSiteSettings.backgroundImage);
-              console.log('Background image saved to localStorage, length:', newSiteSettings.backgroundImage.length);
+              saveBgImageToIDB(newSiteSettings.backgroundImage).then(() => {
+                  setBackgroundImage(newSiteSettings.backgroundImage);
+                  console.log('Background image saved to IndexedDB, length:', newSiteSettings.backgroundImage.length);
+              });
           } else {
-              localStorage.removeItem(BACKGROUND_IMAGE_KEY);
-              setBackgroundImage('');
-              console.log('Background image removed from localStorage (empty)');
+              removeBgImageFromIDB().then(() => {
+                  setBackgroundImage('');
+                  console.log('Background image removed from IndexedDB');
+              });
           }
       }
       

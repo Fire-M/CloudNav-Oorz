@@ -79,11 +79,32 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
       };
       setLocalSiteSettings(safeSettings);
 
-      // 从 localStorage 加载背景图
-      const savedBgImage = localStorage.getItem('cloudnav_background_image');
-      if (savedBgImage) {
-        setLocalSiteSettings(prev => ({ ...prev, backgroundImage: savedBgImage }));
-      }
+      // 从 IndexedDB 加载背景图
+      const loadBg = async () => {
+        try {
+          const db = await new Promise<IDBDatabase>((resolve, reject) => {
+            const req = indexedDB.open('cloudnav_db', 1);
+            req.onerror = () => reject(req.error);
+            req.onsuccess = () => resolve(req.result);
+            req.onupgradeneeded = () => {
+              const db = req.result;
+              if (!db.objectStoreNames.contains('background')) {
+                db.createObjectStore('background');
+              }
+            };
+          });
+          const tx = db.transaction('background', 'readonly');
+          const request = tx.objectStore('background').get('backgroundImage');
+          request.onsuccess = () => {
+            if (request.result) {
+              setLocalSiteSettings(prev => ({ ...prev, backgroundImage: request.result }));
+            }
+          };
+        } catch (err) {
+          console.error('Failed to load background image from IndexedDB:', err);
+        }
+      };
+      loadBg();
 
       setIsProcessing(false);
       setIsZipping(false);
