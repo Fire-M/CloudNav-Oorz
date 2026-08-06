@@ -2282,7 +2282,7 @@ function App() {
         className={`group relative transition-all duration-200 hover:shadow-lg hover:shadow-blue-100/50 dark:hover:shadow-blue-900/20 ${
           isSelected 
             ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' 
-            : 'bg-white dark:bg-slate-800 hover:bg-blue-50 dark:hover:bg-blue-900/20 border-slate-200 dark:border-slate-700'
+            : 'bg-white dark:bg-slate-800 hover:bg-blue-50 border-slate-200 dark:border-slate-700'
         } ${isBatchEditMode ? 'cursor-pointer' : ''} ${
           isDetailedView 
             ? 'flex flex-col rounded-2xl border shadow-sm p-4 min-h-[100px] hover:border-blue-400 dark:hover:border-blue-500' 
