@@ -380,11 +380,16 @@ const authFetch = async (url, options) => {
 };
 
 const verifyPassword = async (password) => {
+    // 必须走 POST + authOnly：GET 是首页公开接口，不校验密码，
+    // 用它验证会导致错误的密码也能通过，存下无效凭证后所有请求都会 401
     const res = await fetch(CONFIG.apiBase + '/api/storage', {
+        method: 'POST',
         headers: {
+            'Content-Type': 'application/json',
             'x-auth-password': password,
             'x-auth-issued-at': String(Date.now())
-        }
+        },
+        body: JSON.stringify({ authOnly: true })
     });
     if (!res.ok) return false;
     await saveAuth(password);
@@ -1294,6 +1299,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             const result = response.result || {};
             btn.textContent = '完成：新增 ' + (result.added || 0) + ' · 归位 ' + (result.moved || 0) + ' · 删除 ' + (result.removed || 0);
         } catch (e) {
+            // 没解锁时直接把登录框顶上来，比干巴巴一句"同步失败"有用
+            if (String((e && e.message) || '').indexOf('需要登录') !== -1) {
+                showLogin('请先用站点密码解锁');
+                return;
+            }
             btn.textContent = '同步失败，点击重试';
             btn.disabled = false;
             console.error('Sync bookmarks failed', e);
