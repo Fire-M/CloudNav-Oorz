@@ -166,30 +166,46 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       categoriesAdded++;
     }
 
-    // 5. 链接去重（同时防止同一批次内部重复）
-    const existingUrls = new Set<string>();
+    // 5. 链接：URL 已存在则归入它在收藏夹里的当前位置，不存在才新增
+    //    这样你之前导入过、但挂在已删除分类下的孤儿链接也会被收进收藏夹结构
+    const existingByUrl = new Map<string, any>();
     for (const item of data.links as any[]) {
-      if (item && item.url) existingUrls.add(normalizeUrl(item.url));
+      if (item && item.url) {
+        const key = normalizeUrl(item.url);
+        // 同 URL 多条时保留第一条，保证后续修改作用在会被展示的那条上
+        if (!existingByUrl.has(key)) existingByUrl.set(key, item);
+      }
     }
 
     let added = 0;
+    let moved = 0;
     let skipped = 0;
     for (const link of links) {
       if (!link || !link.url) continue;
       const key = normalizeUrl(link.url);
-      if (existingUrls.has(key)) {
-        skipped++;
+      const targetCategory = link.folderId || ROOT_CATEGORY_ID;
+
+      const existing = existingByUrl.get(key);
+      if (existing) {
+        if (existing.categoryId !== targetCategory) {
+          existing.categoryId = targetCategory;
+          moved++;
+        } else {
+          skipped++;
+        }
         continue;
       }
-      existingUrls.add(key);
-      data.links.push({
+
+      const item = {
         id: link.id || ('bm_' + Date.now().toString(36) + Math.random().toString(36).slice(2, 8)),
         title: link.title || link.url,
         url: link.url,
-        categoryId: link.folderId || ROOT_CATEGORY_ID,
+        categoryId: targetCategory,
         createdAt: link.dateAdded || Date.now(),
         pinned: false,
-      });
+      };
+      data.links.push(item);
+      existingByUrl.set(key, item);
       added++;
     }
 
@@ -198,6 +214,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     return new Response(JSON.stringify({
       success: true,
       added,
+      moved,
       skipped,
       categoriesAdded,
       categoriesUpdated,

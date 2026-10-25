@@ -413,7 +413,7 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
     if (message?.type === 'sync-bookmarks') {
         syncBookmarksToSite().then((result) => {
             sendResponse({ ok: true, result: result });
-            notify('收藏夹已同步', '新增 ' + (result.added || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条');
+            notify('收藏夹已同步', '新增 ' + (result.added || 0) + ' 条，归位 ' + (result.moved || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条');
             chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
         }).catch((error) => {
             console.error('Failed to sync bookmarks', error);
@@ -1217,7 +1217,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error((response && response.error) || '同步失败');
             }
             const result = response.result || {};
-            btn.textContent = '完成：新增 ' + (result.added || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条';
+            btn.textContent = '完成：新增 ' + (result.added || 0) + ' 条，归位 ' + (result.moved || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条';
         } catch (e) {
             btn.textContent = '同步失败，点击重试';
             btn.disabled = false;
