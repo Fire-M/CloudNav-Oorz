@@ -293,6 +293,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
         minimum_chrome_version: "116",
         description: `${navName} - 侧边栏 + 弹窗双模式收藏助手`,
         permissions: ["activeTab", "scripting", "sidePanel", "storage", "favicon", "contextMenus", "notifications", "tabs", "bookmarks"],
+        host_permissions: [`${domain}/*`],
         background: {
             service_worker: "background.js"
         },
