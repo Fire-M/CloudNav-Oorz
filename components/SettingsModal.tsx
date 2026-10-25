@@ -1312,45 +1312,88 @@ document.addEventListener('DOMContentLoaded', async () => {
     </div>
   );
 
-  const generateIconBlob = async (): Promise<Blob | null> => {
+  // 纯本地绘制，不依赖外部图片与 CORS，保证一定能产出 128x128 图标
+  const generateFallbackIconBlob = async (): Promise<Blob> => {
+     const canvas = document.createElement('canvas');
+     canvas.width = 128;
+     canvas.height = 128;
+     const ctx = canvas.getContext('2d');
+     if (!ctx) throw new Error('Canvas error');
+
+     const gradient = ctx.createLinearGradient(0, 0, 128, 128);
+     gradient.addColorStop(0, '#60a5fa');
+     gradient.addColorStop(1, '#2563eb');
+
+     ctx.fillStyle = gradient;
+     ctx.beginPath();
+     ctx.moveTo(28, 0);
+     ctx.lineTo(100, 0);
+     ctx.quadraticCurveTo(128, 0, 128, 28);
+     ctx.lineTo(128, 100);
+     ctx.quadraticCurveTo(128, 128, 100, 128);
+     ctx.lineTo(28, 128);
+     ctx.quadraticCurveTo(0, 128, 0, 100);
+     ctx.lineTo(0, 28);
+     ctx.quadraticCurveTo(0, 0, 28, 0);
+     ctx.closePath();
+     ctx.fill();
+
+     // 白色书签图形（lucide bookmark 放大 4 倍后居中）
+     ctx.fillStyle = '#ffffff';
+     ctx.beginPath();
+     ctx.moveTo(92, 100);
+     ctx.lineTo(64, 84);
+     ctx.lineTo(36, 100);
+     ctx.lineTo(36, 36);
+     ctx.quadraticCurveTo(36, 28.8, 44, 28);
+     ctx.lineTo(84, 28);
+     ctx.quadraticCurveTo(92, 28.8, 92, 36);
+     ctx.closePath();
+     ctx.fill();
+
+     return new Promise((resolve, reject) => {
+         canvas.toBlob((blob) => {
+             if (blob) resolve(blob);
+             else reject(new Error('toBlob failed'));
+         }, 'image/png');
+     });
+  };
+
+  const generateIconBlob = async (): Promise<Blob> => {
      const iconUrl = localSiteSettings.favicon;
-     if (!iconUrl) return null;
 
-     try {
-         const img = new Image();
-         img.crossOrigin = "anonymous";
-         img.src = iconUrl;
+     if (iconUrl) {
+         try {
+             const img = new Image();
+             img.crossOrigin = "anonymous";
+             img.src = iconUrl;
 
-         await new Promise((resolve, reject) => {
-             img.onload = resolve;
-             img.onerror = reject;
-         });
+             await new Promise((resolve, reject) => {
+                 img.onload = resolve;
+                 img.onerror = reject;
+             });
 
-         const canvas = document.createElement('canvas');
-         canvas.width = 128;
-         canvas.height = 128;
-         const ctx = canvas.getContext('2d');
-         if (!ctx) throw new Error('Canvas error');
-
-         ctx.drawImage(img, 0, 0, 128, 128);
-
-         return new Promise((resolve) => {
-             canvas.toBlob((blob) => {
-                 resolve(blob);
-             }, 'image/png');
-         });
-     } catch (e) {
-         console.error(e);
-         return null;
+             const canvas = document.createElement('canvas');
+             canvas.width = 128;
+             canvas.height = 128;
+             const ctx = canvas.getContext('2d');
+             if (ctx) {
+                 ctx.drawImage(img, 0, 0, 128, 128);
+                 const blob = await new Promise<Blob | null>((resolve) => {
+                     canvas.toBlob((b) => resolve(b), 'image/png');
+                 });
+                 if (blob) return blob;
+             }
+         } catch (e) {
+             console.warn('站点图标生成失败，改用内置默认图标', e);
+         }
      }
+
+     return generateFallbackIconBlob();
   };
 
   const handleDownloadIcon = async () => {
     const blob = await generateIconBlob();
-    if (!blob) {
-        alertDialog({ message: "生成图片失败 (可能是跨域限制)。\n\n请尝试右键点击下方的预览图片，选择 '图片另存为...' 保存。", variant: 'warning', title: '下载失败' });
-        return;
-    }
     const url = window.URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
@@ -1374,12 +1417,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         zip.file("popup.js", extPopupJs);
         
         const iconBlob = await generateIconBlob();
-        if (iconBlob) {
-            zip.file("icon.png", iconBlob);
-        } else {
-            console.warn("Could not generate icon for zip");
-            zip.file("icon_missing.txt", "Icon generation failed due to CORS. Please save the icon manually.");
-        }
+        zip.file("icon.png", iconBlob);
 
         const content = await zip.generateAsync({ type: "blob" });
         const url = window.URL.createObjectURL(content);
