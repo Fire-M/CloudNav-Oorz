@@ -123,7 +123,17 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     const links: LinkPayload[] = Array.isArray(body.links) ? body.links : [];
 
     if (folders.length === 0 && links.length === 0) {
-      return new Response(JSON.stringify({ success: true, added: 0, skipped: 0, categoriesAdded: 0 }), {
+      // 收藏夹为空多半是读取异常，直接返回，不做任何改动更不会删除数据
+      return new Response(JSON.stringify({
+        success: true,
+        added: 0,
+        moved: 0,
+        removed: 0,
+        skipped: 0,
+        categoriesAdded: 0,
+        categoriesUpdated: 0,
+        categoriesRemoved: 0,
+      }), {
         headers: { 'Content-Type': 'application/json', ...corsHeaders },
       });
     }
@@ -164,6 +174,16 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
         parentId: folder.parentId || ROOT_CATEGORY_ID,
       });
       categoriesAdded++;
+    }
+
+    // 本次收藏夹里实际存在的 URL / 文件夹，用于后面判定哪些已经被你删掉
+    const incomingUrls = new Set<string>();
+    for (const link of links) {
+      if (link && link.url) incomingUrls.add(normalizeUrl(link.url));
+    }
+    const incomingFolderIds = new Set<string>();
+    for (const folder of folders) {
+      if (folder && folder.id) incomingFolderIds.add(folder.id);
     }
 
     // 5. 链接：URL 已存在则归入它在收藏夹里的当前位置，不存在才新增
@@ -209,15 +229,45 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       added++;
     }
 
+    // 6. 清理你在收藏夹里已经删掉的，真正从 KV 移除
+    //    只删当初同步进来的（bm_ 前缀），手工添加的一律保留
+    //    收藏夹为空判定为读取异常，不做任何删除，避免误清空
+    let removed = 0;
+    let categoriesRemoved = 0;
+    if (incomingUrls.size > 0) {
+      const keptLinks: any[] = [];
+      for (const item of data.links as any[]) {
+        const key = item && item.url ? normalizeUrl(item.url) : '';
+        if (String((item && item.id) || '').startsWith('bm_') && !incomingUrls.has(key)) {
+          removed++;
+          continue;
+        }
+        keptLinks.push(item);
+      }
+      data.links = keptLinks;
+
+      const keptCategories: any[] = [];
+      for (const category of data.categories) {
+        if (String(category.id).startsWith('bm_') && !incomingFolderIds.has(category.id)) {
+          categoriesRemoved++;
+          continue;
+        }
+        keptCategories.push(category);
+      }
+      data.categories = keptCategories;
+    }
+
     await env.CLOUDNAV_KV.put('app_data', JSON.stringify(data));
 
     return new Response(JSON.stringify({
       success: true,
       added,
       moved,
+      removed,
       skipped,
       categoriesAdded,
       categoriesUpdated,
+      categoriesRemoved,
       total: data.links.length,
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
