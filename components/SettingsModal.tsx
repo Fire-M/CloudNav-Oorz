@@ -289,10 +289,10 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     const json: any = {
         manifest_version: 3,
         name: navName + " Pro",
-        version: "7.6",
+        version: "7.7",
         minimum_chrome_version: "116",
         description: `${navName} - 侧边栏 + 弹窗双模式收藏助手`,
-        permissions: ["activeTab", "scripting", "sidePanel", "storage", "favicon", "contextMenus", "notifications", "tabs"],
+        permissions: ["activeTab", "scripting", "sidePanel", "storage", "favicon", "contextMenus", "notifications", "tabs", "bookmarks"],
         background: {
             service_worker: "background.js"
         },
@@ -336,7 +336,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     return JSON.stringify(json, null, 2);
   };
 
-const extBackgroundJs = `// background.js - ${localSiteSettings.navTitle || 'CloudNav'} Assistant v7.6
+const extBackgroundJs = `// background.js - ${localSiteSettings.navTitle || 'CloudNav'} Assistant v7.7
 const CONFIG = {
   apiBase: "${domain}",
   password: "${password}",
@@ -398,6 +398,15 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         }).catch((error) => {
             console.error('Failed to switch to popup', error);
             sendResponse({ ok: false });
+        });
+        return true;
+    }
+    if (message?.type === 'get-bookmarks-preview') {
+        collectBookmarks().then((data) => {
+            sendResponse({ ok: true, folders: data.folders, links: data.links });
+        }).catch((error) => {
+            console.error('Failed to collect bookmarks', error);
+            sendResponse({ ok: false, error: String((error && error.message) || error) });
         });
         return true;
     }
@@ -572,6 +581,58 @@ async function saveLink(title, url, categoryId, icon = '') {
     } catch (e) {
         notify('保存失败', '网络请求错误');
     }
+}
+
+// --- 浏览器收藏夹遍历（只读，不写入任何数据）---
+const BM_SKIP_PREFIXES = [
+    'chrome:', 'edge:', 'microsoft-edge:', 'read:', 'edge-extension:',
+    'about:', 'javascript:', 'place:', 'data:', 'view-source:',
+    'msteams:', 'ms-excel:', 'ms-word:', 'ms-powerpoint:',
+    'chrome-extension:', 'moz-extension:'
+];
+
+function isSkippedBookmarkUrl(url) {
+    if (!url) return true;
+    const lower = String(url).toLowerCase();
+    for (const prefix of BM_SKIP_PREFIXES) {
+        if (lower.indexOf(prefix) === 0) return true;
+    }
+    return false;
+}
+
+function walkBookmarkNodes(nodes, parentId, folders, links, depth) {
+    for (const node of nodes) {
+        if (node.url) {
+            if (isSkippedBookmarkUrl(node.url)) continue;
+            links.push({
+                id: 'bm_' + node.id,
+                title: node.title || node.url,
+                url: node.url,
+                folderId: parentId,
+                dateAdded: node.dateAdded || 0
+            });
+        } else if (node.children) {
+            const isRoot = node.id === '0';
+            const folderId = isRoot ? '' : ('bm_' + node.id);
+            if (!isRoot) {
+                folders.push({
+                    id: folderId,
+                    title: node.title || '未命名文件夹',
+                    parentId: parentId,
+                    depth: depth
+                });
+            }
+            walkBookmarkNodes(node.children, folderId, folders, links, depth + 1);
+        }
+    }
+}
+
+async function collectBookmarks() {
+    const tree = await chrome.bookmarks.getTree();
+    const folders = [];
+    const links = [];
+    walkBookmarkNodes(tree, '', folders, links, 0);
+    return { folders: folders, links: links };
 }
 
 function notify(title, message) {
@@ -927,6 +988,9 @@ const extPopupHtml = `<!DOCTYPE html>
                     <button id="refresh" class="refresh-btn" title="同步最新数据">
                         <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                     </button>
+                    <button id="bmPreview" class="refresh-btn" title="预览浏览器收藏夹（只读，不会上传）">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    </button>
                 </div>
             </div>
             <input id="search" class="search" type="text" placeholder="搜标题、网址、描述" autocomplete="off">
@@ -953,6 +1017,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('search');
     const refreshBtn = document.getElementById('refresh');
     const openSidepanelBtn = document.getElementById('openSidepanel');
+    const bmPreviewBtn = document.getElementById('bmPreview');
+    let bmPreviewMode = false;
+    let bmData = { folders: [], links: [] };
 
     let allLinks = [];
     let allCategories = [];
@@ -1000,6 +1067,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const render = () => {
+        if (bmPreviewMode) return;
         const query = searchInput.value.trim().toLowerCase();
         const filteredLinks = allLinks.filter((link) => {
             if (activeCategory !== 'all' && link.categoryId !== activeCategory) return false;
@@ -1037,6 +1105,59 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderChips();
         render();
     });
+    const renderBookmarkPreview = () => {
+        const folderCount = bmData.folders.length;
+        const linkCount = bmData.links.length;
+        const rootLinks = bmData.links.filter((item) => !item.folderId).length;
+        const rows = bmData.folders.map((folder) => {
+            const children = bmData.links.filter((item) => item.folderId === folder.id).length;
+            const indent = folder.depth * 14;
+            return \`
+                <div class="card" style="cursor:default">
+                    <div class="meta">
+                        <div class="title" style="margin-left:\${indent}px">\${escapeHtml(folder.title)}</div>
+                        <div class="url" style="margin-left:\${indent}px">\${children} 个书签</div>
+                    </div>
+                </div>
+            \`;
+        }).join('');
+        content.innerHTML = \`
+            <div class="card" style="cursor:default;border-color:rgba(37,99,235,0.35)">
+                <div class="meta">
+                    <div class="title">收藏夹共 \${linkCount} 个书签</div>
+                    <div class="url">\${folderCount} 个文件夹\${rootLinks ? ('，其中 ' + rootLinks + ' 个在根目录') : ''}</div>
+                </div>
+            </div>
+            \${rows}
+        \`;
+    };
+
+    bmPreviewBtn?.addEventListener('click', async () => {
+        if (bmPreviewMode) {
+            bmPreviewMode = false;
+            bmPreviewBtn.style.color = '';
+            chips.style.display = '';
+            render();
+            return;
+        }
+        try {
+            bmPreviewBtn.classList.add('rotating');
+            const response = await chrome.runtime.sendMessage({ type: 'get-bookmarks-preview' });
+            if (!response || !response.ok) {
+                throw new Error((response && response.error) || '读取收藏夹失败');
+            }
+            bmData = { folders: response.folders || [], links: response.links || [] };
+            bmPreviewMode = true;
+            bmPreviewBtn.style.color = 'var(--accent)';
+            chips.style.display = 'none';
+            renderBookmarkPreview();
+        } catch (e) {
+            content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
+        } finally {
+            bmPreviewBtn.classList.remove('rotating');
+        }
+    });
+
     openSidepanelBtn?.addEventListener('click', async () => {
         try {
             const currentWindow = await chrome.windows.getCurrent();
