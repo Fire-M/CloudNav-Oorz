@@ -1645,7 +1645,7 @@ function App() {
           setSidebarOpen(false);
           return;
         }
-        if (ancestor.password && !unlockedCategoryIds.has(id)) {
+        if ((ancestor.hasPassword || ancestor.password) && !unlockedCategoryIds.has(id)) {
           lockedAncestor = ancestor;
           break;
         }
@@ -2070,7 +2070,7 @@ function App() {
         const cat = categories.find(c => c.id === id);
         if (!cat) continue;
         if (cat.requireAuth && !authToken) return true;
-        if (cat.password && !unlockedCategoryIds.has(id)) return true;
+        if ((cat.hasPassword || cat.password) && !unlockedCategoryIds.has(id)) return true;
       }
       return false;
   };

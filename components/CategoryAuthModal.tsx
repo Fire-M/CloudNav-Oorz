@@ -12,18 +12,39 @@ interface CategoryAuthModalProps {
 const CategoryAuthModal: React.FC<CategoryAuthModalProps> = ({ isOpen, onClose, category, onUnlock }) => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [verifying, setVerifying] = useState(false);
 
   if (!isOpen || !category) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
+  // 密码不放在前端比对：GET 接口已不再下发明文，统一交给服务端校验
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (password === category.password) {
-        onUnlock(category.id);
+    if (verifying || !password) return;
+
+    setVerifying(true);
+    setError('');
+    try {
+      const response = await fetch('/api/storage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          verifyCategory: { categoryId: category.id, password },
+        }),
+      });
+      const result = await response.json();
+
+      if (result && result.success) {
         setPassword('');
         setError('');
+        onUnlock(category.id);
         onClose();
-    } else {
+      } else {
         setError('密码错误');
+      }
+    } catch {
+      setError('验证失败，请重试');
+    } finally {
+      setVerifying(false);
     }
   };
 
@@ -64,10 +85,14 @@ const CategoryAuthModal: React.FC<CategoryAuthModalProps> = ({ isOpen, onClose, 
 
           <button
             type="submit"
-            disabled={!password}
-            className="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
+            disabled={!password || verifying}
+            className="w-full bg-amber-500 hover:bg-amber-600 disabled:opacity-60 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-lg shadow-amber-500/30 flex items-center justify-center gap-2"
           >
-            解锁 <ArrowRight size={18} />
+            {verifying ? (
+              <><Loader2 size={18} className="animate-spin" /> 验证中</>
+            ) : (
+              <>解锁 <ArrowRight size={18} /></>
+            )}
           </button>
         </form>
       </div>

@@ -345,6 +345,20 @@ export const onRequestGet = async (context: { env: Env; request: Request }) => {
       }
     } catch {}
 
+    // 返回前剔除分类密码明文，只留 hasPassword 标记
+    // 否则任何人 GET 这个接口就能拿到全部目录密码
+    try {
+      const parsed = JSON.parse(data);
+      if (parsed.categories && Array.isArray(parsed.categories)) {
+        parsed.categories = parsed.categories.map((cat: any) => {
+          if (!cat || !cat.password) return cat;
+          const { password, ...rest } = cat;
+          return { ...rest, hasPassword: true };
+        });
+        data = JSON.stringify(parsed);
+      }
+    } catch {}
+
     return new Response(data, {
       headers: {
         'Content-Type': 'application/json',
@@ -384,6 +398,22 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       });
     }
     
+    // 验证分类密码：只需要分类密码本身，不要求站点登录态，
+    // 否则没登录的人就没法解锁受保护的目录
+    if (body.verifyCategory) {
+      const { categoryId, password } = body.verifyCategory;
+      let ok = false;
+      try {
+        const appData = await env.CLOUDNAV_KV.get('app_data');
+        const parsed = appData ? JSON.parse(appData) : { categories: [] };
+        const target = (parsed.categories || []).find((c: any) => c.id === categoryId);
+        ok = !!target && !!target.password && target.password === password;
+      } catch {}
+      return new Response(JSON.stringify({ success: ok }), {
+        headers: { 'Content-Type': 'application/json', ...corsHeaders },
+      });
+    }
+
     // 如果是保存搜索配置（允许无密码访问，因为搜索配置不包含敏感数据）
     if (body.saveConfig === 'search') {
       // 如果服务器设置了密码，需要验证密码
@@ -508,8 +538,35 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       });
     }
     
+    // 分类密码不在 GET 里下发，保存时按 id 从旧数据补齐，
+    // 否则前端拿不到明文、回写时就会把密码清空
+    let payload = body;
+    if (Array.isArray(body.categories)) {
+      let oldCategories: any[] = [];
+      try {
+        const oldData = await env.CLOUDNAV_KV.get('app_data');
+        oldCategories = oldData ? (JSON.parse(oldData).categories || []) : [];
+      } catch {}
+
+      const oldPasswords = new Map(
+        oldCategories.filter((c: any) => c && c.password).map((c: any) => [c.id, c.password])
+      );
+
+      payload = {
+        ...body,
+        categories: body.categories.map((cat: any) => {
+          if (!cat) return cat;
+          const { hasPassword, ...rest } = cat;
+          // 请求里明确带了 password 字段才更新密码，否则保留服务端已有的
+          if (Object.prototype.hasOwnProperty.call(rest, 'password')) return rest;
+          const old = oldPasswords.get(cat.id);
+          return old ? { ...rest, password: old } : rest;
+        }),
+      };
+    }
+
     // 将数据写入 KV
-    await env.CLOUDNAV_KV.put('app_data', JSON.stringify(body));
+    await env.CLOUDNAV_KV.put('app_data', JSON.stringify(payload));
 
     return new Response(JSON.stringify({ success: true }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },

@@ -16,6 +16,7 @@ export interface Category {
   name: string;
   icon: string; // Lucide icon name or emoji
   password?: string; // Optional password for category protection
+  hasPassword?: boolean; // 服务端下发时抹掉明文密码，只留这个标记
   requireAuth?: boolean; // 使用全站密码后才可查看该分类内容
   parentId?: string; // 父分类ID，无值则为顶级分类
 }
