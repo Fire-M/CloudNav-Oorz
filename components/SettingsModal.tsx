@@ -1149,9 +1149,11 @@ document.addEventListener('DOMContentLoaded', async () => {
         const folderCount = bmData.folders.length;
         const linkCount = bmData.links.length;
         const rootLinks = bmData.links.filter((item) => !item.folderId).length;
+
         const rows = bmData.folders.map((folder) => {
             const children = bmData.links.filter((item) => item.folderId === folder.id).length;
-            const indent = folder.depth * 14;
+            // depth 1 是收藏夹栏，它本身挂在"浏览器收藏夹"容器下，所以从 1 级开始缩进
+            const indent = typeof folder.depth === 'number' ? folder.depth * 14 : 14;
             return \`
                 <div class="card" style="cursor:default">
                     <div class="meta">

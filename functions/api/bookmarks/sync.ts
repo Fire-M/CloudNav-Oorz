@@ -7,6 +7,7 @@ interface FolderPayload {
   id: string;
   title: string;
   parentId?: string;
+  depth?: number;
 }
 
 interface LinkPayload {
@@ -132,26 +133,40 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
     if (!Array.isArray(data.links)) data.links = [];
     if (!Array.isArray(data.categories)) data.categories = [];
 
-    // 1. 确保"浏览器收藏夹"根分类存在
+    // 1. 固定容器：收藏夹内容全部挂在"浏览器收藏夹"下，与手工整理的分类隔离
     if (!data.categories.some((c: any) => c.id === ROOT_CATEGORY_ID)) {
       data.categories.push({ id: ROOT_CATEGORY_ID, name: '浏览器收藏夹', icon: 'Bookmark' });
     }
 
-    // 2. 收藏夹文件夹 -> 分类。id 来自收藏夹节点，稳定，重复同步不会重建
+    // 2. 文件夹 -> 分类，完整保留收藏夹原始层级
+    //    顶级文件夹（收藏夹栏/其他收藏夹）parentId 为空，挂到容器下
     let categoriesAdded = 0;
+    let categoriesUpdated = 0;
     for (const folder of folders) {
       if (!folder || !folder.id) continue;
-      if (data.categories.some((c: any) => c.id === folder.id)) continue;
+
+      const name = folder.title || '未命名文件夹';
+      const existing = data.categories.find((c: any) => c.id === folder.id);
+
+      if (existing) {
+        // 收藏夹里改了文件夹名，这次同步把它改名过来
+        if (existing.name !== name) {
+          existing.name = name;
+          categoriesUpdated++;
+        }
+        continue;
+      }
+
       data.categories.push({
         id: folder.id,
-        name: folder.title || '未命名文件夹',
+        name: name,
         icon: 'Folder',
         parentId: folder.parentId || ROOT_CATEGORY_ID,
       });
       categoriesAdded++;
     }
 
-    // 3. 链接去重（同时防止同一批次内部重复）
+    // 5. 链接去重（同时防止同一批次内部重复）
     const existingUrls = new Set<string>();
     for (const item of data.links as any[]) {
       if (item && item.url) existingUrls.add(normalizeUrl(item.url));
@@ -185,6 +200,7 @@ export const onRequestPost = async (context: { request: Request; env: Env }) => 
       added,
       skipped,
       categoriesAdded,
+      categoriesUpdated,
       total: data.links.length,
     }), {
       headers: { 'Content-Type': 'application/json', ...corsHeaders },
