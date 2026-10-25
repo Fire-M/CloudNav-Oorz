@@ -337,13 +337,66 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     return JSON.stringify(json, null, 2);
   };
 
+// 鉴权公共代码：密码不进扩展源码，运行时输入后存 chrome.storage，请求时注入请求头
+const extAuthHelpers = `const AUTH_KEY = 'cloudnav_auth';
+
+const getStoredAuth = async () => {
+    const stored = await chrome.storage.local.get(AUTH_KEY);
+    return stored[AUTH_KEY] || null;
+};
+
+const saveAuth = async (password) => {
+    const auth = { password: password, issuedAt: Date.now() };
+    await chrome.storage.local.set({ [AUTH_KEY]: auth });
+    return auth;
+};
+
+const clearStoredAuth = async () => {
+    await chrome.storage.local.remove(AUTH_KEY);
+};
+
+const authFetch = async (url, options) => {
+    const auth = await getStoredAuth();
+    if (!auth) {
+        // 站点可能没设密码，先试一次不带凭证的请求，能过就直接放行
+        const probe = await fetch(url, options);
+        if (probe.status !== 401) return probe;
+        const err = new Error('需要登录');
+        err.needAuth = true;
+        throw err;
+    }
+    const headers = Object.assign({}, (options && options.headers) || {}, {
+        'x-auth-password': auth.password,
+        'x-auth-issued-at': String(auth.issuedAt)
+    });
+    const res = await fetch(url, Object.assign({}, options, { headers: headers }));
+    if (res.status === 401) {
+        await clearStoredAuth();
+        const err = new Error('需要登录');
+        err.needAuth = true;
+        throw err;
+    }
+    return res;
+};
+
+const verifyPassword = async (password) => {
+    const res = await fetch(CONFIG.apiBase + '/api/storage', {
+        headers: {
+            'x-auth-password': password,
+            'x-auth-issued-at': String(Date.now())
+        }
+    });
+    if (!res.ok) return false;
+    await saveAuth(password);
+    return true;
+};`;
+
 const extBackgroundJs = `// background.js - ${localSiteSettings.navTitle || 'CloudNav'} Assistant v7.7
 const CONFIG = {
   apiBase: "${domain}",
-  password: "${password}",
-  authTimestamp: "${authIssuedAt || ''}",
   siteName: "${(localSiteSettings.navTitle || 'CloudNav').replace(/"/g, '\\"')}"
 };
+${extAuthHelpers}
 const MODE_KEY = 'cloudnav_ui_mode';
 const POPUP_PATH = 'popup.html';
 
@@ -531,8 +584,8 @@ chrome.contextMenus.onClicked.addListener(async (info, tab) => {
 });
 
 async function saveLink(title, url, categoryId, icon = '') {
-    if (!CONFIG.password) {
-        notify('保存失败', '未配置密码，请先在侧边栏登录。');
+    if (!(await getStoredAuth())) {
+        notify('保存失败', '请先在弹窗或侧边栏用站点密码解锁。');
         return;
     }
 
@@ -545,12 +598,10 @@ async function saveLink(title, url, categoryId, icon = '') {
 
     try {
         const domain = new URL(url).hostname;
-        const iconRes = await fetch(\`\${CONFIG.apiBase}/api/storage\`, {
+        const iconRes = await authFetch(\`\${CONFIG.apiBase}/api/storage\`, {
             method: 'POST',
             headers: {
-                'Content-Type': 'application/json',
-                'x-auth-password': CONFIG.password,
-                ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 saveConfig: 'favicon',
@@ -566,12 +617,10 @@ async function saveLink(title, url, categoryId, icon = '') {
     } catch (e) {}
 
     try {
-        const res = await fetch(\`\${CONFIG.apiBase}/api/link\`, {
+        const res = await authFetch(\`\${CONFIG.apiBase}/api/link\`, {
             method: 'POST',
-            headers: { 
-                'Content-Type': 'application/json',
-                'x-auth-password': CONFIG.password,
-                ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
+            headers: {
+                'Content-Type': 'application/json'
             },
             body: JSON.stringify({
                 title: title || '未命名',
@@ -650,16 +699,10 @@ async function collectBookmarks() {
 async function syncBookmarksToSite() {
     const data = await collectBookmarks();
 
-    if (!CONFIG.password) {
-        throw new Error('未配置密码，请先在侧边栏登录后重新生成扩展。');
-    }
-
-    const res = await fetch(\`\${CONFIG.apiBase}/api/bookmarks/sync\`, {
+    const res = await authFetch(\`\${CONFIG.apiBase}/api/bookmarks/sync\`, {
         method: 'POST',
         headers: {
-            'Content-Type': 'application/json',
-            'x-auth-password': CONFIG.password,
-            ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
+            'Content-Type': 'application/json'
         },
         body: JSON.stringify({ folders: data.folders, links: data.links })
     });
@@ -767,10 +810,9 @@ function notify(title, message) {
 </html>`;
 
 const extSidebarJs = `const CONFIG = {
-  apiBase: "${domain}",
-  password: "${password}",
-  authTimestamp: "${authIssuedAt || ''}"
+  apiBase: "${domain}"
 };
+${extAuthHelpers}
 const CACHE_KEY = 'cloudnav_data';
 
 let port = null;
@@ -896,6 +938,42 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    const showLogin = (errorMessage) => {
+        const tip = errorMessage
+            ? '<div style="color:#ef4444;font-size:12px;margin-top:8px">' + escapeHtml(errorMessage) + '</div>'
+            : '';
+        container.innerHTML = \`
+            <div class="empty" style="padding:24px 16px">
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px">需要站点密码</div>
+                <div style="font-size:12px;opacity:0.7;margin-bottom:14px">密码只存本机，不写进扩展文件</div>
+                <input id="pwdInput" type="password" placeholder="输入站点密码" autocomplete="off"
+                    style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid rgba(148,163,184,0.35);background:transparent;color:inherit;font-size:13px;outline:none">
+                <button id="loginBtn" class="chip" style="margin-top:10px;width:100%;text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
+                    解锁
+                </button>
+                \${tip}
+            </div>
+        \`;
+        const input = document.getElementById('pwdInput');
+        const btn = document.getElementById('loginBtn');
+        input?.focus();
+        const submit = async () => {
+            const value = input ? input.value.trim() : '';
+            if (!value) return;
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+            if (!(await verifyPassword(value))) {
+                showLogin('密码不正确');
+                return;
+            }
+            loadData(true);
+        };
+        btn?.addEventListener('click', submit);
+        input?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') submit();
+        });
+    };
+
     const loadData = async (forceRefresh = false) => {
         try {
             if (!forceRefresh) {
@@ -911,15 +989,8 @@ document.addEventListener('DOMContentLoaded', async () => {
 
             refreshBtn.classList.add('rotating');
             container.innerHTML = '<div class="loading">同步数据中...</div>';
-            
-            const res = await fetch(\`\${CONFIG.apiBase}/api/storage\`, {
-                headers: {
-                    'x-auth-password': CONFIG.password,
-                    ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
-                }
-            });
-            
-            if (!res.ok) throw new Error("Sync failed");
+
+            const res = await authFetch(\`\${CONFIG.apiBase}/api/storage\`);
             
             const data = await res.json();
             allLinks = data.links || [];
@@ -929,7 +1000,11 @@ document.addEventListener('DOMContentLoaded', async () => {
             
             render(searchInput.value);
         } catch (e) {
-            container.innerHTML = \`<div class="empty" style="color:#ef4444">加载失败: \${escapeHtml(e.message)}<br>请点击右上角刷新</div>\`;
+            if (e && e.needAuth) {
+                showLogin('');
+            } else {
+                container.innerHTML = \`<div class="empty" style="color:#ef4444">加载失败: \${escapeHtml(e.message)}<br>请点击右上角刷新</div>\`;
+            }
         } finally {
             refreshBtn.classList.remove('rotating');
         }
@@ -1045,10 +1120,9 @@ const extPopupHtml = `<!DOCTYPE html>
 </html>`;
 
 const extPopupJs = `const CONFIG = {
-  apiBase: "${domain}",
-  password: "${password}",
-  authTimestamp: "${authIssuedAt || ''}"
+  apiBase: "${domain}"
 };
+${extAuthHelpers}
 const CACHE_KEY = 'cloudnav_data';
 
 document.addEventListener('DOMContentLoaded', async () => {
@@ -1238,6 +1312,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
+    const showLogin = (errorMessage) => {
+        const tip = errorMessage
+            ? '<div style="color:#ef4444;font-size:12px;margin-top:8px">' + escapeHtml(errorMessage) + '</div>'
+            : '';
+        content.innerHTML = \`
+            <div class="empty" style="padding:24px 16px">
+                <div style="font-size:14px;font-weight:600;margin-bottom:6px">需要站点密码</div>
+                <div style="font-size:12px;opacity:0.7;margin-bottom:14px">密码只存本机，不写进扩展文件</div>
+                <input id="pwdInput" type="password" placeholder="输入站点密码" autocomplete="off"
+                    style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid rgba(148,163,184,0.35);background:transparent;color:inherit;font-size:13px;outline:none">
+                <button id="loginBtn" class="chip" style="margin-top:10px;width:100%;text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
+                    解锁
+                </button>
+                \${tip}
+            </div>
+        \`;
+        chips.style.display = 'none';
+        const input = document.getElementById('pwdInput');
+        const btn = document.getElementById('loginBtn');
+        input?.focus();
+        const submit = async () => {
+            const value = input ? input.value.trim() : '';
+            if (!value) return;
+            btn.disabled = true;
+            btn.textContent = '验证中...';
+            if (!(await verifyPassword(value))) {
+                showLogin('密码不正确');
+                return;
+            }
+            chips.style.display = '';
+            loadData(true);
+        };
+        btn?.addEventListener('click', submit);
+        input?.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') submit();
+        });
+    };
+
     const loadData = async (forceRefresh = false) => {
         try {
             if (!forceRefresh) {
@@ -1252,22 +1364,20 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
 
             refreshBtn.classList.add('rotating');
-            const res = await fetch(\`\${CONFIG.apiBase}/api/storage\`, {
-                headers: {
-                    'x-auth-password': CONFIG.password,
-                    ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
-                }
-            });
-            if (!res.ok) throw new Error('同步失败');
-
+            const res = await authFetch(\`\${CONFIG.apiBase}/api/storage\`);
             const data = await res.json();
             allLinks = data.links || [];
             allCategories = data.categories || [];
             await chrome.storage.local.set({ [CACHE_KEY]: data });
+            chips.style.display = '';
             renderChips();
             render();
         } catch (e) {
-            content.innerHTML = \`<div class="empty" style="color:#ef4444">加载失败<br>\${escapeHtml(e.message)}</div>\`;
+            if (e && e.needAuth) {
+                showLogin('');
+            } else {
+                content.innerHTML = \`<div class="empty" style="color:#ef4444">加载失败<br>\${escapeHtml(e.message)}</div>\`;
+            }
         } finally {
             refreshBtn.classList.remove('rotating');
         }
