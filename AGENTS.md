@@ -4,7 +4,7 @@
 
 ## 项目概述
 
-CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/导航站点，部署在 Cloudflare Pages 上，使用 KV 存储。支持多级分类导航、常用收藏、AI 驱动的描述生成（Gemini/OpenAI）、WebDAV 备份、密码保护访问、分类级别鉴权、Chrome 扩展集成，以及通过 Cloudflare KV 实现的多设备数据同步。
+CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/导航站点，部署在 Cloudflare Pages 上，使用 KV 存储。支持多级分类导航、常用收藏、自定义背景图（IndexedDB 存储）、书签分享合集、死链检测、AI 驱动的描述生成（Gemini/OpenAI）、WebDAV 备份、密码保护访问、分类级别鉴权、Chrome 扩展集成，以及通过 Cloudflare KV 实现的多设备数据同步。
 
 ## 构建与开发命令
 
@@ -18,8 +18,8 @@ CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/
 ### 前端（单页应用）
 
 - **`index.tsx`** → 将 `<App />` 挂载到 `#root`
-- **`App.tsx`**（约 3400 行）— 单体组件，包含所有 UI 逻辑：侧边栏（支持折叠）、链接网格、拖拽排序（@dnd-kit）、搜索、鉴权流程、批量编辑、收藏功能、右键菜单和弹窗调度。这是需要理解和修改的主要文件。
-- **`types.ts`** — 所有共享的 TypeScript 接口（`LinkItem`、`Category`、`SiteSettings`、`AIConfig`、`SearchConfig`、`WebDavConfig`）及默认数据常量。`LinkItem` 包含 `favorite` 字段，`Category` 包含 `parentId` 字段支持多级分类。
+- **`App.tsx`**（约 3500 行）— 单体组件，包含所有 UI 逻辑：侧边栏（支持折叠）、链接网格、拖拽排序（@dnd-kit）、搜索、鉴权流程、批量编辑、收藏功能、背景图设置、右键菜单和弹窗调度。这是需要理解和修改的主要文件。
+- **`types.ts`** — 所有共享的 TypeScript 接口（`LinkItem`、`Category`、`SiteSettings`、`AIConfig`、`SearchConfig`、`WebDavConfig`、`SharedCollection`）及默认数据常量。`LinkItem` 包含 `favorite` 字段，`Category` 包含 `parentId` 字段支持多级分类。
 - **`index.html`** — 通过 CDN 加载 Tailwind CSS，包含内联脚本，在 React 挂载前从 localStorage/KV 读取 `SiteSettings` 以设置页面标题和图标
 
 ### 组件（`components/`）
@@ -32,9 +32,10 @@ CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/
 - `CategoryManagerModal` — 分类增删改查，支持多级分类，使用 `CategoryTreeSelect` 选择父分类
 - `CategoryAuthModal` — 单个分类密码解锁
 - `BackupModal` — WebDAV 备份/恢复、HTML 导出
-- `SettingsModal` — 站点设置、AI 配置、Chrome 扩展代码生成
+- `SettingsModal` — 站点设置、AI 配置、Chrome 扩展代码生成、死链检测
 - `SearchConfigModal` — 内部/外部搜索源配置
 - `ImportModal` — Chrome/Edge 书签 HTML 导入
+- `ShareModal` — 书签分享合集管理
 - `QRCodeModal` — 二维码显示
 
 **UI 基础组件：**
@@ -63,25 +64,34 @@ CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/
   - `POST`（默认）— 保存完整 `app_data` 到 KV（始终需要鉴权）
   - 图标抓取：获取网站图标、Base64 编码后缓存到 KV，键为 `favicon:{domain}`
 - **`link.ts`** — Chrome 扩展端点，路径 `/api/link`。POST 创建新书签，支持自动分类检测（查找名为"收集"、"未分类"、"inbox"等的分类）
+- **`linkcheck.ts`** — 死链检测端点，路径 `/api/linkcheck`。检查链接是否可访问
+- **`share.ts`** — 分享合集管理端点，路径 `/api/share`。创建、获取、删除分享合集
+- **`share/[token].ts`** — 分享合集访问端点，路径 `/api/share/[token]`。通过 token 访问分享合集
 - **`webdav.ts`** — WebDAV 代理，路径 `/api/webdav`。支持 `check`（PROPFIND）、`upload`（PUT）、`download`（GET）操作，将请求转发到用户的 WebDAV 服务器
 
 ### KV 存储键
 
 所有数据存储在单个 Cloudflare KV 命名空间中（`CLOUDNAV_KV` 绑定）：
 - `app_data` — JSON `{ links, categories }` — 核心书签数据
-- `website_config` — 站点标题、图标、卡片样式、密码设置
+- `website_config` — 站点标题、图标、卡片样式、密码设置（不包含背景图）
 - `ai_config` — AI 提供商/API Key/模型配置
 - `search_config` — 搜索模式和外部搜索源
 - `webdav_config` — WebDAV 连接设置
+- `share_collections` — 分享合集数据
 - `favicon:{domain}` — Base64 编码的图标缓存
 
-### 客户端存储（localStorage）
+### 客户端存储
 
+**localStorage：**
 - `cloudnav_data_cache` — 缓存的应用数据，用于离线/快速加载
 - `cloudnav_auth_token` — 密码（明文，用作鉴权令牌）
 - `lastLoginTime` — 密码过期检查的时间戳
 - `cloudnav_sidebar_collapsed` — 侧边栏折叠状态（`"true"` / `"false"`）
 - `cloudnav_webdav_config`、`cloudnav_ai_config`、`cloudnav_search_config` — 本地配置副本
+- `cloudnav_site_settings` — 站点设置（包含透明度）
+
+**IndexedDB：**
+- `cloudnav_db` / `background` / `backgroundImage` — 背景图数据（支持大文件，避免 localStorage 配额限制）
 
 ## 关键模式
 
@@ -103,6 +113,22 @@ CloudNav（云航）是一个基于 React 19 + TypeScript 构建的个人书签/
 - "常用推荐"分类（id: `common`）作为独立的收藏入口，显示所有 `favorite=true` 的链接。
 - 卡片 hover 显示星标按钮，右键菜单包含"加入常用/取消常用"。
 - 收藏不改变链接的原分类归属。
+
+### 自定义背景图
+
+- 背景图存储在 IndexedDB（`cloudnav_db`），而非 KV 或 localStorage，避免大文件配额问题。
+- 背景图只在主内容区域显示，顶部导航和侧边栏使用纯色背景。
+- 支持 URL 输入和本地上传（最大 50MB）。
+- 背景图设置入口在首页顶部（图片图标按钮），不需要登录即可设置。
+- 透明度调节通过遮罩层实现，暗色模式使用深色遮罩，亮色模式使用浅色遮罩。
+- 相关函数：`saveBgImageToIDB()`、`loadBgImageFromIDB()`、`removeBgImageFromIDB()`。
+
+### 书签分享合集
+
+- `SharedCollection` 接口定义分享合集结构。
+- 分享合集通过 `/api/share` 端点管理，支持创建、获取、删除。
+- 访问链接格式：`/api/share/[token]`。
+- 分享合集数据存储在 KV 的 `share_collections` 键。
 
 ### 侧边栏折叠
 
