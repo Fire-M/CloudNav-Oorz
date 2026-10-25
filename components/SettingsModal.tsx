@@ -410,6 +410,17 @@ chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
         });
         return true;
     }
+    if (message?.type === 'sync-bookmarks') {
+        syncBookmarksToSite().then((result) => {
+            sendResponse({ ok: true, result: result });
+            notify('收藏夹已同步', '新增 ' + (result.added || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条');
+            chrome.runtime.sendMessage({ type: 'refresh' }).catch(() => {});
+        }).catch((error) => {
+            console.error('Failed to sync bookmarks', error);
+            sendResponse({ ok: false, error: String((error && error.message) || error) });
+        });
+        return true;
+    }
     return false;
 });
 
@@ -633,6 +644,34 @@ async function collectBookmarks() {
     const links = [];
     walkBookmarkNodes(tree, '', folders, links, 0);
     return { folders: folders, links: links };
+}
+
+async function syncBookmarksToSite() {
+    const data = await collectBookmarks();
+
+    if (!CONFIG.password) {
+        throw new Error('未配置密码，请先在侧边栏登录后重新生成扩展。');
+    }
+
+    const res = await fetch(\`\${CONFIG.apiBase}/api/bookmarks/sync\`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'x-auth-password': CONFIG.password,
+            ...(CONFIG.authTimestamp ? { 'x-auth-issued-at': CONFIG.authTimestamp } : {})
+        },
+        body: JSON.stringify({ folders: data.folders, links: data.links })
+    });
+
+    if (!res.ok) {
+        let detail = '';
+        try {
+            detail = await res.text();
+        } catch (e) {}
+        throw new Error('服务器返回 ' + res.status + (detail ? (' - ' + detail) : ''));
+    }
+
+    return await res.json();
 }
 
 function notify(title, message) {
@@ -1020,6 +1059,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const bmPreviewBtn = document.getElementById('bmPreview');
     let bmPreviewMode = false;
     let bmData = { folders: [], links: [] };
+    let bmSyncing = false;
 
     let allLinks = [];
     let allCategories = [];
@@ -1128,6 +1168,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="url">\${folderCount} 个文件夹\${rootLinks ? ('，其中 ' + rootLinks + ' 个在根目录') : ''}</div>
                 </div>
             </div>
+            <button id="bmSync" class="chip" style="text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
+                同步到站点
+            </button>
             \${rows}
         \`;
     };
@@ -1155,6 +1198,30 @@ document.addEventListener('DOMContentLoaded', async () => {
             content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
         } finally {
             bmPreviewBtn.classList.remove('rotating');
+        }
+    });
+
+    content.addEventListener('click', async (event) => {
+        const btn = event.target.closest('#bmSync');
+        if (!btn || bmSyncing) return;
+
+        bmSyncing = true;
+        btn.disabled = true;
+        btn.textContent = '正在同步...';
+
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'sync-bookmarks' });
+            if (!response || !response.ok) {
+                throw new Error((response && response.error) || '同步失败');
+            }
+            const result = response.result || {};
+            btn.textContent = '完成：新增 ' + (result.added || 0) + ' 条，跳过 ' + (result.skipped || 0) + ' 条';
+        } catch (e) {
+            btn.textContent = '同步失败，点击重试';
+            btn.disabled = false;
+            console.error('Sync bookmarks failed', e);
+        } finally {
+            bmSyncing = false;
         }
     });
 
