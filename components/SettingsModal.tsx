@@ -758,21 +758,21 @@ function notify(title, message) {
     <meta charset="utf-8">
     <style>
         :root {
-            --bg: #ffffff;
-            --text: #1e293b;
-            --border: #e2e8f0;
-            --hover: #f1f5f9;
-            --accent: #3b82f6;
-            --muted: #64748b;
+            --bg: #f8f9fd;
+            --text: #14172b;
+            --border: #e5e8f2;
+            --hover: #eef1f8;
+            --accent: #4257e6;
+            --muted: #626b85;
         }
         @media (prefers-color-scheme: dark) {
             :root {
-                --bg: #0f172a;
-                --text: #f1f5f9;
-                --border: #334155;
-                --hover: #1e293b;
-                --accent: #60a5fa;
-                --muted: #94a3b8;
+                --bg: #12141d;
+                --text: #eef0f7;
+                --border: #2a2f40;
+                --hover: #1c2030;
+                --accent: #92a6ff;
+                --muted: #9aa3b8;
             }
         }
         html, body { width: 100%; min-width: 0; max-width: 100%; overflow-x: hidden; }
@@ -1058,18 +1058,22 @@ const extPopupHtml = `<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#eef2f8">
+    <meta name="color-scheme" content="light dark">
+    <meta name="theme-color" content="#f8f9fd">
     <style>
         :root {
-            --ink: #15181d;
-            --ink-soft: #6c7480;
-            --line: rgba(17,24,39,0.09);
-            --line-strong: rgba(17,24,39,0.16);
-            --surface: rgba(255,255,255,0.72);
-            --surface-solid: rgba(255,255,255,0.94);
-            --accent: #2f6df6;
-            --accent-soft: rgba(47,109,246,0.10);
+            --ink: #14172b;
+            --ink-soft: #626b85;
+            --line: rgba(20,23,43,0.10);
+            --line-strong: rgba(20,23,43,0.18);
+            --surface: rgba(255,255,255,0.76);
+            --surface-solid: rgba(255,255,255,0.95);
+            --solid: #14172b;
+            --solid-ink: #ffffff;
+            --accent: #4257e6;
+            --accent-soft: rgba(66,87,230,0.12);
+            --danger: #b42318;
+            --danger-soft: rgba(180,35,24,0.09);
         }
         * { box-sizing: border-box; }
         html, body { margin: 0; width: 100%; height: 100%; color: var(--ink);
@@ -1077,9 +1081,9 @@ const extPopupHtml = `<!DOCTYPE html>
           -webkit-font-smoothing: antialiased; }
         body { padding: 16px;
           background:
-            radial-gradient(1200px 620px at 6% -14%, #cfdefa 0%, rgba(207,222,250,0) 60%),
-            radial-gradient(980px 560px at 94% -8%, #d8e9e0 0%, rgba(216,233,224,0) 56%),
-            linear-gradient(180deg, #eef2f8 0%, #e4e9f1 100%);
+            radial-gradient(1100px 600px at 8% -12%, #e9ecff 0%, rgba(233,236,255,0) 62%),
+            radial-gradient(900px 520px at 94% -8%, #e8f3ff 0%, rgba(232,243,255,0) 58%),
+            linear-gradient(180deg, #f8f9fd 0%, #eef1f8 100%);
           background-attachment: fixed; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
           clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -1089,7 +1093,7 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock { flex: 0 0 244px; width: 244px; display: flex; flex-direction: column; min-height: 0;
           padding: 4px 8px 4px 0; }
         .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; }
-        .dock-mark { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: #15181d; color: #fff;
+        .dock-mark { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--solid); color: var(--solid-ink);
           display: inline-flex; align-items: center; justify-content: center; }
         .dock-title { font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -1108,7 +1112,7 @@ const extPopupHtml = `<!DOCTYPE html>
           color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
           transition: background-color .14s, color .14s, border-color .14s; }
         .dir-item:hover { background: var(--surface-solid); color: var(--ink); border-color: var(--line-strong); }
-        .dir-item.active { background: #15181d; border-color: #15181d; color: #fff; font-weight: 500; }
+        .dir-item.active { background: var(--solid); border-color: var(--solid); color: var(--solid-ink); font-weight: 500; }
         .dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .dir-count { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .65; }
         .dir-item.active .dir-count { opacity: .85; }
@@ -1138,7 +1142,7 @@ const extPopupHtml = `<!DOCTYPE html>
         .search { width: 100%; height: 40px; border: 1px solid var(--line); background: var(--surface-solid);
           color: var(--ink); border-radius: 11px; padding: 0 104px 0 40px; outline: none; font-size: 13px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
-        .search::placeholder { color: rgba(108,116,128,0.8); }
+        .search::placeholder { color: rgba(98,107,133,0.75); }
         .search:hover { border-color: var(--line-strong); }
         .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
         .engine-wrap { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
@@ -1152,9 +1156,16 @@ const extPopupHtml = `<!DOCTYPE html>
         .engine-caret { position: absolute; right: 5px; display: flex; pointer-events: none; color: var(--ink-soft); }
 
         /* 内容标签 */
-        .tabbar { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; margin-top: 2px;
-          border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+        .tabrow { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin-top: 2px;
+          border-bottom: 1px solid var(--line); }
+        .tabbar { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px;
+          overflow-x: auto; scrollbar-width: none; }
         .tabbar::-webkit-scrollbar { display: none; }
+        .tab-action { flex: 0 0 auto; height: 26px; padding: 0 10px; border: 1px solid var(--line);
+          border-radius: 999px; background: rgba(255,255,255,0.5); color: var(--ink-soft);
+          font-size: 12px; font-family: inherit; cursor: pointer; touch-action: manipulation;
+          transition: color .14s, background-color .14s, border-color .14s; }
+        .tab-action:hover { color: var(--danger); background: var(--danger-soft); border-color: rgba(180,35,24,0.28); }
         .tab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
           border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-family: inherit;
           white-space: nowrap; cursor: pointer; touch-action: manipulation; border-radius: 8px 8px 0 0;
@@ -1164,7 +1175,7 @@ const extPopupHtml = `<!DOCTYPE html>
         .tab.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
           border-radius: 2px; background: var(--accent); }
         .tab-x { font-size: 14px; line-height: 1; opacity: .45; padding: 0 1px; }
-        .tab-x:hover { opacity: 1; color: #b42318; }
+        .tab-x:hover { opacity: 1; color: var(--danger); }
         .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-anchor: none;
           padding: 16px 2px 8px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.32) transparent; }
         .panel::-webkit-scrollbar { width: 8px; }
@@ -1173,23 +1184,29 @@ const extPopupHtml = `<!DOCTYPE html>
         .panel::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.26); border: 2px solid transparent;
           background-clip: content-box; border-radius: 999px; }
         .grid { position: relative; width: 100%; }
-        .app { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px;
-          height: 84px; text-decoration: none; color: inherit; touch-action: manipulation; }
-        .app-icon { width: 58px; height: 58px; border-radius: 15px; background: var(--surface-solid);
+        .app { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 7px;
+          height: 98px; text-decoration: none; color: inherit; touch-action: manipulation; }
+        .app-icon { position: relative; width: 58px; height: 58px; border-radius: 15px; background: var(--surface-solid);
           display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(15,23,42,0.06);
           transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s, border-color .18s; }
         .app:hover .app-icon { transform: translateY(-2px); border-color: var(--line-strong);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 12px 24px -12px rgba(15,23,42,0.42); }
         .app-icon img { width: 32px; height: 32px; object-fit: contain; }
-        .app-name { font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.35;
-          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .app-letter { display: none; position: absolute; inset: 0; align-items: center; justify-content: center;
+          font-size: 20px; font-weight: 600; letter-spacing: 0.02em; }
+        .app-icon.fb { background: linear-gradient(135deg, hsl(var(--h), 72%, 90%), hsl(var(--h), 60%, 80%));
+          border-color: transparent; box-shadow: none; }
+        .app-icon.fb .app-letter { display: flex; color: hsl(var(--h), 42%, 36%); }
+        .app-name { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+          font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
+          overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
         .empty { text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
         .status { flex: 0 0 auto; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
         .status:empty { display: none; }
         .status:not(:empty) { padding: 8px 2px 0; }
-        .status.error { color: #b42318; }
+        .status.error { color: var(--danger); }
         .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px;
           border: 1px solid transparent; border-radius: 9px; background: var(--accent); color: #fff; font-size: 13px;
           font-family: inherit; font-weight: 500; cursor: pointer; touch-action: manipulation; }
@@ -1197,6 +1214,31 @@ const extPopupHtml = `<!DOCTYPE html>
         .btn:disabled { opacity: .6; cursor: default; }
         .daily { flex: 0 0 auto; padding: 10px 2px 2px; text-align: center; font-size: 12px;
           color: var(--ink-soft); line-height: 1.6; opacity: .85; }
+        /* 跟随系统深色模式 */
+        @media (prefers-color-scheme: dark) {
+            :root {
+                --ink: #eef0f7; --ink-soft: #9aa3b8;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(28,31,44,0.62); --surface-solid: rgba(35,39,53,0.94);
+                --solid: #eef0f7; --solid-ink: #14172b;
+                --accent: #92a6ff; --accent-soft: rgba(146,166,255,0.18);
+                --danger: #ff9c8b; --danger-soft: rgba(255,156,139,0.12);
+            }
+            body { background:
+                radial-gradient(1100px 600px at 8% -12%, #1f2545 0%, rgba(31,37,69,0) 62%),
+                radial-gradient(900px 520px at 94% -8%, #17293c 0%, rgba(23,41,60,0) 58%),
+                linear-gradient(180deg, #12141d 0%, #0b0d12 100%); }
+            .dir-item { background: rgba(255,255,255,0.05); }
+            .dir-item:hover { background: rgba(255,255,255,0.1); }
+            .tool-btn:hover { background: rgba(255,255,255,0.08); }
+            .tab:hover { background: rgba(255,255,255,0.07); }
+            .tab-action { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.10); }
+            .tab-action:hover { background: var(--danger-soft); border-color: rgba(255,156,139,0.30); }
+            .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.3); }
+            .app:hover .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 24px -12px rgba(0,0,0,0.7); }
+            .app-icon.fb { background: linear-gradient(135deg, hsl(var(--h), 30%, 27%), hsl(var(--h), 34%, 37%)); }
+            .app-icon.fb .app-letter { color: hsl(var(--h), 65%, 78%); }
+        }
         @media (max-width: 860px) {
             /* 窄屏仍然保持内部滚动容器：虚拟滚动依赖固定高度的滚动区 */
             body { padding: 10px; height: 100vh; overflow: hidden; }
@@ -1403,7 +1445,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，上千条收藏也不会撑爆主线程
     const panel = document.querySelector('.panel');
-    const TILE_H = 84;
+    const TILE_H = 98;
     const GAP_X = 14;
     const GAP_Y = 22;
     const OVERSCAN = 2;
@@ -1420,12 +1462,21 @@ document.addEventListener('DOMContentLoaded', async () => {
         metrics = { cols: cols, cellW: cellW, stepX: cellW + GAP_X, stepY: TILE_H + GAP_Y };
     };
 
+    // 无 favicon 时按 URL 稳定散列出一个色相，用彩色字母磁贴兜底
+    const hueFor = (link) => {
+        const key = String(link.url || link.title || '');
+        let h = 0;
+        for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+        return h;
+    };
+
     const appHtml = (link, index) => {
         const col = index % metrics.cols;
         const row = Math.floor(index / metrics.cols);
+        const letter = escapeHtml((String(link.title || '').trim().charAt(0) || '?').toUpperCase());
         return \`
             <a class="app" style="left:\${Math.round(col * metrics.stepX)}px;top:\${Math.round(row * metrics.stepY)}px;width:\${Math.round(metrics.cellW)}px" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
-                <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none'"></div>
+                <div class="app-icon" style="--h:\${hueFor(link)}"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentNode.classList.add('fb')"><span class="app-letter">\${letter}</span></div>
                 <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
             </a>
         \`;
@@ -1472,6 +1523,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             ? pool.filter((link) => link.title.toLowerCase().includes(query) ||
                 link.url.toLowerCase().includes(query))
             : pool;
+
+        // 搜索时给个结果计数，避免“到底筛出来没有”的疑问
+        if (query) {
+            statusBar.textContent = '「' + searchInput.value.trim() + '」：' + viewList.length + ' 条结果';
+        } else if (!statusBar.classList.contains('error')) {
+            statusBar.textContent = '';
+        }
 
         if (!viewList.length) {
             viewList = [];
@@ -1555,11 +1613,26 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchTimer = window.setTimeout(render, 120);
     });
     searchInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape' && searchInput.value) {
+            searchInput.value = '';
+            render();
+            return;
+        }
         if (event.key !== 'Enter') return;
         const query = searchInput.value.trim();
         if (!query) return;
         // 输入框会实时筛出本地收藏，回车则是用搜索引擎搜网络
         window.open(ENGINES[activeEngine] + encodeURIComponent(query), '_blank');
+    });
+
+    // 全局按「/」聚焦搜索框（输入控件内不拦截）
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== '/' || event.defaultPrevented) return;
+        const target = event.target;
+        if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' ||
+            target.tagName === 'SELECT' || target.isContentEditable)) return;
+        event.preventDefault();
+        searchInput.focus();
     });
 
     // --- 锁定：清除本机保存的密码 ---
