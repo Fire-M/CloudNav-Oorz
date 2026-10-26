@@ -1085,19 +1085,17 @@ const extPopupHtml = `<!DOCTYPE html>
           clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
         .shell { display: flex; gap: 14px; height: calc(100vh - 32px); max-width: 1520px; margin: 0 auto; }
 
-        /* 左：插件目录 */
-        .dock { flex: 0 0 236px; width: 236px; display: flex; flex-direction: column; min-height: 0;
-          padding: 16px 10px 10px; border-radius: 18px; background: var(--surface);
-          border: 1px solid rgba(255,255,255,0.9);
-          -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 40px -30px rgba(15,23,42,0.5); }
-        .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 6px 13px; }
+        /* 左：插件目录（无底板，气泡平铺） */
+        .dock { flex: 0 0 244px; width: 244px; display: flex; flex-direction: column; min-height: 0;
+          padding: 4px 8px 4px 0; }
+        .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; }
         .dock-mark { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: #15181d; color: #fff;
           display: inline-flex; align-items: center; justify-content: center; }
         .dock-title { font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dock-label { padding: 0 9px 6px; font-size: 10.5px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
-        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
+        .dock-label { padding: 0 2px 8px; font-size: 10.5px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
+        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
+          align-content: flex-start; padding: 2px 2px 2px 0;
           scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
         .dock-list::-webkit-scrollbar { width: 8px; height: 8px; }
         .dock-list::-webkit-scrollbar-button { display: none; }
@@ -1105,21 +1103,16 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-list::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border: 2px solid transparent;
           background-clip: content-box; border-radius: 999px; }
         .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
-        .dir-item { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
-          padding: 0 10px 0 12px; border: 0; background: transparent; border-radius: 8px; color: var(--ink-soft);
-          font-size: 13px; font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
-          transition: background-color .14s, color .14s; }
-        .dir-item::before { content: ""; position: absolute; left: 3px; top: 50%; width: 2px; height: 14px;
-          border-radius: 2px; background: var(--accent); transform: translateY(-50%) scaleY(0);
-          transition: transform .16s ease; }
-        .dir-item:hover { background: rgba(255,255,255,0.6); color: var(--ink); }
-        .dir-item.active { background: var(--surface-solid); color: var(--ink); font-weight: 500;
-          box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
-        .dir-item.active::before { transform: translateY(-50%) scaleY(1); }
-        .dir-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dir-count { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; opacity: .7; }
-        .dir-item.active .dir-count { opacity: .95; }
-        .dock-foot { margin-top: 10px; padding: 10px 9px 2px; border-top: 1px solid var(--line);
+        .dir-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 30px;
+          padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,0.55);
+          color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
+          transition: background-color .14s, color .14s, border-color .14s; }
+        .dir-item:hover { background: var(--surface-solid); color: var(--ink); border-color: var(--line-strong); }
+        .dir-item.active { background: #15181d; border-color: #15181d; color: #fff; font-weight: 500; }
+        .dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dir-count { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .65; }
+        .dir-item.active .dir-count { opacity: .85; }
+        .dock-foot { margin-top: 10px; padding: 10px 2px 0; border-top: 1px solid var(--line);
           font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
         /* 右：内容区 */
@@ -1172,10 +1165,16 @@ const extPopupHtml = `<!DOCTYPE html>
           border-radius: 2px; background: var(--accent); }
         .tab-x { font-size: 14px; line-height: 1; opacity: .45; padding: 0 1px; }
         .tab-x:hover { opacity: 1; color: #b42318; }
-        .panel { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 2px 8px; }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 22px 14px; }
-        .app { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none;
-          color: inherit; touch-action: manipulation; content-visibility: auto; contain-intrinsic-size: auto 92px; }
+        .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-anchor: none;
+          padding: 16px 2px 8px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.32) transparent; }
+        .panel::-webkit-scrollbar { width: 8px; }
+        .panel::-webkit-scrollbar-button { display: none; }
+        .panel::-webkit-scrollbar-track { background: transparent; }
+        .panel::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.26); border: 2px solid transparent;
+          background-clip: content-box; border-radius: 999px; }
+        .grid { position: relative; width: 100%; }
+        .app { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 8px;
+          height: 84px; text-decoration: none; color: inherit; touch-action: manipulation; }
         .app-icon { width: 58px; height: 58px; border-radius: 15px; background: var(--surface-solid);
           display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(15,23,42,0.06);
@@ -1186,7 +1185,7 @@ const extPopupHtml = `<!DOCTYPE html>
         .app-name { font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.35;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .app:hover .app-name { color: var(--ink); }
-        .empty { grid-column: 1/-1; text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
+        .empty { text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
         .status { flex: 0 0 auto; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
         .status:empty { display: none; }
         .status:not(:empty) { padding: 8px 2px 0; }
@@ -1199,23 +1198,22 @@ const extPopupHtml = `<!DOCTYPE html>
         .daily { flex: 0 0 auto; padding: 10px 2px 2px; text-align: center; font-size: 12px;
           color: var(--ink-soft); line-height: 1.6; opacity: .85; }
         @media (max-width: 860px) {
-            body { padding: 10px; height: auto; min-height: 100vh; }
-            .shell { flex-direction: column; height: auto; gap: 10px; }
+            /* 窄屏仍然保持内部滚动容器：虚拟滚动依赖固定高度的滚动区 */
+            body { padding: 10px; height: 100vh; overflow: hidden; }
+            .shell { flex-direction: column; height: calc(100vh - 20px); gap: 10px; }
             .dock { flex: 0 0 auto; width: auto; flex-direction: row; align-items: center;
-              gap: 4px; padding: 8px; overflow-x: auto; scrollbar-width: none; }
+              gap: 4px; padding: 0; overflow-x: auto; scrollbar-width: none; }
             .dock::-webkit-scrollbar { display: none; }
             .dock-brand, .dock-label, .dock-foot { display: none; }
-            .dock-list { flex-direction: row; gap: 2px; overflow: visible; }
-            .dir-item { width: auto; height: 30px; padding: 0 10px; white-space: nowrap; }
-            .dir-item::before { display: none; }
+            .dock-list { flex-wrap: nowrap; gap: 6px; overflow: visible; padding: 0; }
+            .dir-item { height: 30px; flex: 0 0 auto; }
             .dir-count { display: none; }
             .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 0 2px 10px; }
             .clock-wrap { gap: 8px; }
             .clock { font-size: 24px; }
             .search-wrap { order: 3; flex: 1 1 100%; max-width: none; margin: 0; }
             .tools { margin-left: auto; }
-            .panel { overflow: visible; padding-top: 14px; }
-            .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 18px 10px; }
+            .panel { padding-top: 12px; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -1276,7 +1274,10 @@ const extPopupHtml = `<!DOCTYPE html>
                 </div>
             </header>
 
-            <div class="tabbar" id="tabs" role="tablist" aria-label="内容标签"></div>
+            <div class="tabrow" id="tabRow">
+                <div class="tabbar" id="tabs" role="tablist" aria-label="内容标签"></div>
+                <button id="closeAllTabs" class="tab-action" type="button" title="关闭所有标签" style="display:none">关闭所有</button>
+            </div>
             <div id="statusBar" class="status" role="status" aria-live="polite"></div>
             <div class="panel">
                 <div id="content" class="grid">
@@ -1298,6 +1299,8 @@ ${extAuthHelpers}
 document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('content');
     const tabs = document.getElementById('tabs');
+    const tabRow = document.getElementById('tabRow');
+    const closeAllTabsBtn = document.getElementById('closeAllTabs');
     const dirList = document.getElementById('dirList');
     const dirFoot = document.getElementById('dirFoot');
     const searchInput = document.getElementById('search');
@@ -1311,7 +1314,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allCategories = [];
     let activeCategory = 'all';
     let openTabs = ['all'];
-    let renderToken = 0;
     let liveLoaded = false;
     // 收藏夹快照缓存：下次打开先用它出首屏，再拉最新数据
     const CACHE_KEY = 'cloudnav_bm_cache';
@@ -1395,47 +1397,117 @@ document.addEventListener('DOMContentLoaded', async () => {
                 \${id === 'all' ? '' : \`<span class="tab-x" data-close="\${escapeHtml(id)}" role="button" aria-label="关闭标签">×</span>\`}
             </button>
         \`).join('');
+        // 只有一个「全部」标签时不需要「关闭所有」
+        if (closeAllTabsBtn) closeAllTabsBtn.style.display = openTabs.length > 1 ? '' : 'none';
     };
 
-    // 上千条收藏一次性插入会长时间卡住主线程：先画首屏，其余分批补
-    const FIRST_BATCH = 96;
-    const NEXT_BATCH = 240;
+    // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，上千条收藏也不会撑爆主线程
+    const panel = document.querySelector('.panel');
+    const TILE_H = 84;
+    const GAP_X = 14;
+    const GAP_Y = 22;
+    const OVERSCAN = 2;
+    let viewList = [];
+    let metrics = { cols: 1, cellW: 100, stepX: 114, stepY: TILE_H + GAP_Y };
+    let paintedRange = '';
+    let renderSeq = 0;
 
-    const appHtml = (link) => \`
-            <a class="app" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
+    const measure = () => {
+        const width = Math.max(1, panel.clientWidth - 4);
+        const minW = width < 560 ? 84 : 98;
+        const cols = Math.max(1, Math.floor((width + GAP_X) / (minW + GAP_X)));
+        const cellW = (width - GAP_X * (cols - 1)) / cols;
+        metrics = { cols: cols, cellW: cellW, stepX: cellW + GAP_X, stepY: TILE_H + GAP_Y };
+    };
+
+    const appHtml = (link, index) => {
+        const col = index % metrics.cols;
+        const row = Math.floor(index / metrics.cols);
+        return \`
+            <a class="app" style="left:\${Math.round(col * metrics.stepX)}px;top:\${Math.round(row * metrics.stepY)}px;width:\${Math.round(metrics.cellW)}px" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
                 <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none'"></div>
                 <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
             </a>
         \`;
+    };
+
+    const paintWindow = () => {
+        if (!viewList.length) return;
+        const total = Math.ceil(viewList.length / metrics.cols);
+        content.style.height = (total * metrics.stepY - GAP_Y) + 'px';
+        const top = Math.max(0, panel.scrollTop - content.offsetTop);
+        const firstRow = Math.max(0, Math.floor(top / metrics.stepY) - OVERSCAN);
+        const lastRow = Math.min(total, Math.ceil((top + panel.clientHeight) / metrics.stepY) + OVERSCAN);
+        const from = firstRow * metrics.cols;
+        const to = Math.min(viewList.length, lastRow * metrics.cols);
+        const range = renderSeq + ':' + from + ':' + to;
+        if (range === paintedRange) return;
+        // 同一轮数据里只增量补/删磁贴，避免整屏重建触发滚动锚定回弹
+        const sameData = paintedRange.indexOf(renderSeq + ':') === 0;
+        if (sameData) {
+            const prev = paintedRange.split(':');
+            const prevFrom = Number(prev[1]);
+            const prevTo = Number(prev[2]);
+            if (prevFrom === from && to > prevTo) {
+                let appendHtml = '';
+                for (let i = prevTo; i < to; i++) appendHtml += appHtml(viewList[i], i);
+                content.insertAdjacentHTML('beforeend', appendHtml);
+                paintedRange = range;
+                return;
+            }
+        }
+        paintedRange = range;
+        let html = '';
+        for (let i = from; i < to; i++) html += appHtml(viewList[i], i);
+        content.innerHTML = html;
+    };
 
     const render = () => {
+        renderSeq++;
         const query = searchInput.value.trim().toLowerCase();
-        const token = ++renderToken;
         const pool = activeCategory === 'all'
             ? allLinks
             : allLinks.filter((link) => link.categoryId === activeCategory);
-        const list = query
+        viewList = query
             ? pool.filter((link) => link.title.toLowerCase().includes(query) ||
                 link.url.toLowerCase().includes(query))
             : pool;
 
-        if (list.length === 0) {
+        if (!viewList.length) {
+            viewList = [];
+            paintedRange = '';
+            content.style.height = '';
             content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
             return;
         }
 
-        content.innerHTML = '';
-        let cursor = 0;
-        const paint = (size) => {
-            if (token !== renderToken) return;
-            content.insertAdjacentHTML('beforeend', list.slice(cursor, cursor + size).map(appHtml).join(''));
-            cursor += size;
-            if (cursor < list.length) {
-                window.setTimeout(() => paint(NEXT_BATCH), 16);
-            }
-        };
-        paint(FIRST_BATCH);
+        paintedRange = '';
+        measure();
+        paintWindow();
+        // 切回标签时恢复原滚动位置；高度就位后再设置，避免被旧内容高度截断
+        panel.scrollTop = scrollMemory[activeCategory] || 0;
     };
+
+    let paintPending = false;
+    panel.addEventListener('scroll', () => {
+        if (paintPending) return;
+        paintPending = true;
+        window.requestAnimationFrame(() => {
+            paintPending = false;
+            paintWindow();
+        });
+    }, { passive: true });
+
+    const remeasure = () => {
+        paintedRange = '';
+        measure();
+        paintWindow();
+    };
+    if (window.ResizeObserver) {
+        new window.ResizeObserver(remeasure).observe(panel);
+    } else {
+        window.addEventListener('resize', remeasure);
+    }
 
     // --- 时钟与日期 ---
     const dateLine = document.getElementById('dateLine');
@@ -1496,7 +1568,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         showLogin('已锁定，请输入站点密码');
     });
 
+    const scrollMemory = {};
+
     const selectCategory = (id, addTab) => {
+        scrollMemory[activeCategory] = panel.scrollTop;
         activeCategory = id;
         if (addTab && !openTabs.includes(id)) openTabs = openTabs.concat(id).slice(0, 8);
         renderDir();
@@ -1527,6 +1602,15 @@ document.addEventListener('DOMContentLoaded', async () => {
         selectCategory(tab.dataset.id || 'all', false);
     });
 
+    closeAllTabsBtn?.addEventListener('click', () => {
+        openTabs = ['all'];
+        activeCategory = 'all';
+        Object.keys(scrollMemory).forEach((key) => { delete scrollMemory[key]; });
+        renderDir();
+        renderTabs();
+        render();
+    });
+
 
     openSidepanelBtn?.addEventListener('click', async () => {
         try {
@@ -1554,7 +1638,8 @@ document.addEventListener('DOMContentLoaded', async () => {
                 \${tip}
             </div>
         \`;
-        tabs.style.display = 'none';
+        tabRow.style.display = 'none';
+        content.style.height = '';
         const input = document.getElementById('pwdInput');
         const btn = document.getElementById('loginBtn');
         input?.focus();
@@ -1567,7 +1652,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showLogin('密码不正确', onSuccess);
                 return;
             }
-            tabs.style.display = '';
+            tabRow.style.display = '';
             // 解锁后接着做被打断的事（比如同步），没指定就刷新收藏夹
             if (onSuccess) onSuccess();
             else loadBookmarks();
@@ -1582,7 +1667,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         allCategories = folders;
         allLinks = links;
         rebuildCounts();
-        tabs.style.display = '';
+        tabRow.style.display = '';
         if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
             activeCategory = 'all';
         }
@@ -1633,6 +1718,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 chrome.storage.local.set({ [CACHE_KEY]: { folders: folders, links: links, savedAt: Date.now() } });
             } catch (e) {}
         } catch (e) {
+            content.style.height = '';
             content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
         } finally {
             refreshBtn.classList.remove('rotating');
