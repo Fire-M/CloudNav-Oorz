@@ -1059,96 +1059,148 @@ const extPopupHtml = `<!DOCTYPE html>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="color-scheme" content="light">
-    <meta name="theme-color" content="#fff8fa">
+    <meta name="theme-color" content="#eef2f8">
     <style>
         :root {
-            --ink: #2b1a28;
-            --ink-soft: #7d6178;
-            --line: rgba(43,26,40,0.09);
-            --surface: rgba(255,255,255,0.76);
-            --accent: #db2777;
-            --accent-soft: rgba(219,39,119,0.10);
+            --ink: #15181d;
+            --ink-soft: #6c7480;
+            --line: rgba(17,24,39,0.09);
+            --line-strong: rgba(17,24,39,0.16);
+            --surface: rgba(255,255,255,0.72);
+            --surface-solid: rgba(255,255,255,0.94);
+            --accent: #2f6df6;
+            --accent-soft: rgba(47,109,246,0.10);
         }
         * { box-sizing: border-box; }
-        html, body { margin: 0; width: 100%; min-height: 100vh; color: var(--ink);
-          background:
-            radial-gradient(1100px 520px at 50% -8%, rgba(236,72,153,0.15), transparent 68%),
-            linear-gradient(180deg, #fff8fa 0%, #fdeef4 48%, #fffafc 100%);
-          background-attachment: fixed;
+        html, body { margin: 0; width: 100%; height: 100%; color: var(--ink);
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
           -webkit-font-smoothing: antialiased; }
-        body { padding: 44px 40px 36px; }
-        .shell { display: flex; flex-direction: column; gap: 24px; max-width: 1480px; margin: 0 auto; }
+        body { padding: 16px;
+          background:
+            radial-gradient(1200px 620px at 6% -14%, #cfdefa 0%, rgba(207,222,250,0) 60%),
+            radial-gradient(980px 560px at 94% -8%, #d8e9e0 0%, rgba(216,233,224,0) 56%),
+            linear-gradient(180deg, #eef2f8 0%, #e4e9f1 100%);
+          background-attachment: fixed; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
           clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
-        .hero { padding: 32px 32px 28px; border-radius: 24px; background: var(--surface);
-          -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
-          border: 1px solid rgba(255,255,255,0.92); text-align: center;
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 44px -20px rgba(157,23,77,0.30), 0 2px 6px rgba(157,23,77,0.04); }
-        .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .date { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.14em; }
-        .tools { display: flex; gap: 6px; }
-        .tool-btn { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line);
-          background: rgba(255,255,255,0.55); color: var(--ink-soft); display: inline-flex; align-items: center;
-          justify-content: center; cursor: pointer; touch-action: manipulation;
+        .shell { display: flex; gap: 14px; height: calc(100vh - 32px); max-width: 1520px; margin: 0 auto; }
+
+        /* 左：插件目录 */
+        .dock { flex: 0 0 236px; width: 236px; display: flex; flex-direction: column; min-height: 0;
+          padding: 14px 10px 10px; border-radius: 18px; background: var(--surface);
+          border: 1px solid rgba(255,255,255,0.9);
+          -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 40px -30px rgba(15,23,42,0.5); }
+        .dock-brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px 12px; }
+        .dock-mark { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 9px; background: #15181d; color: #fff;
+          display: inline-flex; align-items: center; justify-content: center; }
+        .dock-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dock-label { padding: 0 8px 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--ink-soft); }
+        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
+        .dir-item { display: flex; align-items: center; gap: 9px; width: 100%; height: 34px; padding: 0 8px;
+          border: 0; background: transparent; border-radius: 9px; color: var(--ink-soft); font-size: 13px;
+          font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
+          transition: background-color .14s, color .14s; }
+        .dir-item:hover { background: rgba(255,255,255,0.62); color: var(--ink); }
+        .dir-item.active { background: var(--surface-solid); color: var(--ink); font-weight: 500;
+          box-shadow: 0 1px 2px rgba(15,23,42,0.07); }
+        .dir-dot { flex: 0 0 6px; width: 6px; height: 6px; border-radius: 2px; background: currentColor; opacity: .35; }
+        .dir-item.active .dir-dot { background: var(--accent); opacity: 1; }
+        .dir-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dir-count { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; opacity: .85; }
+        .dock-foot { margin-top: 8px; padding: 9px 8px 2px; border-top: 1px solid var(--line);
+          font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
+
+        /* 右：内容区 */
+        .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
+        .hero { position: relative; flex: 0 0 auto; padding: 24px 22px 20px; border-radius: 18px;
+          background: var(--surface); border: 1px solid rgba(255,255,255,0.9); text-align: center;
+          -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 40px -30px rgba(15,23,42,0.5); }
+        .date { margin-top: 6px; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.04em; }
+        .clock { font-size: 54px; font-weight: 300; line-height: 1.02;
+          letter-spacing: -0.04em; color: var(--ink); font-variant-numeric: tabular-nums; }
+        .tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; }
+        .tool-btn { width: 30px; height: 30px; border-radius: 9px; border: 1px solid transparent; background: transparent;
+          color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
+          cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s, border-color .16s; }
-        .tool-btn:hover { color: var(--accent); border-color: rgba(219,39,119,0.3); background: #fff; }
-        .tool-btn:focus-visible, .engine:focus-visible, .chip:focus-visible, .app:focus-visible {
+        .tool-btn:hover { color: var(--ink); background: rgba(255,255,255,0.75); border-color: var(--line); }
+        .tool-btn:focus-visible, .engine:focus-visible, .tab:focus-visible, .app:focus-visible, .dir-item:focus-visible {
           outline: 2px solid var(--accent); outline-offset: 2px; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .clock { margin-top: 10px; font-size: 82px; font-weight: 200; line-height: 1; letter-spacing: -0.045em;
-          color: var(--ink); font-variant-numeric: tabular-nums; }
-        .search-wrap { position: relative; margin: 26px auto 0; max-width: 560px; }
-        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
+        .search-wrap { position: relative; margin: 16px auto 0; max-width: 520px; }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
           pointer-events: none; display: flex; }
-        .search { width: 100%; height: 46px; border: 1px solid var(--line); background: rgba(255,255,255,0.92);
-          color: var(--ink); border-radius: 13px; padding: 0 16px 0 44px; outline: none; font-size: 14px;
+        .search { width: 100%; height: 42px; border: 1px solid var(--line); background: var(--surface-solid);
+          color: var(--ink); border-radius: 12px; padding: 0 15px 0 42px; outline: none; font-size: 13px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
-        .search::placeholder { color: rgba(125,97,120,0.75); }
-        .search:hover { border-color: rgba(219,39,119,0.22); }
-        .search:focus-visible { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px var(--accent-soft); }
-        .engines { display: flex; gap: 6px; margin: 12px auto 0; max-width: 560px; justify-content: center; }
-        .engine { white-space: nowrap; border: 1px solid transparent; background: transparent; color: var(--ink-soft);
-          border-radius: 8px; padding: 5px 14px; font-size: 12px; cursor: pointer; touch-action: manipulation;
-          transition: color .16s, background-color .16s, border-color .16s; }
-        .engine:hover { color: var(--accent); background: rgba(255,255,255,0.8); border-color: rgba(219,39,119,0.2); }
-        .engine.active { color: #fff; background: var(--accent); border-color: transparent;
-          box-shadow: 0 4px 12px -2px rgba(219,39,119,0.35); }
-        .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 2px; }
-        .chip { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.62); color: var(--ink-soft);
-          border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; touch-action: manipulation;
-          transition: color .16s, background-color .16s, border-color .16s; }
-        .chip:hover { color: var(--accent); border-color: rgba(219,39,119,0.28); background: #fff; }
-        .chip.active { color: #fff; background: var(--accent); border-color: transparent;
-          box-shadow: 0 4px 12px -2px rgba(219,39,119,0.35); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 28px 18px; }
-        .app { display: flex; flex-direction: column; align-items: center; gap: 9px; text-decoration: none;
-          color: inherit; touch-action: manipulation; content-visibility: auto; contain-intrinsic-size: auto 88px; }
-        .app-icon { width: 60px; height: 60px; border-radius: 16px; background: #fff; display: flex; align-items: center;
-          justify-content: center; overflow: hidden; border: 1px solid rgba(43,26,40,0.06);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 8px rgba(157,23,77,0.07);
-          transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s; }
-        .app:hover .app-icon { transform: translateY(-2px);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 22px -8px rgba(157,23,77,0.35); }
-        .app-icon img { width: 36px; height: 36px; object-fit: contain; }
+        .search::placeholder { color: rgba(108,116,128,0.8); }
+        .search:hover { border-color: var(--line-strong); }
+        .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
+        .engines { display: flex; gap: 2px; margin: 10px 0 0; justify-content: center; }
+        .engine { white-space: nowrap; border: 0; background: transparent; color: var(--ink-soft); border-radius: 7px;
+          padding: 4px 9px; font-size: 12px; font-family: inherit; cursor: pointer; touch-action: manipulation;
+          transition: color .16s, background-color .16s; }
+        .engine:hover { color: var(--ink); background: rgba(255,255,255,0.7); }
+        .engine.active { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+
+        /* 内容标签 */
+        .tabbar { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; margin-top: 14px;
+          border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+        .tabbar::-webkit-scrollbar { display: none; }
+        .tab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
+          border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-family: inherit;
+          white-space: nowrap; cursor: pointer; touch-action: manipulation; border-radius: 8px 8px 0 0;
+          transition: color .14s, background-color .14s; }
+        .tab:hover { color: var(--ink); background: rgba(255,255,255,0.55); }
+        .tab.active { color: var(--ink); font-weight: 500; }
+        .tab.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
+          border-radius: 2px; background: var(--accent); }
+        .tab-x { font-size: 14px; line-height: 1; opacity: .45; padding: 0 1px; }
+        .tab-x:hover { opacity: 1; color: #b42318; }
+        .panel { flex: 1; min-height: 0; overflow-y: auto; padding: 18px 2px 8px; }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(98px, 1fr)); gap: 22px 14px; }
+        .app { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none;
+          color: inherit; touch-action: manipulation; content-visibility: auto; contain-intrinsic-size: auto 92px; }
+        .app-icon { width: 58px; height: 58px; border-radius: 15px; background: var(--surface-solid);
+          display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(15,23,42,0.06);
+          transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s, border-color .18s; }
+        .app:hover .app-icon { transform: translateY(-2px); border-color: var(--line-strong);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 12px 24px -12px rgba(15,23,42,0.42); }
+        .app-icon img { width: 32px; height: 32px; object-fit: contain; }
         .app-name { font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.35;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
-          background: rgba(255,255,255,0.72); border: 1px solid var(--line); text-decoration: none; color: inherit; }
-        .meta { min-width: 0; flex: 1; }
-        .title { font-size: 13px; font-weight: 600; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .url { margin-top: 2px; font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .badge { margin-top: 8px; display: inline-flex; padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
-        .empty { grid-column: 1/-1; text-align: center; color: var(--ink-soft); padding: 44px 12px; font-size: 13px; }
-        .status { text-align: center; font-size: 12px; color: var(--ink-soft); line-height: 1.55; min-height: 18px; }
-        .status.error { color: #c0264a; }
-        .daily { margin-top: 4px; padding: 16px 10px 0; text-align: center; font-size: 12px; color: var(--ink-soft);
-          line-height: 1.6; letter-spacing: 0.02em; opacity: 0.9; }
-        @media (max-width: 720px) {
-            body { padding: 24px 18px 24px; }
-            .clock { font-size: 58px; }
-            .hero { padding: 22px 18px 20px; }
+        .app:hover .app-name { color: var(--ink); }
+        .empty { grid-column: 1/-1; text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
+        .status { flex: 0 0 auto; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+        .status:empty { display: none; }
+        .status:not(:empty) { padding: 8px 2px 0; }
+        .status.error { color: #b42318; }
+        .btn { display: inline-flex; align-items: center; justify-content: center; height: 34px; padding: 0 14px;
+          border: 1px solid transparent; border-radius: 9px; background: var(--accent); color: #fff; font-size: 13px;
+          font-family: inherit; font-weight: 500; cursor: pointer; touch-action: manipulation; }
+        .btn:hover { filter: brightness(.96); }
+        .btn:disabled { opacity: .6; cursor: default; }
+        .daily { flex: 0 0 auto; padding: 10px 2px 2px; text-align: center; font-size: 12px;
+          color: var(--ink-soft); line-height: 1.6; opacity: .85; }
+        @media (max-width: 860px) {
+            body { padding: 10px; height: auto; min-height: 100vh; }
+            .shell { flex-direction: column; height: auto; gap: 10px; }
+            .dock { flex: 0 0 auto; width: auto; flex-direction: row; align-items: center;
+              gap: 4px; padding: 8px; overflow-x: auto; scrollbar-width: none; }
+            .dock::-webkit-scrollbar { display: none; }
+            .dock-brand, .dock-label, .dock-foot { display: none; }
+            .dock-list { flex-direction: row; gap: 2px; overflow: visible; }
+            .dir-item { width: auto; height: 30px; padding: 0 10px; white-space: nowrap; }
+            .dir-count { display: none; }
+            .hero { padding: 16px 16px 14px; }
+            .clock { font-size: 34px; }
+            .panel { overflow: visible; padding-top: 14px; }
+            .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 18px 10px; }
         }
         @media (prefers-reduced-motion: reduce) {
             *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -1159,43 +1211,58 @@ const extPopupHtml = `<!DOCTYPE html>
 <body>
     <h1 class="sr-only">收藏夹导航</h1>
     <div class="shell">
-        <section class="hero">
-            <div class="hero-top">
+        <aside class="dock" aria-label="插件目录">
+            <div class="dock-brand">
+                <span class="dock-mark" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>
+                </span>
+                <span class="dock-title">收藏夹</span>
+            </div>
+            <div class="dock-label">目录</div>
+            <nav id="dirList" class="dock-list"></nav>
+            <div class="dock-foot" id="dirFoot"></div>
+        </aside>
+
+        <section class="stage">
+            <header class="hero">
+                <div class="clock" id="clockLine">--:--</div>
                 <div class="date" id="dateLine">—</div>
                 <div class="tools">
-                    <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
-                    </button>
-                    <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-                    </button>
-                    <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
-                    </button>
-                    <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                    </button>
+                        <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+                        </button>
+                        <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                        </button>
+                        <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+                        </button>
+                        <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                        </button>
+                    </div>
+                <div class="search-wrap">
+                    <span class="search-icon" aria-hidden="true">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                    </span>
+                    <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
+                </div>
+                <div class="engines" id="engines">
+                    <button class="engine active" data-engine="baidu">百度</button>
+                    <button class="engine" data-engine="bing">必应</button>
+                    <button class="engine" data-engine="google">Google</button>
+                </div>
+            </header>
+
+            <div class="tabbar" id="tabs" role="tablist" aria-label="内容标签"></div>
+            <div id="statusBar" class="status" role="status" aria-live="polite"></div>
+            <div class="panel">
+                <div id="content" class="grid">
+                    <div class="empty">读取收藏夹中…</div>
                 </div>
             </div>
-            <div class="clock" id="clockLine">--:--</div>
-            <div class="search-wrap">
-                <span class="search-icon" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
-                </span>
-                <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
-            </div>
-            <div class="engines" id="engines">
-                <button class="engine active" data-engine="baidu">百度</button>
-                <button class="engine" data-engine="bing">必应</button>
-                <button class="engine" data-engine="google">Google</button>
-            </div>
+            <footer class="daily" id="daily"></footer>
         </section>
-        <div id="statusBar" class="status" role="status" aria-live="polite"></div>
-        <div id="chips" class="chips"></div>
-        <div id="content" class="grid">
-            <div class="empty">读取收藏夹中…</div>
-        </div>
-        <footer class="daily" id="daily"></footer>
     </div>
     <script src="popup.js"></script>
 </body>
@@ -1208,7 +1275,9 @@ ${extAuthHelpers}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('content');
-    const chips = document.getElementById('chips');
+    const tabs = document.getElementById('tabs');
+    const dirList = document.getElementById('dirList');
+    const dirFoot = document.getElementById('dirFoot');
     const searchInput = document.getElementById('search');
     const refreshBtn = document.getElementById('refresh');
     const openSidepanelBtn = document.getElementById('openSidepanel');
@@ -1219,6 +1288,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allLinks = [];
     let allCategories = [];
     let activeCategory = 'all';
+    let openTabs = ['all'];
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -1247,23 +1317,48 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
-    // 网格每格只有 84px，标签最多显示 5 个字；
-    // 完整标题已经挂在 a 标签的 title 上，鼠标悬浮即可看全
-    const shortName = (value) => {
-        const text = String(value ?? '');
-        return text.length > 5 ? text.slice(0, 5) + '…' : text;
+    // 标签宽度交给 CSS 做省略号，完整标题挂在 a 标签的 title 上
+    const shortName = (value) => String(value ?? '');
+
+    const categoryList = () => allCategories.length > 0
+        ? allCategories
+        : Array.from(new Set(allLinks.map((link) => link.categoryId)))
+            .filter(Boolean)
+            .map((categoryId) => ({ id: categoryId, name: categoryId }));
+
+    const countOf = (id) => id === 'all'
+        ? allLinks.length
+        : allLinks.filter((link) => link.categoryId === id).length;
+
+    const categoryName = (id) => {
+        if (id === 'all') return '全部';
+        const found = categoryList().find((category) => category.id === id);
+        return found ? found.name : id;
     };
 
-    const renderChips = () => {
-        const fallbackCategories = allCategories.length > 0
-            ? allCategories
-            : Array.from(new Set(allLinks.map((link) => link.categoryId)))
-                .filter(Boolean)
-                .map((categoryId) => ({ id: categoryId, name: categoryId }));
-        const items = [{ id: 'all', name: '全部' }, ...fallbackCategories];
-        chips.innerHTML = items.map((category) => \`
-            <button class="chip \${activeCategory === category.id ? 'active' : ''}" data-id="\${category.id}">
-                \${escapeHtml(category.name)}
+    // 左栏：插件目录
+    const renderDir = () => {
+        const items = [{ id: 'all', name: '全部收藏' }, ...categoryList()];
+        dirList.innerHTML = items.map((category) => \`
+            <button class="dir-item \${activeCategory === category.id ? 'active' : ''}" type="button" data-id="\${escapeHtml(category.id)}">
+                <span class="dir-dot" aria-hidden="true"></span>
+                <span class="dir-name" title="\${escapeHtml(category.name)}">\${escapeHtml(category.name)}</span>
+                <span class="dir-count">\${countOf(category.id)}</span>
+            </button>
+        \`).join('');
+        dirFoot.textContent = \`\${allLinks.length} 个收藏 · \${categoryList().length} 个目录\`;
+    };
+
+    // 右栏：内容标签
+    const renderTabs = () => {
+        const known = ['all', ...categoryList().map((category) => category.id)];
+        openTabs = openTabs.filter((id) => known.includes(id));
+        if (openTabs.length === 0) openTabs = ['all'];
+        if (!openTabs.includes(activeCategory)) openTabs.push(activeCategory);
+        tabs.innerHTML = openTabs.map((id) => \`
+            <button class="tab \${activeCategory === id ? 'active' : ''}" type="button" role="tab" aria-selected="\${activeCategory === id}" data-id="\${escapeHtml(id)}">
+                <span>\${escapeHtml(categoryName(id))}</span>
+                \${id === 'all' ? '' : \`<span class="tab-x" data-close="\${escapeHtml(id)}" role="button" aria-label="关闭标签">×</span>\`}
             </button>
         \`).join('');
     };
@@ -1353,12 +1448,35 @@ document.addEventListener('DOMContentLoaded', async () => {
         showLogin('已锁定，请输入站点密码');
     });
 
-    chips.addEventListener('click', (event) => {
-        const chip = event.target.closest('.chip');
-        if (!chip) return;
-        activeCategory = chip.dataset.id || 'all';
-        renderChips();
+    const selectCategory = (id, addTab) => {
+        activeCategory = id;
+        if (addTab && !openTabs.includes(id)) openTabs = openTabs.concat(id).slice(0, 8);
+        renderDir();
+        renderTabs();
         render();
+    };
+
+    dirList.addEventListener('click', (event) => {
+        const item = event.target.closest('.dir-item');
+        if (!item) return;
+        selectCategory(item.dataset.id || 'all', true);
+    });
+
+    tabs.addEventListener('click', (event) => {
+        const closeBtn = event.target.closest('.tab-x');
+        if (closeBtn) {
+            event.stopPropagation();
+            const closingId = closeBtn.dataset.close;
+            openTabs = openTabs.filter((id) => id !== closingId);
+            if (activeCategory === closingId) activeCategory = 'all';
+            renderDir();
+            renderTabs();
+            render();
+            return;
+        }
+        const tab = event.target.closest('.tab');
+        if (!tab) return;
+        selectCategory(tab.dataset.id || 'all', false);
     });
 
 
@@ -1382,13 +1500,13 @@ document.addEventListener('DOMContentLoaded', async () => {
                 <div style="font-size:12px;opacity:0.7;margin-bottom:14px">密码只存本机，不写进扩展文件</div>
                 <input id="pwdInput" type="password" placeholder="输入站点密码" autocomplete="off"
                     style="width:100%;box-sizing:border-box;padding:8px 10px;border-radius:8px;border:1px solid rgba(148,163,184,0.35);background:transparent;color:inherit;font-size:13px;outline:none">
-                <button id="loginBtn" class="chip" style="margin-top:10px;width:100%;text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
+                <button id="loginBtn" class="btn" style="margin-top:10px;width:100%">
                     解锁
                 </button>
                 \${tip}
             </div>
         \`;
-        chips.style.display = 'none';
+        tabs.style.display = 'none';
         const input = document.getElementById('pwdInput');
         const btn = document.getElementById('loginBtn');
         input?.focus();
@@ -1401,7 +1519,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showLogin('密码不正确', onSuccess);
                 return;
             }
-            chips.style.display = '';
+            tabs.style.display = '';
             // 解锁后接着做被打断的事（比如同步），没指定就刷新收藏夹
             if (onSuccess) onSuccess();
             else loadBookmarks();
@@ -1428,8 +1546,12 @@ document.addEventListener('DOMContentLoaded', async () => {
                 url: link.url,
                 categoryId: link.folderId || ''
             }));
-            chips.style.display = '';
-            renderChips();
+            tabs.style.display = '';
+            if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
+                activeCategory = 'all';
+            }
+            renderDir();
+            renderTabs();
             render();
         } catch (e) {
             content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
