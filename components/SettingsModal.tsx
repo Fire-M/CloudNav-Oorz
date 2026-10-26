@@ -1114,6 +1114,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .url { margin-top: 3px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .badge { margin-top: 8px; display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
         .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px 12px; font-size: 13px; }
+        .status { text-align: center; font-size: 12px; color: var(--muted); line-height: 1.5; min-height: 18px; }
+        .status.error { color: #ef4444; }
         .daily { margin-top: 8px; padding: 18px 10px 0; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.5; }
         @media (max-width: 720px) {
             body { padding: 24px 18px 24px; }
@@ -1131,11 +1133,11 @@ const extPopupHtml = `<!DOCTYPE html>
                     <button id="openSidepanel" class="tool-btn" title="打开侧边栏">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
                     </button>
-                    <button id="refresh" class="tool-btn" title="同步最新数据">
+                    <button id="refresh" class="tool-btn" title="重新读取浏览器收藏夹">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                     </button>
-                    <button id="bmPreview" class="tool-btn" title="预览浏览器收藏夹（只读，不会上传）">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    <button id="syncToSite" class="tool-btn" title="把浏览器收藏夹同步到站点">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
                     </button>
                     <button id="lock" class="tool-btn" title="锁定（清除本机保存的密码）">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
@@ -1155,9 +1157,10 @@ const extPopupHtml = `<!DOCTYPE html>
                 <button class="engine" data-engine="google">Google</button>
             </div>
         </section>
+        <div id="statusBar" class="status"></div>
         <div id="chips" class="chips"></div>
         <div id="content" class="grid">
-            <div class="empty">初始化中...</div>
+            <div class="empty">读取收藏夹中...</div>
         </div>
         <footer class="daily" id="daily"></footer>
     </div>
@@ -1169,7 +1172,6 @@ const extPopupJs = `const CONFIG = {
   apiBase: "${domain}"
 };
 ${extAuthHelpers}
-const CACHE_KEY = 'cloudnav_data';
 
 document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('content');
@@ -1177,9 +1179,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const searchInput = document.getElementById('search');
     const refreshBtn = document.getElementById('refresh');
     const openSidepanelBtn = document.getElementById('openSidepanel');
-    const bmPreviewBtn = document.getElementById('bmPreview');
-    let bmPreviewMode = false;
-    let bmData = { folders: [], links: [] };
+    const syncBtn = document.getElementById('syncToSite');
+    const statusBar = document.getElementById('statusBar');
     let bmSyncing = false;
 
     let allLinks = [];
@@ -1235,7 +1236,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const render = () => {
-        if (bmPreviewMode) return;
         const query = searchInput.value.trim().toLowerCase();
         const filteredLinks = allLinks.filter((link) => {
             if (activeCategory !== 'all' && link.categoryId !== activeCategory) return false;
@@ -1324,92 +1324,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderChips();
         render();
     });
-    const renderBookmarkPreview = () => {
-        const folderCount = bmData.folders.length;
-        const linkCount = bmData.links.length;
-        const rootLinks = bmData.links.filter((item) => !item.folderId).length;
 
-        const rows = bmData.folders.map((folder) => {
-            const children = bmData.links.filter((item) => item.folderId === folder.id).length;
-            // depth 1 是收藏夹栏，它本身挂在"浏览器收藏夹"容器下，所以从 1 级开始缩进
-            const indent = typeof folder.depth === 'number' ? folder.depth * 14 : 14;
-            return \`
-                <div class="card" style="cursor:default">
-                    <div class="meta">
-                        <div class="title" style="margin-left:\${indent}px">\${escapeHtml(folder.title)}</div>
-                        <div class="url" style="margin-left:\${indent}px">\${children} 个书签</div>
-                    </div>
-                </div>
-            \`;
-        }).join('');
-        content.innerHTML = \`
-            <div class="card" style="cursor:default;border-color:rgba(37,99,235,0.35)">
-                <div class="meta">
-                    <div class="title">收藏夹共 \${linkCount} 个书签</div>
-                    <div class="url">\${folderCount} 个文件夹\${rootLinks ? ('，其中 ' + rootLinks + ' 个在根目录') : ''}</div>
-                </div>
-            </div>
-            <button id="bmSync" class="chip" style="grid-column:1/-1;text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
-                同步到站点
-            </button>
-            \${rows}
-        \`;
-    };
-
-    bmPreviewBtn?.addEventListener('click', async () => {
-        if (bmPreviewMode) {
-            bmPreviewMode = false;
-            bmPreviewBtn.style.color = '';
-            chips.style.display = '';
-            render();
-            return;
-        }
-        try {
-            bmPreviewBtn.classList.add('rotating');
-            const response = await chrome.runtime.sendMessage({ type: 'get-bookmarks-preview' });
-            if (!response || !response.ok) {
-                throw new Error((response && response.error) || '读取收藏夹失败');
-            }
-            bmData = { folders: response.folders || [], links: response.links || [] };
-            bmPreviewMode = true;
-            bmPreviewBtn.style.color = 'var(--accent)';
-            chips.style.display = 'none';
-            renderBookmarkPreview();
-        } catch (e) {
-            content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
-        } finally {
-            bmPreviewBtn.classList.remove('rotating');
-        }
-    });
-
-    content.addEventListener('click', async (event) => {
-        const btn = event.target.closest('#bmSync');
-        if (!btn || bmSyncing) return;
-
-        bmSyncing = true;
-        btn.disabled = true;
-        btn.textContent = '正在同步...';
-
-        try {
-            const response = await chrome.runtime.sendMessage({ type: 'sync-bookmarks' });
-            if (!response || !response.ok) {
-                throw new Error((response && response.error) || '同步失败');
-            }
-            const result = response.result || {};
-            btn.textContent = '完成：新增 ' + (result.added || 0) + ' · 归位 ' + (result.moved || 0) + ' · 删除 ' + (result.removed || 0);
-        } catch (e) {
-            // 没解锁时直接把登录框顶上来，比干巴巴一句"同步失败"有用
-            if (String((e && e.message) || '').indexOf('需要登录') !== -1) {
-                showLogin('请先用站点密码解锁');
-                return;
-            }
-            btn.textContent = '同步失败，点击重试';
-            btn.disabled = false;
-            console.error('Sync bookmarks failed', e);
-        } finally {
-            bmSyncing = false;
-        }
-    });
 
     openSidepanelBtn?.addEventListener('click', async () => {
         try {
@@ -1421,7 +1336,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     });
 
-    const showLogin = (errorMessage) => {
+    const showLogin = (errorMessage, onSuccess) => {
         const tip = errorMessage
             ? '<div style="color:#ef4444;font-size:12px;margin-top:8px">' + escapeHtml(errorMessage) + '</div>'
             : '';
@@ -1447,11 +1362,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             btn.disabled = true;
             btn.textContent = '验证中...';
             if (!(await verifyPassword(value))) {
-                showLogin('密码不正确');
+                showLogin('密码不正确', onSuccess);
                 return;
             }
             chips.style.display = '';
-            loadData(true);
+            // 解锁后接着做被打断的事（比如同步），没指定就刷新收藏夹
+            if (onSuccess) onSuccess();
+            else loadBookmarks();
         };
         btn?.addEventListener('click', submit);
         input?.addEventListener('keydown', (event) => {
@@ -1459,48 +1376,75 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
-    const loadData = async (forceRefresh = false) => {
+    // 主数据源就是浏览器收藏夹，浏览时完全不连站点
+    const loadBookmarks = async () => {
         try {
-            if (!forceRefresh) {
-                const cached = await chrome.storage.local.get(CACHE_KEY);
-                if (cached[CACHE_KEY]) {
-                    allLinks = cached[CACHE_KEY].links || [];
-                    allCategories = cached[CACHE_KEY].categories || [];
-                    renderChips();
-                    render();
-                    return;
-                }
-            }
-
             refreshBtn.classList.add('rotating');
-            const res = await authFetch(\`\${CONFIG.apiBase}/api/storage\`);
-            const data = await res.json();
-            allLinks = data.links || [];
-            allCategories = data.categories || [];
-            await chrome.storage.local.set({ [CACHE_KEY]: data });
+            const response = await chrome.runtime.sendMessage({ type: 'get-bookmarks-preview' });
+            if (!response || !response.ok) {
+                throw new Error((response && response.error) || '读取收藏夹失败');
+            }
+            // 收藏夹文件夹当分类、书签当链接，喂给现成的渲染逻辑
+            allCategories = (response.folders || []).map((folder) => ({ id: folder.id, name: folder.title }));
+            allLinks = (response.links || []).map((link) => ({
+                id: link.id,
+                title: link.title,
+                url: link.url,
+                categoryId: link.folderId || ''
+            }));
             chips.style.display = '';
             renderChips();
             render();
         } catch (e) {
-            if (e && e.needAuth) {
-                showLogin('');
-            } else {
-                content.innerHTML = \`<div class="empty" style="color:#ef4444">加载失败<br>\${escapeHtml(e.message)}</div>\`;
-            }
+            content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
         } finally {
             refreshBtn.classList.remove('rotating');
         }
     };
 
-    refreshBtn.addEventListener('click', () => loadData(true));
+    const setStatus = (text, isError) => {
+        statusBar.textContent = text || '';
+        statusBar.classList.toggle('error', !!isError);
+    };
+
+    // 只有这一步需要站点凭证，所以没解锁才会弹登录框
+    const doSync = async () => {
+        if (bmSyncing) return;
+        bmSyncing = true;
+        syncBtn.classList.add('rotating');
+        setStatus('正在同步到站点...');
+        try {
+            const response = await chrome.runtime.sendMessage({ type: 'sync-bookmarks' });
+            if (!response || !response.ok) {
+                throw new Error((response && response.error) || '同步失败');
+            }
+            const result = response.result || {};
+            setStatus('已同步：新增 ' + (result.added || 0) + ' · 归位 ' + (result.moved || 0) + ' · 删除 ' + (result.removed || 0));
+            await loadBookmarks();
+        } catch (e) {
+            const message = String((e && e.message) || '同步失败');
+            if (message.indexOf('需要登录') !== -1) {
+                // 解锁后自动重试这一次同步
+                showLogin('请先用站点密码解锁', doSync);
+            } else {
+                setStatus(message, true);
+            }
+        } finally {
+            bmSyncing = false;
+            syncBtn.classList.remove('rotating');
+        }
+    };
+
+    syncBtn?.addEventListener('click', doSync);
+    refreshBtn.addEventListener('click', () => loadBookmarks());
 
     chrome.runtime.onMessage.addListener((msg) => {
         if (msg.type === 'refresh') {
-            loadData(true);
+            loadBookmarks();
         }
     });
 
-    loadData();
+    loadBookmarks();
 });`;
 
   const renderCodeBlock = (filename: string, code: string) => (
