@@ -1042,83 +1042,101 @@ const extPopupHtml = `<!DOCTYPE html>
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <style>
         :root {
-            --bg: #f8fafc;
-            --card: rgba(255,255,255,0.88);
-            --text: #0f172a;
-            --muted: #64748b;
-            --line: rgba(148,163,184,0.22);
-            --accent: #2563eb;
-            --accent-soft: rgba(37,99,235,0.12);
-        }
-        @media (prefers-color-scheme: dark) {
-            :root {
-                --bg: #020617;
-                --card: rgba(15,23,42,0.86);
-                --text: #e2e8f0;
-                --muted: #94a3b8;
-                --line: rgba(148,163,184,0.18);
-                --accent: #60a5fa;
-                --accent-soft: rgba(96,165,250,0.16);
-            }
+            --card: rgba(255,255,255,0.72);
+            --text: #4a2545;
+            --muted: #9a7f95;
+            --line: rgba(236,72,153,0.14);
+            --accent: #ec4899;
+            --accent-soft: rgba(236,72,153,0.12);
         }
         * { box-sizing: border-box; }
-        html, body { margin: 0; width: 388px; min-width: 388px; max-width: 388px; background:
-          radial-gradient(circle at top, rgba(59,130,246,0.16), transparent 34%),
-          linear-gradient(180deg, rgba(255,255,255,0.4), transparent 40%),
-          var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-        body { padding: 14px; }
-        .shell { display: flex; flex-direction: column; gap: 12px; max-height: 580px; }
-        .hero { padding: 14px; border-radius: 18px; background: var(--card); backdrop-filter: blur(16px); border: 1px solid var(--line); box-shadow: 0 18px 60px rgba(15,23,42,0.10); }
+        html, body { margin: 0; width: 388px; min-width: 388px; max-width: 388px; color: var(--text);
+          background: linear-gradient(165deg, #ffe3ee 0%, #fff4f8 42%, #ffffff 100%);
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif; }
+        body { padding: 16px 14px 12px; }
+        .shell { display: flex; flex-direction: column; gap: 12px; max-height: 600px; }
+        .hero { padding: 16px 14px 14px; border-radius: 22px; background: var(--card); backdrop-filter: blur(18px);
+          border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(236,72,153,0.10); }
         .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .hero h1 { margin: 0; font-size: 16px; line-height: 1.2; }
-        .hero p { margin: 4px 0 0; font-size: 12px; color: var(--muted); }
-        .refresh-btn { width: 34px; height: 34px; border-radius: 12px; border: 1px solid var(--line); background: transparent; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; }
-        .refresh-btn:hover { color: var(--accent); border-color: rgba(37,99,235,0.28); background: var(--accent-soft); }
+        .date { font-size: 12px; color: var(--muted); letter-spacing: .3px; }
+        .tools { display: flex; gap: 6px; }
+        .tool-btn { width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.6);
+          color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all .18s; }
+        .tool-btn:hover { color: var(--accent); border-color: rgba(236,72,153,0.32); background: #fff; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .search { margin-top: 12px; width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,0.58); color: var(--text); border-radius: 14px; padding: 11px 13px; outline: none; font-size: 13px; }
-        @media (prefers-color-scheme: dark) { .search { background: rgba(15,23,42,0.8); } }
-        .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 0; }
-        .chip { white-space: nowrap; border: 1px solid var(--line); background: transparent; color: var(--muted); border-radius: 999px; padding: 7px 11px; font-size: 12px; cursor: pointer; }
-        .chip.active { color: white; background: var(--accent); border-color: transparent; box-shadow: 0 10px 28px rgba(37,99,235,0.25); }
-        .results { display: flex; flex-direction: column; gap: 10px; }
-        .card { display: flex; align-items: center; gap: 12px; padding: 12px; border-radius: 16px; background: var(--card); border: 1px solid var(--line); text-decoration: none; color: inherit; backdrop-filter: blur(12px); }
-        .card:hover { transform: translateY(-1px); border-color: rgba(37,99,235,0.28); box-shadow: 0 14px 34px rgba(37,99,235,0.10); }
-        .icon { width: 38px; height: 38px; border-radius: 12px; background: rgba(148,163,184,0.12); display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0; }
-        .icon img { width: 100%; height: 100%; object-fit: cover; }
+        .clock { margin-top: 4px; font-size: 46px; font-weight: 250; line-height: 1.05; letter-spacing: -1px; color: #3d2039; }
+        .search-wrap { position: relative; margin-top: 14px; }
+        .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; display: flex; }
+        .search { width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,0.85); color: var(--text); border-radius: 999px;
+          padding: 10px 14px 10px 36px; outline: none; font-size: 13px; transition: all .18s; }
+        .search:focus { border-color: rgba(236,72,153,0.4); box-shadow: 0 0 0 3px rgba(236,72,153,0.10); }
+        .engines { display: flex; gap: 6px; margin-top: 10px; }
+        .engine { flex: 1; white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.55); color: var(--muted);
+          border-radius: 999px; padding: 5px 6px; font-size: 11px; cursor: pointer; transition: all .18s; }
+        .engine:hover { color: var(--accent); border-color: rgba(236,72,153,0.3); }
+        .engine.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 6px 16px rgba(236,72,153,0.22); }
+        .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 0; scrollbar-width: none; }
+        .chips::-webkit-scrollbar { display: none; }
+        .chip { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.6); color: var(--muted); border-radius: 999px;
+          padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all .18s; }
+        .chip.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 8px 20px rgba(236,72,153,0.25); }
+        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; }
+        .app { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: inherit; }
+        .app-icon { width: 54px; height: 54px; border-radius: 18px; background: #fff; display: flex; align-items: center; justify-content: center;
+          overflow: hidden; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 20px rgba(236,72,153,0.10); transition: transform .18s, box-shadow .18s; }
+        .app:hover .app-icon { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(236,72,153,0.20); }
+        .app-icon img { width: 58%; height: 58%; object-fit: contain; }
+        .app-name { font-size: 11px; color: #6b4c68; text-align: center; max-width: 100%; line-height: 1.2;
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 16px;
+          background: rgba(255,255,255,0.7); border: 1px solid var(--line); text-decoration: none; color: inherit; }
         .meta { min-width: 0; flex: 1; }
         .title { font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .url { margin-top: 3px; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .badge { margin-top: 8px; display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
-        .empty { text-align: center; color: var(--muted); padding: 28px 12px; font-size: 12px; }
+        .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 28px 12px; font-size: 12px; }
+        .daily { padding: 2px 10px 0; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.5; }
     </style>
 </head>
 <body>
     <div class="shell">
         <section class="hero">
             <div class="hero-top">
-                <div>
-                    <h1>${localSiteSettings.navTitle || 'CloudNav'} 扩展弹窗</h1>
-                    <p>点这里能快速搜和存</p>
-                </div>
-                <div style="display:flex; gap:8px;">
-                    <button id="openSidepanel" class="refresh-btn" title="打开侧边栏">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+                <div class="date" id="dateLine">—</div>
+                <div class="tools">
+                    <button id="openSidepanel" class="tool-btn" title="打开侧边栏">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
                     </button>
-                    <button id="refresh" class="refresh-btn" title="同步最新数据">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                    <button id="refresh" class="tool-btn" title="同步最新数据">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                     </button>
-                    <button id="bmPreview" class="refresh-btn" title="预览浏览器收藏夹（只读，不会上传）">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    <button id="bmPreview" class="tool-btn" title="预览浏览器收藏夹（只读，不会上传）">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v16z"/></svg>
+                    </button>
+                    <button id="lock" class="tool-btn" title="锁定（清除本机保存的密码）">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </button>
                 </div>
             </div>
-            <input id="search" class="search" type="text" placeholder="搜标题、网址、描述" autocomplete="off">
+            <div class="clock" id="clockLine">--:--</div>
+            <div class="search-wrap">
+                <span class="search-icon">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                </span>
+                <input id="search" class="search" type="text" placeholder="搜收藏，回车用搜索引擎搜网络" autocomplete="off">
+            </div>
+            <div class="engines" id="engines">
+                <button class="engine active" data-engine="baidu">百度</button>
+                <button class="engine" data-engine="bing">必应</button>
+                <button class="engine" data-engine="google">Google</button>
+            </div>
         </section>
         <div id="chips" class="chips"></div>
-        <div id="content" class="results">
+        <div id="content" class="grid">
             <div class="empty">初始化中...</div>
         </div>
+        <footer class="daily" id="daily"></footer>
     </div>
     <script src="popup.js"></script>
 </body>
@@ -1198,26 +1216,77 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
 
         if (filteredLinks.length === 0) {
-            content.innerHTML = '<div class="empty">这里还没有符合条件的链接</div>';
+            content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
             return;
         }
 
-        content.innerHTML = filteredLinks.map((link) => {
-            const category = allCategories.find((item) => item.id === link.categoryId);
-            return \`
-                <a class="card" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer">
-                    <div class="icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt=""></div>
-                    <div class="meta">
-                        <div class="title">\${escapeHtml(link.title)}</div>
-                        <div class="url">\${escapeHtml(getHostname(link.url))}</div>
-                        <div class="badge">\${escapeHtml(category?.name || '未分类')}</div>
-                    </div>
-                </a>
-            \`;
-        }).join('');
+        content.innerHTML = filteredLinks.map((link) => \`
+            <a class="app" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
+                <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" onerror="this.style.display='none'"></div>
+                <div class="app-name">\${escapeHtml(link.title)}</div>
+            </a>
+        \`).join('');
     };
 
+    // --- 时钟与日期 ---
+    const dateLine = document.getElementById('dateLine');
+    const clockLine = document.getElementById('clockLine');
+    const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    const tickClock = () => {
+        const now = new Date();
+        clockLine.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
+        dateLine.textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' + WEEKDAYS[now.getDay()];
+    };
+    tickClock();
+    setInterval(tickClock, 15000);
+
+    // --- 每日一句：本地按天轮换，不联网 ---
+    const TIPS = [
+        '今天的努力是为了明天的从容。',
+        '把最重要的事先做完，剩下的都是赚到的。',
+        '专注当下这一件事就够了。',
+        '慢一点没关系，方向对就行。',
+        '整理好了再出发，也是一种效率。',
+        '让喜欢的事占据更多时间。',
+        '先开始，再谈完美。',
+        '休息也是计划的一部分。',
+    ];
+    document.getElementById('daily').textContent = TIPS[Math.floor(Date.now() / 86400000) % TIPS.length];
+
+    // --- 搜索引擎 ---
+    const ENGINES = {
+        baidu: 'https://www.baidu.com/s?wd=',
+        bing: 'https://www.bing.com/search?q=',
+        google: 'https://www.google.com/search?q=',
+    };
+    let activeEngine = 'baidu';
+    const enginesBox = document.getElementById('engines');
+    enginesBox.addEventListener('click', (event) => {
+        const btn = event.target.closest('.engine');
+        if (!btn) return;
+        activeEngine = btn.dataset.engine || 'baidu';
+        enginesBox.querySelectorAll('.engine').forEach((item) => {
+            item.classList.toggle('active', item === btn);
+        });
+        const query = searchInput.value.trim();
+        if (query) window.open(ENGINES[activeEngine] + encodeURIComponent(query), '_blank');
+    });
+
     searchInput.addEventListener('input', render);
+    searchInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter') return;
+        const query = searchInput.value.trim();
+        if (!query) return;
+        // 输入框会实时筛出本地收藏，回车则是用搜索引擎搜网络
+        window.open(ENGINES[activeEngine] + encodeURIComponent(query), '_blank');
+    });
+
+    // --- 锁定：清除本机保存的密码 ---
+    document.getElementById('lock')?.addEventListener('click', async () => {
+        await clearStoredAuth();
+        showLogin('已锁定，请输入站点密码');
+    });
+
     chips.addEventListener('click', (event) => {
         const chip = event.target.closest('.chip');
         if (!chip) return;
@@ -1250,7 +1319,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                     <div class="url">\${folderCount} 个文件夹\${rootLinks ? ('，其中 ' + rootLinks + ' 个在根目录') : ''}</div>
                 </div>
             </div>
-            <button id="bmSync" class="chip" style="text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
+            <button id="bmSync" class="chip" style="grid-column:1/-1;text-align:center;justify-content:center;color:white;background:var(--accent);border-color:transparent">
                 同步到站点
             </button>
             \${rows}
