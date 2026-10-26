@@ -1198,7 +1198,8 @@ const extPopupHtml = `<!DOCTYPE html>
 
         /* 右：内容区 */
         .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
-        .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 2px 2px 14px; }
+        /* 顶栏整体抬到内容之上，展开的浮层才不会被磁贴盖住 */
+        .topbar { flex: 0 0 auto; position: relative; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 2px 2px 14px; }
         .clock-wrap { display: flex; align-items: baseline; gap: 12px; flex: 0 0 auto; }
         .clock { font-size: 38px; font-weight: 300; line-height: 1;
           letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
@@ -1231,11 +1232,11 @@ const extPopupHtml = `<!DOCTYPE html>
         .engine-btn:hover { color: var(--ink); background: var(--chip-hi); }
         .engine-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
         .engine-btn svg { flex: 0 0 auto; }
-        .engine-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 45; width: 316px; padding: 10px;
+        .engine-menu { position: absolute; top: calc(100% + 8px); left: 0; right: 0; z-index: 200; padding: 10px;
           border: 1px solid var(--line); border-radius: 14px; background: var(--surface-solid);
           box-shadow: 0 12px 28px -12px rgba(15,23,42,0.35); }
         .engine-menu[hidden] { display: none; }
-        .engine-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+        .engine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); gap: 4px; }
         .engine-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
           padding: 10px 2px 8px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
           transition: background-color .14s; }
@@ -1281,7 +1282,7 @@ const extPopupHtml = `<!DOCTYPE html>
           transition: color .14s, background-color .14s; }
         .engine-cancel:hover { color: var(--ink); background: var(--chip-hi); }
 
-        .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-anchor: none;
+        .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; z-index: 0; overflow-anchor: none;
           padding: 16px 2px 8px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.32) transparent; }
         .panel::-webkit-scrollbar { width: 8px; }
         .panel::-webkit-scrollbar-button { display: none; }
@@ -1418,7 +1419,7 @@ const extPopupHtml = `<!DOCTYPE html>
         }
         /* 主题切换器 */
         .theme-wrap { position: relative; display: inline-flex; }
-        .theme-menu { position: absolute; top: 34px; right: 0; z-index: 40; width: 176px; padding: 6px;
+        .theme-menu { position: absolute; top: 34px; right: 0; z-index: 200; width: 176px; padding: 6px;
           border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
           box-shadow: 0 12px 28px -12px rgba(15,23,42,0.35); }
         .theme-menu[hidden] { display: none; }
@@ -1504,18 +1505,18 @@ const extPopupHtml = `<!DOCTYPE html>
                             <span id="engineLabel">百度</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
-                        <div class="engine-menu" id="engineMenu" role="listbox" aria-label="搜索引擎" hidden>
-                            <div class="engine-grid" id="engineGrid"></div>
-                            <div class="engine-form" id="engineForm">
-                                <input id="engineName" class="engine-input" type="text" placeholder="名称，如 DuckDuckGo" autocomplete="off" maxlength="20">
-                                <input id="engineUrl" class="engine-input" type="text" placeholder="https://…/search?q=%s" autocomplete="off" spellcheck="false">
-                                <div class="engine-form-row">
-                                    <button id="engineSave" class="engine-save" type="button">添加</button>
-                                    <button id="engineCancel" class="engine-cancel" type="button">取消</button>
-                                </div>
+                    </span>
+                    <div class="engine-menu" id="engineMenu" role="listbox" aria-label="搜索引擎" hidden>
+                        <div class="engine-grid" id="engineGrid"></div>
+                        <div class="engine-form" id="engineForm">
+                            <input id="engineName" class="engine-input" type="text" placeholder="名称，如 DuckDuckGo" autocomplete="off" maxlength="20">
+                            <input id="engineUrl" class="engine-input" type="text" placeholder="https://…/search?q=%s" autocomplete="off" spellcheck="false">
+                            <div class="engine-form-row">
+                                <button id="engineSave" class="engine-save" type="button">添加</button>
+                                <button id="engineCancel" class="engine-cancel" type="button">取消</button>
                             </div>
                         </div>
-                    </span>
+                    </div>
                 </div>
                 <div class="tools">
                     <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
@@ -2032,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     });
     document.addEventListener('click', (event) => {
-        if (engineMenu && !engineMenu.hidden && !event.target.closest('.engine-wrap')) closeEngineMenu();
+        if (engineMenu && !engineMenu.hidden && !event.target.closest('.search-wrap')) closeEngineMenu();
     });
     try {
         loadEngines();
