@@ -1190,6 +1190,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // 网格每格只有 84px，标签最多显示 5 个字；
+    // 完整标题已经挂在 a 标签的 title 上，鼠标悬浮即可看全
+    const shortName = (value) => {
+        const text = String(value ?? '');
+        return text.length > 5 ? text.slice(0, 5) + '…' : text;
+    };
+
     const renderChips = () => {
         const fallbackCategories = allCategories.length > 0
             ? allCategories
@@ -1223,7 +1230,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         content.innerHTML = filteredLinks.map((link) => \`
             <a class="app" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
                 <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" onerror="this.style.display='none'"></div>
-                <div class="app-name">\${escapeHtml(link.title)}</div>
+                <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
             </a>
         \`).join('');
     };
