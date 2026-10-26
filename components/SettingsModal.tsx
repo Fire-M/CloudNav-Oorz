@@ -1560,6 +1560,25 @@ const extPopupJs = `const CONFIG = {
 };
 ${extAuthHelpers}
 
+// 初始化如果抛错，直接把原因显示在页面上，方便排查（MV3 禁止内联脚本，只能放这里）
+var showFatal = function (message) {
+    var el = document.getElementById('statusBar');
+    if (el) {
+        el.textContent = '初始化出错：' + message;
+        el.classList.add('error');
+    }
+};
+window.addEventListener('error', function (event) {
+    var message = event && event.message ? event.message : '';
+    // ResizeObserver 的循环告警是无害噪声，不当作故障展示
+    if (message.indexOf('ResizeObserver loop') === 0) return;
+    showFatal(message || '未知错误');
+});
+window.addEventListener('unhandledrejection', function (event) {
+    var reason = event && event.reason;
+    showFatal(reason && reason.message ? reason.message : String(reason));
+});
+
 document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('content');
     const dirList = document.getElementById('dirList');
@@ -1943,7 +1962,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         }).catch(() => {});
     };
 
-    engineBtn.addEventListener('click', (event) => {
+    engineBtn?.addEventListener('click', (event) => {
         event.stopPropagation();
         const willOpen = engineMenu.hidden;
         engineMenu.hidden = !willOpen;
@@ -1951,14 +1970,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
     // 磁贴 favicon 加载失败 → 彩色字母块（error 不冒泡，用捕获）
-    engineGrid.addEventListener('error', (event) => {
+    engineGrid?.addEventListener('error', (event) => {
         const img = event.target;
         if (!img || img.tagName !== 'IMG') return;
         img.style.display = 'none';
         img.parentNode.classList.add('fb');
     }, true);
 
-    engineGrid.addEventListener('click', (event) => {
+    engineGrid?.addEventListener('click', (event) => {
         const del = event.target.closest('.engine-del');
         if (del) {
             event.stopPropagation();
@@ -2003,20 +2022,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const engineSaveBtn = document.getElementById('engineSave');
-    engineSaveBtn.addEventListener('click', addEngine);
-    document.getElementById('engineCancel').addEventListener('click', () => {
+    engineSaveBtn?.addEventListener('click', addEngine);
+    document.getElementById('engineCancel')?.addEventListener('click', () => {
         engineForm.classList.remove('open');
     });
     [engineNameInput, engineUrlInput].forEach((input) => {
-        input.addEventListener('keydown', (event) => {
+        input?.addEventListener('keydown', (event) => {
             if (event.key === 'Enter') addEngine();
         });
     });
     document.addEventListener('click', (event) => {
-        if (!engineMenu.hidden && !event.target.closest('.engine-wrap')) closeEngineMenu();
+        if (engineMenu && !engineMenu.hidden && !event.target.closest('.engine-wrap')) closeEngineMenu();
     });
-    loadEngines();
-    renderEngineMenu();
+    try {
+        loadEngines();
+        renderEngineMenu();
+    } catch (e) { /* 引擎菜单初始化失败不阻断收藏夹加载 */ }
 
     let searchTimer = 0;
     searchInput.addEventListener('input', () => {
@@ -2082,20 +2103,24 @@ document.addEventListener('DOMContentLoaded', async () => {
         themeBtn.setAttribute('aria-expanded', 'false');
     };
     setTheme('indigo');
-    chrome.storage.local.get(THEME_KEY).then((data) => {
-        if (data && data[THEME_KEY]) setTheme(data[THEME_KEY]);
-    }).catch(() => {});
-    themeBtn.addEventListener('click', (event) => {
+    try {
+        chrome.storage.local.get(THEME_KEY).then((data) => {
+            if (data && data[THEME_KEY]) setTheme(data[THEME_KEY]);
+        }).catch(() => {});
+    } catch (e) { /* 存储不可用时用默认主题 */ }
+    themeBtn?.addEventListener('click', (event) => {
         event.stopPropagation();
         const willOpen = themeMenu.hidden;
         themeMenu.hidden = !willOpen;
         themeBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
-    themeGrid.addEventListener('click', (event) => {
+    themeGrid?.addEventListener('click', (event) => {
         const item = event.target.closest('.theme-item');
         if (!item) return;
         setTheme(item.dataset.theme);
-        chrome.storage.local.set({ [THEME_KEY]: item.dataset.theme }).catch(() => {});
+        try {
+            chrome.storage.local.set({ [THEME_KEY]: item.dataset.theme }).catch(() => {});
+        } catch (e) {}
         closeThemeMenu();
     });
     document.addEventListener('click', (event) => {
