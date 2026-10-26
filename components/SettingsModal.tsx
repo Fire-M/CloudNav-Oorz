@@ -1170,11 +1170,11 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock { flex: 0 0 244px; width: 244px; display: flex; flex-direction: column; min-height: 0;
           padding: 4px 8px 4px 0; }
         .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; }
-        .dock-mark { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: var(--solid); color: var(--solid-ink);
+        .dock-mark { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 9px; background: var(--solid); color: var(--solid-ink);
           display: inline-flex; align-items: center; justify-content: center; }
-        .dock-title { font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em;
+        .dock-title { font-size: 17px; font-weight: 600; letter-spacing: 0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dock-label { padding: 0 2px 8px; font-size: 10.5px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
+        .dock-label { padding: 0 2px 8px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
         .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
           align-content: flex-start; padding: 2px 2px 2px 0;
           scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
@@ -1199,10 +1199,10 @@ const extPopupHtml = `<!DOCTYPE html>
         /* 右：内容区 */
         .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
         .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 2px 2px 14px; }
-        .clock-wrap { display: flex; align-items: baseline; gap: 10px; flex: 0 0 auto; }
-        .clock { font-size: 30px; font-weight: 300; line-height: 1;
+        .clock-wrap { display: flex; align-items: baseline; gap: 12px; flex: 0 0 auto; }
+        .clock { font-size: 38px; font-weight: 300; line-height: 1;
           letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
-        .date { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.03em; white-space: nowrap; }
+        .date { font-size: 13px; color: var(--ink-soft); letter-spacing: 0.03em; white-space: nowrap; }
         .tools { flex: 0 0 auto; display: flex; gap: 2px; margin-left: 2px; }
         .tool-btn { width: 30px; height: 30px; border-radius: 9px; border: 1px solid transparent; background: transparent;
           color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
@@ -1240,17 +1240,18 @@ const extPopupHtml = `<!DOCTYPE html>
         .panel::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.26); border: 2px solid transparent;
           background-clip: content-box; border-radius: 999px; }
         .grid { position: relative; width: 100%; }
-        .app { position: absolute; display: flex; flex-direction: column; align-items: center; gap: 7px;
-          height: 98px; text-decoration: none; color: inherit; touch-action: manipulation; }
-        .app-icon { position: relative; width: 58px; height: 58px; border-radius: 15px; background: var(--surface-solid);
+        .app { position: absolute; top: 0; left: 0; display: flex; flex-direction: column; align-items: center; gap: 6px;
+          height: 84px; text-decoration: none; color: inherit; touch-action: manipulation;
+          contain: layout style; }
+        .app-icon { position: relative; width: 46px; height: 46px; border-radius: 12px; background: var(--surface-solid);
           display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(15,23,42,0.06);
           transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s, border-color .18s; }
         .app:hover .app-icon { transform: translateY(-2px); border-color: var(--line-strong);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 12px 24px -12px rgba(15,23,42,0.42); }
-        .app-icon img { width: 32px; height: 32px; object-fit: contain; }
+        .app-icon img { width: 26px; height: 26px; object-fit: contain; }
         .app-letter { display: none; position: absolute; inset: 0; align-items: center; justify-content: center;
-          font-size: 20px; font-weight: 600; letter-spacing: 0.02em; }
+          font-size: 17px; font-weight: 600; letter-spacing: 0.02em; }
         .app-icon.fb { background: linear-gradient(135deg, hsl(var(--h), 72%, 90%), hsl(var(--h), 60%, 80%));
           border-color: transparent; box-shadow: none; }
         .app-icon.fb .app-letter { display: flex; color: hsl(var(--h), 42%, 36%); }
@@ -1411,7 +1412,7 @@ const extPopupHtml = `<!DOCTYPE html>
             .dir-count { display: none; }
             .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 0 2px 10px; }
             .clock-wrap { gap: 8px; }
-            .clock { font-size: 24px; }
+            .clock { font-size: 28px; }
             .search-wrap { order: 3; flex: 1 1 100%; max-width: none; margin: 0; }
             .tools { margin-left: auto; }
             .panel { padding-top: 12px; }
@@ -1428,7 +1429,7 @@ const extPopupHtml = `<!DOCTYPE html>
         <aside class="dock" aria-label="插件目录">
             <div class="dock-brand">
                 <span class="dock-mark" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>
                 </span>
                 <span class="dock-title">收藏夹</span>
             </div>
@@ -1587,78 +1588,141 @@ document.addEventListener('DOMContentLoaded', async () => {
         dirFoot.textContent = \`\${allLinks.length} 个收藏 · \${categoryList().length} 个目录\`;
     };
 
-    // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，上千条收藏也不会撑爆主线程
+    // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，并且复用节点，滚动时只改内容与位置
     const panel = document.querySelector('.panel');
-    const TILE_H = 98;
+    const TILE_H = 84;
     const GAP_X = 14;
-    const GAP_Y = 22;
+    const GAP_Y = 20;
     const OVERSCAN = 2;
     let viewList = [];
     let metrics = { cols: 1, cellW: 100, stepX: 114, stepY: TILE_H + GAP_Y };
-    let paintedRange = '';
-    let renderSeq = 0;
+    let panelH = 0;
+    let contentTop = 0;
+    let paintedFrom = -1;
+    let paintedTo = -1;
 
+    // 复用的磁贴节点：index -> 元素，滚出可视区的进空闲池，滚进来的直接改内容
+    const tiles = new Map();
+    const spareTiles = [];
+
+    // 一次测量拿到所有几何量，滚动时不再读布局，避免每帧强制重排
     const measure = () => {
         const width = Math.max(1, panel.clientWidth - 4);
-        const minW = width < 560 ? 84 : 98;
+        const minW = width < 560 ? 76 : 88;
         const cols = Math.max(1, Math.floor((width + GAP_X) / (minW + GAP_X)));
         const cellW = (width - GAP_X * (cols - 1)) / cols;
         metrics = { cols: cols, cellW: cellW, stepX: cellW + GAP_X, stepY: TILE_H + GAP_Y };
+        panelH = panel.clientHeight;
+        contentTop = content.offsetTop;
+        tiles.forEach((el, index) => { placeTile(el, index); });
+    };
+
+    const applyHeight = () => {
+        const total = Math.ceil(viewList.length / metrics.cols);
+        content.style.height = (total * metrics.stepY - GAP_Y) + 'px';
     };
 
     // 无 favicon 时按 URL 稳定散列出一个色相，用彩色字母磁贴兜底
+    const hueCache = new WeakMap();
     const hueFor = (link) => {
+        const cached = hueCache.get(link);
+        if (cached !== undefined) return cached;
         const key = String(link.url || link.title || '');
         let h = 0;
         for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+        hueCache.set(link, h);
         return h;
     };
 
-    const appHtml = (link, index) => {
+    const createTile = () => {
+        const el = document.createElement('a');
+        el.className = 'app';
+        el.target = '_blank';
+        el.rel = 'noopener noreferrer';
+        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>';
+        return el;
+    };
+
+    const fillTile = (el, link) => {
+        el.href = link.url;
+        el.title = link.title;
+        const icon = el.firstChild;
+        const img = icon.firstChild;
+        img.src = getFaviconUrl(link);
+        img.style.display = '';
+        icon.classList.remove('fb');
+        icon.style.setProperty('--h', hueFor(link));
+        icon.lastChild.textContent = (String(link.title || '').trim().charAt(0) || '?').toUpperCase();
+        el.lastChild.textContent = shortName(link.title);
+    };
+
+    // 用 transform 定位，走合成层，比改 left/top 少一次布局
+    const placeTile = (el, index) => {
         const col = index % metrics.cols;
-        const row = Math.floor(index / metrics.cols);
-        const letter = escapeHtml((String(link.title || '').trim().charAt(0) || '?').toUpperCase());
-        return \`
-            <a class="app" style="left:\${Math.round(col * metrics.stepX)}px;top:\${Math.round(row * metrics.stepY)}px;width:\${Math.round(metrics.cellW)}px" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
-                <div class="app-icon" style="--h:\${hueFor(link)}"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none';this.parentNode.classList.add('fb')"><span class="app-letter">\${letter}</span></div>
-                <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
-            </a>
-        \`;
+        const row = (index - col) / metrics.cols;
+        el.style.width = metrics.cellW + 'px';
+        el.style.transform = 'translate3d(' + Math.round(col * metrics.stepX) + 'px,' + Math.round(row * metrics.stepY) + 'px,0)';
+    };
+
+    // 图标加载失败统一在这里兜底（error 不冒泡，用捕获）
+    content.addEventListener('error', (event) => {
+        const img = event.target;
+        if (!img || img.tagName !== 'IMG') return;
+        img.style.display = 'none';
+        img.parentNode.classList.add('fb');
+    }, true);
+
+    const clearTiles = () => {
+        tiles.clear();
+        spareTiles.length = 0;
+        paintedFrom = -1;
+        paintedTo = -1;
+        content.innerHTML = '';
     };
 
     const paintWindow = () => {
         if (!viewList.length) return;
-        const total = Math.ceil(viewList.length / metrics.cols);
-        content.style.height = (total * metrics.stepY - GAP_Y) + 'px';
-        const top = Math.max(0, panel.scrollTop - content.offsetTop);
+        const top = Math.max(0, panel.scrollTop - contentTop);
         const firstRow = Math.max(0, Math.floor(top / metrics.stepY) - OVERSCAN);
-        const lastRow = Math.min(total, Math.ceil((top + panel.clientHeight) / metrics.stepY) + OVERSCAN);
+        const lastRow = Math.ceil((top + panelH) / metrics.stepY) + OVERSCAN;
         const from = firstRow * metrics.cols;
         const to = Math.min(viewList.length, lastRow * metrics.cols);
-        const range = renderSeq + ':' + from + ':' + to;
-        if (range === paintedRange) return;
-        // 同一轮数据里只增量补/删磁贴，避免整屏重建触发滚动锚定回弹
-        const sameData = paintedRange.indexOf(renderSeq + ':') === 0;
-        if (sameData) {
-            const prev = paintedRange.split(':');
-            const prevFrom = Number(prev[1]);
-            const prevTo = Number(prev[2]);
-            if (prevFrom === from && to > prevTo) {
-                let appendHtml = '';
-                for (let i = prevTo; i < to; i++) appendHtml += appHtml(viewList[i], i);
-                content.insertAdjacentHTML('beforeend', appendHtml);
-                paintedRange = range;
-                return;
+        if (from === paintedFrom && to === paintedTo) return;
+
+        // 滚出可视区的节点先收进空闲池
+        const spare = [];
+        tiles.forEach((el, index) => {
+            if (index < from || index >= to) {
+                spare.push(el);
+                tiles.delete(index);
             }
+        });
+
+        let cursor = 0;
+        for (let i = from; i < to; i++) {
+            if (tiles.has(i)) continue;
+            let el = cursor < spare.length ? spare[cursor++] : null;
+            if (el) {
+                fillTile(el, viewList[i]);
+                placeTile(el, i);
+            } else {
+                el = spareTiles.pop() || createTile();
+                fillTile(el, viewList[i]);
+                placeTile(el, i);
+                content.appendChild(el);
+            }
+            tiles.set(i, el);
         }
-        paintedRange = range;
-        let html = '';
-        for (let i = from; i < to; i++) html += appHtml(viewList[i], i);
-        content.innerHTML = html;
+        // 多出来的空闲节点留着下次复用，不反复增删 DOM
+        for (; cursor < spare.length; cursor++) {
+            if (spareTiles.length < 40) spareTiles.push(spare[cursor]);
+            else spare[cursor].remove();
+        }
+        paintedFrom = from;
+        paintedTo = to;
     };
 
     const render = () => {
-        renderSeq++;
         const query = searchInput.value.trim().toLowerCase();
         const pool = activeCategory === 'all'
             ? allLinks
@@ -1678,14 +1742,15 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         if (!viewList.length) {
             viewList = [];
-            paintedRange = '';
+            clearTiles();
             content.style.height = '';
             content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
             return;
         }
 
-        paintedRange = '';
+        clearTiles();
         measure();
+        applyHeight();
         paintWindow();
         // 切回标签时恢复原滚动位置；高度就位后再设置，避免被旧内容高度截断
         panel.scrollTop = scrollMemory[activeCategory] || 0;
@@ -1702,8 +1767,9 @@ document.addEventListener('DOMContentLoaded', async () => {
     }, { passive: true });
 
     const remeasure = () => {
-        paintedRange = '';
+        if (!viewList.length) return;
         measure();
+        applyHeight();
         paintWindow();
     };
     if (window.ResizeObserver) {
