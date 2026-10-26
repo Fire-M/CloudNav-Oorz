@@ -1061,29 +1061,106 @@ const extPopupHtml = `<!DOCTYPE html>
     <meta name="color-scheme" content="light dark">
     <meta name="theme-color" content="#f8f9fd">
     <style>
-        :root {
-            --ink: #14172b;
-            --ink-soft: #626b85;
-            --line: rgba(20,23,43,0.10);
-            --line-strong: rgba(20,23,43,0.18);
-            --surface: rgba(255,255,255,0.76);
-            --surface-solid: rgba(255,255,255,0.95);
-            --solid: #14172b;
-            --solid-ink: #ffffff;
-            --accent: #4257e6;
-            --accent-soft: rgba(66,87,230,0.12);
-            --danger: #b42318;
-            --danger-soft: rgba(180,35,24,0.09);
+        /* 主题令牌：默认靛蓝雾，其余主题用 html[data-theme] 覆盖（浅色系） */
+        :root, html[data-theme="indigo"] {
+            --ink: #14172b; --ink-soft: #626b85;
+            --line: rgba(20,23,43,0.10); --line-strong: rgba(20,23,43,0.18);
+            --surface: rgba(255,255,255,0.76); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.55); --chip-hi: rgba(255,255,255,0.78);
+            --solid: #14172b; --solid-ink: #ffffff;
+            --accent: #4257e6; --accent-2: #8aa0ff; --accent-soft: rgba(66,87,230,0.12);
+            --bg-1: #e9ecff; --bg-1e: rgba(233,236,255,0);
+            --bg-2: #e8f3ff; --bg-2e: rgba(232,243,255,0);
+            --bg-3: #f8f9fd; --bg-4: #eef1f8;
         }
+        html[data-theme="graphite"] {
+            --ink: #18181b; --ink-soft: #71717a;
+            --line: rgba(24,24,27,0.10); --line-strong: rgba(24,24,27,0.18);
+            --surface: rgba(255,255,255,0.78); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.70); --chip-hi: rgba(255,255,255,0.90);
+            --solid: #18181b; --solid-ink: #ffffff;
+            --accent: #1f6feb; --accent-2: #4f9bfd; --accent-soft: rgba(31,111,235,0.12);
+            --bg-1: #f0f2f6; --bg-1e: rgba(240,242,246,0);
+            --bg-2: #f6f6f8; --bg-2e: rgba(246,246,248,0);
+            --bg-3: #f7f7f8; --bg-4: #ececef;
+        }
+        html[data-theme="aurora"] {
+            --ink: #0f1d1b; --ink-soft: #5c716e;
+            --line: rgba(15,29,27,0.10); --line-strong: rgba(15,29,27,0.18);
+            --surface: rgba(255,255,255,0.76); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.60); --chip-hi: rgba(255,255,255,0.82);
+            --solid: #0f1d1b; --solid-ink: #ffffff;
+            --accent: #0f766e; --accent-2: #2dd4bf; --accent-soft: rgba(15,118,110,0.12);
+            --bg-1: #e3f4f1; --bg-1e: rgba(227,244,241,0);
+            --bg-2: #e6f6fb; --bg-2e: rgba(230,246,251,0);
+            --bg-3: #f6faf9; --bg-4: #e8efee;
+        }
+        html[data-theme="sand"] {
+            --ink: #2a231c; --ink-soft: #7a6a58;
+            --line: rgba(42,35,28,0.10); --line-strong: rgba(42,35,28,0.18);
+            --surface: rgba(255,255,255,0.78); --surface-solid: rgba(255,255,255,0.96);
+            --chip: rgba(255,255,255,0.62); --chip-hi: rgba(255,255,255,0.84);
+            --solid: #2a231c; --solid-ink: #fdfaf6;
+            --accent: #c2410c; --accent-2: #f0955c; --accent-soft: rgba(194,65,12,0.12);
+            --bg-1: #f7ead9; --bg-1e: rgba(247,234,217,0);
+            --bg-2: #f3eee6; --bg-2e: rgba(243,238,230,0);
+            --bg-3: #faf7f2; --bg-4: #f1ece3;
+        }
+        html[data-theme="ocean"] {
+            --ink: #0d1b2a; --ink-soft: #5b7183;
+            --line: rgba(13,27,42,0.10); --line-strong: rgba(13,27,42,0.18);
+            --surface: rgba(255,255,255,0.78); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.60); --chip-hi: rgba(255,255,255,0.82);
+            --solid: #0d1b2a; --solid-ink: #ffffff;
+            --accent: #0e7490; --accent-2: #38bdf8; --accent-soft: rgba(14,116,144,0.12);
+            --bg-1: #dfeaf9; --bg-1e: rgba(223,234,249,0);
+            --bg-2: #e3f0fb; --bg-2e: rgba(227,240,251,0);
+            --bg-3: #f4f7fb; --bg-4: #e7edf6;
+        }
+        html[data-theme="violet"] {
+            --ink: #17142b; --ink-soft: #6a6488;
+            --line: rgba(23,20,43,0.10); --line-strong: rgba(23,20,43,0.18);
+            --surface: rgba(255,255,255,0.78); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.60); --chip-hi: rgba(255,255,255,0.82);
+            --solid: #17142b; --solid-ink: #ffffff;
+            --accent: #6d28d9; --accent-2: #a78bfa; --accent-soft: rgba(109,40,217,0.12);
+            --bg-1: #ece9fb; --bg-1e: rgba(236,233,251,0);
+            --bg-2: #eeeafc; --bg-2e: rgba(238,234,252,0);
+            --bg-3: #f8f7fd; --bg-4: #eeecf7;
+        }
+        /* 磨砂玻璃：面板半透明 + 背景模糊，靠彩色环境光透出质感 */
+        html[data-theme="glass"] {
+            --ink: #12161f; --ink-soft: #5f6a7d;
+            --line: rgba(255,255,255,0.60); --line-strong: rgba(255,255,255,0.85);
+            --surface: rgba(255,255,255,0.45); --surface-solid: rgba(255,255,255,0.55);
+            --chip: rgba(255,255,255,0.45); --chip-hi: rgba(255,255,255,0.68);
+            --solid: rgba(18,22,31,0.82); --solid-ink: #ffffff;
+            --accent: #2f6bd8; --accent-2: #6ea8ff; --accent-soft: rgba(47,107,216,0.14);
+            --bg-1: #d6e4ff; --bg-1e: rgba(214,228,255,0);
+            --bg-2: #ffe0ef; --bg-2e: rgba(255,224,239,0);
+            --bg-3: #f5f8ff; --bg-4: #e8eefc;
+        }
+        html[data-theme="cyber"] {
+            --ink: #170a24; --ink-soft: #6b5f86;
+            --line: rgba(23,10,36,0.12); --line-strong: rgba(23,10,36,0.22);
+            --surface: rgba(255,255,255,0.80); --surface-solid: rgba(255,255,255,0.95);
+            --chip: rgba(255,255,255,0.66); --chip-hi: rgba(255,255,255,0.88);
+            --solid: #170a24; --solid-ink: #f6f0ff;
+            --accent: #a21caf; --accent-2: #06b6d4; --accent-soft: rgba(162,28,175,0.14);
+            --bg-1: #f0e6ff; --bg-1e: rgba(240,230,255,0);
+            --bg-2: #e2f7ff; --bg-2e: rgba(226,247,255,0);
+            --bg-3: #f7f5fd; --bg-4: #eae6f6;
+        }
+        :root { --danger: #b42318; --danger-soft: rgba(180,35,24,0.09); }
         * { box-sizing: border-box; }
         html, body { margin: 0; width: 100%; height: 100%; color: var(--ink);
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
           -webkit-font-smoothing: antialiased; }
         body { padding: 16px;
           background:
-            radial-gradient(1100px 600px at 8% -12%, #e9ecff 0%, rgba(233,236,255,0) 62%),
-            radial-gradient(900px 520px at 94% -8%, #e8f3ff 0%, rgba(232,243,255,0) 58%),
-            linear-gradient(180deg, #f8f9fd 0%, #eef1f8 100%);
+            radial-gradient(1100px 600px at 8% -12%, var(--bg-1) 0%, var(--bg-1e) 62%),
+            radial-gradient(900px 520px at 94% -8%, var(--bg-2) 0%, var(--bg-2e) 58%),
+            linear-gradient(180deg, var(--bg-3) 0%, var(--bg-4) 100%);
           background-attachment: fixed; }
         .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
           clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
@@ -1108,7 +1185,7 @@ const extPopupHtml = `<!DOCTYPE html>
           background-clip: content-box; border-radius: 999px; }
         .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
         .dir-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 30px;
-          padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,0.55);
+          padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip);
           color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
           transition: background-color .14s, color .14s, border-color .14s; }
         .dir-item:hover { background: var(--surface-solid); color: var(--ink); border-color: var(--line-strong); }
@@ -1131,8 +1208,8 @@ const extPopupHtml = `<!DOCTYPE html>
           color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
           cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s, border-color .16s; }
-        .tool-btn:hover { color: var(--ink); background: rgba(255,255,255,0.75); border-color: var(--line); }
-        .tool-btn:focus-visible, .tab:focus-visible, .app:focus-visible, .dir-item:focus-visible {
+        .tool-btn:hover { color: var(--ink); background: var(--chip-hi); border-color: var(--line); }
+        .tool-btn:focus-visible, .app:focus-visible, .dir-item:focus-visible {
           outline: 2px solid var(--accent); outline-offset: 2px; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
@@ -1142,7 +1219,7 @@ const extPopupHtml = `<!DOCTYPE html>
         .search { width: 100%; height: 40px; border: 1px solid var(--line); background: var(--surface-solid);
           color: var(--ink); border-radius: 11px; padding: 0 104px 0 40px; outline: none; font-size: 13px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
-        .search::placeholder { color: rgba(98,107,133,0.75); }
+        .search::placeholder { color: var(--ink-soft); }
         .search:hover { border-color: var(--line-strong); }
         .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
         .engine-wrap { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
@@ -1155,27 +1232,6 @@ const extPopupHtml = `<!DOCTYPE html>
         .engine-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
         .engine-caret { position: absolute; right: 5px; display: flex; pointer-events: none; color: var(--ink-soft); }
 
-        /* 内容标签 */
-        .tabrow { flex: 0 0 auto; display: flex; align-items: center; gap: 8px; margin-top: 2px;
-          border-bottom: 1px solid var(--line); }
-        .tabbar { flex: 1 1 auto; min-width: 0; display: flex; align-items: center; gap: 2px;
-          overflow-x: auto; scrollbar-width: none; }
-        .tabbar::-webkit-scrollbar { display: none; }
-        .tab-action { flex: 0 0 auto; height: 26px; padding: 0 10px; border: 1px solid var(--line);
-          border-radius: 999px; background: rgba(255,255,255,0.5); color: var(--ink-soft);
-          font-size: 12px; font-family: inherit; cursor: pointer; touch-action: manipulation;
-          transition: color .14s, background-color .14s, border-color .14s; }
-        .tab-action:hover { color: var(--danger); background: var(--danger-soft); border-color: rgba(180,35,24,0.28); }
-        .tab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
-          border: 0; background: transparent; color: var(--ink-soft); font-size: 13px; font-family: inherit;
-          white-space: nowrap; cursor: pointer; touch-action: manipulation; border-radius: 8px 8px 0 0;
-          transition: color .14s, background-color .14s; }
-        .tab:hover { color: var(--ink); background: rgba(255,255,255,0.55); }
-        .tab.active { color: var(--ink); font-weight: 500; }
-        .tab.active::after { content: ""; position: absolute; left: 8px; right: 8px; bottom: -1px; height: 2px;
-          border-radius: 2px; background: var(--accent); }
-        .tab-x { font-size: 14px; line-height: 1; opacity: .45; padding: 0 1px; }
-        .tab-x:hover { opacity: 1; color: var(--danger); }
         .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-anchor: none;
           padding: 16px 2px 8px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.32) transparent; }
         .panel::-webkit-scrollbar { width: 8px; }
@@ -1216,29 +1272,132 @@ const extPopupHtml = `<!DOCTYPE html>
           color: var(--ink-soft); line-height: 1.6; opacity: .85; }
         /* 跟随系统深色模式 */
         @media (prefers-color-scheme: dark) {
-            :root {
+            :root, html[data-theme="indigo"] {
                 --ink: #eef0f7; --ink-soft: #9aa3b8;
                 --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
                 --surface: rgba(28,31,44,0.62); --surface-solid: rgba(35,39,53,0.94);
+                --chip: rgba(255,255,255,0.05); --chip-hi: rgba(255,255,255,0.10);
                 --solid: #eef0f7; --solid-ink: #14172b;
-                --accent: #92a6ff; --accent-soft: rgba(146,166,255,0.18);
-                --danger: #ff9c8b; --danger-soft: rgba(255,156,139,0.12);
+                --accent: #92a6ff; --accent-2: #b39dff; --accent-soft: rgba(146,166,255,0.18);
+                --bg-1: #1f2545; --bg-1e: rgba(31,37,69,0);
+                --bg-2: #17293c; --bg-2e: rgba(23,41,60,0);
+                --bg-3: #12141d; --bg-4: #0b0d12;
             }
-            body { background:
-                radial-gradient(1100px 600px at 8% -12%, #1f2545 0%, rgba(31,37,69,0) 62%),
-                radial-gradient(900px 520px at 94% -8%, #17293c 0%, rgba(23,41,60,0) 58%),
-                linear-gradient(180deg, #12141d 0%, #0b0d12 100%); }
-            .dir-item { background: rgba(255,255,255,0.05); }
-            .dir-item:hover { background: rgba(255,255,255,0.1); }
-            .tool-btn:hover { background: rgba(255,255,255,0.08); }
-            .tab:hover { background: rgba(255,255,255,0.07); }
-            .tab-action { background: rgba(255,255,255,0.05); border-color: rgba(255,255,255,0.10); }
-            .tab-action:hover { background: var(--danger-soft); border-color: rgba(255,156,139,0.30); }
+            html[data-theme="graphite"] {
+                --ink: #f4f4f5; --ink-soft: #a1a1aa;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(32,32,36,0.62); --surface-solid: rgba(39,39,45,0.94);
+                --chip: rgba(255,255,255,0.05); --chip-hi: rgba(255,255,255,0.10);
+                --solid: #f4f4f5; --solid-ink: #18181b;
+                --accent: #6ea8fe; --accent-2: #9bc2ff; --accent-soft: rgba(110,168,254,0.18);
+                --bg-1: #1e2026; --bg-1e: rgba(30,32,38,0);
+                --bg-2: #191a1f; --bg-2e: rgba(25,26,31,0);
+                --bg-3: #17171a; --bg-4: #101012;
+            }
+            html[data-theme="aurora"] {
+                --ink: #e8f2f0; --ink-soft: #93a8a5;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(22,32,31,0.62); --surface-solid: rgba(29,40,39,0.94);
+                --chip: rgba(255,255,255,0.05); --chip-hi: rgba(255,255,255,0.10);
+                --solid: #e8f2f0; --solid-ink: #0f1d1b;
+                --accent: #5eead4; --accent-2: #38bdf8; --accent-soft: rgba(94,234,212,0.18);
+                --bg-1: #12302c; --bg-1e: rgba(18,48,44,0);
+                --bg-2: #0f2a30; --bg-2e: rgba(15,42,48,0);
+                --bg-3: #0e1615; --bg-4: #080d0d;
+            }
+            html[data-theme="sand"] {
+                --ink: #f3ece4; --ink-soft: #a89784;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(38,32,27,0.64); --surface-solid: rgba(46,39,33,0.94);
+                --chip: rgba(255,255,255,0.06); --chip-hi: rgba(255,255,255,0.12);
+                --solid: #f3ece4; --solid-ink: #2a231c;
+                --accent: #f0a678; --accent-2: #ffd0a3; --accent-soft: rgba(240,166,120,0.18);
+                --bg-1: #2b1f16; --bg-1e: rgba(43,31,22,0);
+                --bg-2: #241a13; --bg-2e: rgba(36,26,19,0);
+                --bg-3: #191512; --bg-4: #100d0b;
+            }
+            html[data-theme="ocean"] {
+                --ink: #e6f0f7; --ink-soft: #8fa6b8;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(19,32,45,0.66); --surface-solid: rgba(26,41,56,0.94);
+                --chip: rgba(255,255,255,0.05); --chip-hi: rgba(255,255,255,0.11);
+                --solid: #e6f0f7; --solid-ink: #0d1b2a;
+                --accent: #38bdf8; --accent-2: #67e8f9; --accent-soft: rgba(56,189,248,0.18);
+                --bg-1: #10293b; --bg-1e: rgba(16,41,59,0);
+                --bg-2: #0e2233; --bg-2e: rgba(14,34,51,0);
+                --bg-3: #0b1622; --bg-4: #060d14;
+            }
+            html[data-theme="violet"] {
+                --ink: #efeef7; --ink-soft: #a49fbc;
+                --line: rgba(255,255,255,0.10); --line-strong: rgba(255,255,255,0.20);
+                --surface: rgba(30,27,44,0.64); --surface-solid: rgba(37,34,54,0.94);
+                --chip: rgba(255,255,255,0.05); --chip-hi: rgba(255,255,255,0.11);
+                --solid: #efeef7; --solid-ink: #17142b;
+                --accent: #b08cff; --accent-2: #d8b4fe; --accent-soft: rgba(176,140,255,0.18);
+                --bg-1: #221a3a; --bg-1e: rgba(34,26,58,0);
+                --bg-2: #1a1730; --bg-2e: rgba(26,23,48,0);
+                --bg-3: #13111d; --bg-4: #0b0a12;
+            }
+            html[data-theme="glass"] {
+                --ink: #eaf0f8; --ink-soft: #9fb0c6;
+                --line: rgba(255,255,255,0.16); --line-strong: rgba(255,255,255,0.30);
+                --surface: rgba(255,255,255,0.08); --surface-solid: rgba(255,255,255,0.12);
+                --chip: rgba(255,255,255,0.07); --chip-hi: rgba(255,255,255,0.14);
+                --solid: rgba(234,240,248,0.85); --solid-ink: #0b0f16;
+                --accent: #8ab4ff; --accent-2: #b7e0ff; --accent-soft: rgba(138,180,255,0.20);
+                --bg-1: #1b2b4d; --bg-1e: rgba(27,43,77,0);
+                --bg-2: #3a1d38; --bg-2e: rgba(58,29,56,0);
+                --bg-3: #0d1220; --bg-4: #070a12;
+            }
+            html[data-theme="cyber"] {
+                --ink: #f2e9ff; --ink-soft: #a58fc4;
+                --line: rgba(255,255,255,0.12); --line-strong: rgba(255,255,255,0.24);
+                --surface: rgba(24,14,38,0.66); --surface-solid: rgba(32,19,50,0.94);
+                --chip: rgba(255,255,255,0.06); --chip-hi: rgba(255,255,255,0.12);
+                --solid: #f2e9ff; --solid-ink: #170a24;
+                --accent: #ff3ecb; --accent-2: #22e3ff; --accent-soft: rgba(255,62,203,0.20);
+                --bg-1: #2a0a3d; --bg-1e: rgba(42,10,61,0);
+                --bg-2: #052b3d; --bg-2e: rgba(5,43,61,0);
+                --bg-3: #0a0713; --bg-4: #05040a;
+            }
+            :root { --danger: #ff9c8b; --danger-soft: rgba(255,156,139,0.12); }
             .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 2px 6px rgba(0,0,0,0.3); }
             .app:hover .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.05), 0 12px 24px -12px rgba(0,0,0,0.7); }
             .app-icon.fb { background: linear-gradient(135deg, hsl(var(--h), 30%, 27%), hsl(var(--h), 34%, 37%)); }
             .app-icon.fb .app-letter { color: hsl(var(--h), 65%, 78%); }
         }
+        /* 主题切换器 */
+        .theme-wrap { position: relative; display: inline-flex; }
+        .theme-menu { position: absolute; top: 34px; right: 0; z-index: 40; width: 176px; padding: 6px;
+          border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
+          box-shadow: 0 12px 28px -12px rgba(15,23,42,0.35); }
+        .theme-menu[hidden] { display: none; }
+        .theme-grid { display: grid; gap: 2px; }
+        .theme-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 30px; padding: 0 8px;
+          border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft);
+          font-size: 12px; font-family: inherit; text-align: left; cursor: pointer;
+          transition: background-color .14s, color .14s; }
+        .theme-item:hover { background: var(--chip-hi); color: var(--ink); }
+        .theme-item.active { color: var(--ink); font-weight: 500; background: var(--chip); }
+        .theme-sw { flex: 0 0 14px; width: 14px; height: 14px; border-radius: 999px;
+          box-shadow: inset 0 0 0 1px rgba(0,0,0,0.10); }
+        .theme-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 磨砂玻璃：面板加背景模糊，让环境光透上来 */
+        html[data-theme="glass"] .search,
+        html[data-theme="glass"] .dir-item,
+        html[data-theme="glass"] .app-icon,
+        html[data-theme="glass"] .theme-menu {
+            -webkit-backdrop-filter: blur(16px) saturate(160%);
+            backdrop-filter: blur(16px) saturate(160%);
+        }
+        html[data-theme="glass"] .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 20px -12px rgba(15,23,42,0.35); }
+        html[data-theme="glass"] .app:hover .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 14px 26px -12px rgba(15,23,42,0.45); }
+        /* 赛博朋克：霓虹描边与发光 */
+        html[data-theme="cyber"] .dir-item.active { box-shadow: 0 0 14px var(--accent-soft); }
+        html[data-theme="cyber"] .search:focus-visible { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 12px var(--accent-soft); }
+        html[data-theme="cyber"] .app:hover .app-icon { border-color: var(--accent);
+          box-shadow: 0 0 0 1px var(--accent), 0 10px 22px -12px var(--accent); }
+
         @media (max-width: 860px) {
             /* 窄屏仍然保持内部滚动容器：虚拟滚动依赖固定高度的滚动区 */
             body { padding: 10px; height: 100vh; overflow: hidden; }
@@ -1310,16 +1469,21 @@ const extPopupHtml = `<!DOCTYPE html>
                     <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
                     </button>
+                    <span class="theme-wrap">
+                        <button id="themeBtn" class="tool-btn" type="button" title="主题配色" aria-label="主题配色"
+                                aria-haspopup="true" aria-expanded="false">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.667h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
+                        </button>
+                        <div class="theme-menu" id="themeMenu" role="menu" aria-label="主题配色" hidden>
+                            <div class="theme-grid" id="themeGrid"></div>
+                        </div>
+                    </span>
                     <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </button>
                 </div>
             </header>
 
-            <div class="tabrow" id="tabRow">
-                <div class="tabbar" id="tabs" role="tablist" aria-label="内容标签"></div>
-                <button id="closeAllTabs" class="tab-action" type="button" title="关闭所有标签" style="display:none">关闭所有</button>
-            </div>
             <div id="statusBar" class="status" role="status" aria-live="polite"></div>
             <div class="panel">
                 <div id="content" class="grid">
@@ -1340,9 +1504,6 @@ ${extAuthHelpers}
 
 document.addEventListener('DOMContentLoaded', async () => {
     const content = document.getElementById('content');
-    const tabs = document.getElementById('tabs');
-    const tabRow = document.getElementById('tabRow');
-    const closeAllTabsBtn = document.getElementById('closeAllTabs');
     const dirList = document.getElementById('dirList');
     const dirFoot = document.getElementById('dirFoot');
     const searchInput = document.getElementById('search');
@@ -1355,7 +1516,6 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allLinks = [];
     let allCategories = [];
     let activeCategory = 'all';
-    let openTabs = ['all'];
     let liveLoaded = false;
     // 收藏夹快照缓存：下次打开先用它出首屏，再拉最新数据
     const CACHE_KEY = 'cloudnav_bm_cache';
@@ -1425,22 +1585,6 @@ document.addEventListener('DOMContentLoaded', async () => {
             </button>
         \`).join('');
         dirFoot.textContent = \`\${allLinks.length} 个收藏 · \${categoryList().length} 个目录\`;
-    };
-
-    // 右栏：内容标签
-    const renderTabs = () => {
-        const known = ['all', ...categoryList().map((category) => category.id)];
-        openTabs = openTabs.filter((id) => known.includes(id));
-        if (openTabs.length === 0) openTabs = ['all'];
-        if (!openTabs.includes(activeCategory)) openTabs.push(activeCategory);
-        tabs.innerHTML = openTabs.map((id) => \`
-            <button class="tab \${activeCategory === id ? 'active' : ''}" type="button" role="tab" aria-selected="\${activeCategory === id}" data-id="\${escapeHtml(id)}">
-                <span>\${escapeHtml(categoryName(id))}</span>
-                \${id === 'all' ? '' : \`<span class="tab-x" data-close="\${escapeHtml(id)}" role="button" aria-label="关闭标签">×</span>\`}
-            </button>
-        \`).join('');
-        // 只有一个「全部」标签时不需要「关闭所有」
-        if (closeAllTabsBtn) closeAllTabsBtn.style.display = openTabs.length > 1 ? '' : 'none';
     };
 
     // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，上千条收藏也不会撑爆主线程
@@ -1528,7 +1672,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (query) {
             statusBar.textContent = '「' + searchInput.value.trim() + '」：' + viewList.length + ' 条结果';
         } else if (!statusBar.classList.contains('error')) {
-            statusBar.textContent = '';
+            // 没有面包屑了，用状态栏说明当前所在目录
+            statusBar.textContent = categoryName(activeCategory) + ' · ' + viewList.length + ' 个';
         }
 
         if (!viewList.length) {
@@ -1635,6 +1780,65 @@ document.addEventListener('DOMContentLoaded', async () => {
         searchInput.focus();
     });
 
+    // --- 主题配色：八套主题，选择后写入 chrome.storage.local ---
+    const THEMES = [
+        { id: 'indigo', name: '靛蓝雾', a: '#4257e6', b: '#8aa0ff' },
+        { id: 'graphite', name: '石墨', a: '#1f6feb', b: '#9bc2ff' },
+        { id: 'aurora', name: '极光青', a: '#0f766e', b: '#5eead4' },
+        { id: 'sand', name: '暖砂', a: '#c2410c', b: '#f0a678' },
+        { id: 'ocean', name: '午夜蓝', a: '#0e7490', b: '#38bdf8' },
+        { id: 'violet', name: '紫霞', a: '#6d28d9', b: '#b08cff' },
+        { id: 'glass', name: '磨砂玻璃', a: '#d6e4ff', b: '#ffe0ef' },
+        { id: 'cyber', name: '赛博朋克', a: '#a21caf', b: '#22e3ff' }
+    ];
+    const THEME_KEY = 'cloudnav_ext_theme';
+    const themeBtn = document.getElementById('themeBtn');
+    const themeMenu = document.getElementById('themeMenu');
+    const themeGrid = document.getElementById('themeGrid');
+    let currentTheme = 'indigo';
+
+    const paintThemeMenu = () => {
+        themeGrid.innerHTML = THEMES.map((theme) =>
+            '<button class="theme-item' + (theme.id === currentTheme ? ' active' : '') + '" type="button"'
+            + ' role="menuitemradio" aria-checked="' + (theme.id === currentTheme) + '" data-theme="' + theme.id + '">'
+            + '<span class="theme-sw" style="background:linear-gradient(135deg,' + theme.a + ',' + theme.b + ')"></span>'
+            + '<span class="theme-name">' + theme.name + '</span></button>'
+        ).join('');
+    };
+    const setTheme = (id) => {
+        currentTheme = THEMES.some((theme) => theme.id === id) ? id : 'indigo';
+        document.documentElement.setAttribute('data-theme', currentTheme);
+        if (themeGrid) paintThemeMenu();
+    };
+    const closeThemeMenu = () => {
+        if (!themeMenu || themeMenu.hidden) return;
+        themeMenu.hidden = true;
+        themeBtn.setAttribute('aria-expanded', 'false');
+    };
+    setTheme('indigo');
+    chrome.storage.local.get(THEME_KEY).then((data) => {
+        if (data && data[THEME_KEY]) setTheme(data[THEME_KEY]);
+    }).catch(() => {});
+    themeBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = themeMenu.hidden;
+        themeMenu.hidden = !willOpen;
+        themeBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+    });
+    themeGrid.addEventListener('click', (event) => {
+        const item = event.target.closest('.theme-item');
+        if (!item) return;
+        setTheme(item.dataset.theme);
+        chrome.storage.local.set({ [THEME_KEY]: item.dataset.theme }).catch(() => {});
+        closeThemeMenu();
+    });
+    document.addEventListener('click', (event) => {
+        if (!themeMenu.hidden && !event.target.closest('.theme-wrap')) closeThemeMenu();
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeThemeMenu();
+    });
+
     // --- 锁定：清除本机保存的密码 ---
     document.getElementById('lock')?.addEventListener('click', async () => {
         await clearStoredAuth();
@@ -1643,45 +1847,17 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const scrollMemory = {};
 
-    const selectCategory = (id, addTab) => {
+    const selectCategory = (id) => {
         scrollMemory[activeCategory] = panel.scrollTop;
         activeCategory = id;
-        if (addTab && !openTabs.includes(id)) openTabs = openTabs.concat(id).slice(0, 8);
         renderDir();
-        renderTabs();
         render();
     };
 
     dirList.addEventListener('click', (event) => {
         const item = event.target.closest('.dir-item');
         if (!item) return;
-        selectCategory(item.dataset.id || 'all', true);
-    });
-
-    tabs.addEventListener('click', (event) => {
-        const closeBtn = event.target.closest('.tab-x');
-        if (closeBtn) {
-            event.stopPropagation();
-            const closingId = closeBtn.dataset.close;
-            openTabs = openTabs.filter((id) => id !== closingId);
-            if (activeCategory === closingId) activeCategory = 'all';
-            renderDir();
-            renderTabs();
-            render();
-            return;
-        }
-        const tab = event.target.closest('.tab');
-        if (!tab) return;
-        selectCategory(tab.dataset.id || 'all', false);
-    });
-
-    closeAllTabsBtn?.addEventListener('click', () => {
-        openTabs = ['all'];
-        activeCategory = 'all';
-        Object.keys(scrollMemory).forEach((key) => { delete scrollMemory[key]; });
-        renderDir();
-        renderTabs();
-        render();
+        selectCategory(item.dataset.id || 'all');
     });
 
 
@@ -1711,7 +1887,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 \${tip}
             </div>
         \`;
-        tabRow.style.display = 'none';
         content.style.height = '';
         const input = document.getElementById('pwdInput');
         const btn = document.getElementById('loginBtn');
@@ -1725,7 +1900,6 @@ document.addEventListener('DOMContentLoaded', async () => {
                 showLogin('密码不正确', onSuccess);
                 return;
             }
-            tabRow.style.display = '';
             // 解锁后接着做被打断的事（比如同步），没指定就刷新收藏夹
             if (onSuccess) onSuccess();
             else loadBookmarks();
@@ -1740,12 +1914,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         allCategories = folders;
         allLinks = links;
         rebuildCounts();
-        tabRow.style.display = '';
         if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
             activeCategory = 'all';
         }
         renderDir();
-        renderTabs();
         render();
     };
 
