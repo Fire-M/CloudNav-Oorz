@@ -1952,7 +1952,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadEngines = () => {
         chrome.storage.local.get([ENGINES_KEY, ENGINE_KEY]).then((data) => {
             if (data && Array.isArray(data[ENGINES_KEY])) {
-                const saved = data[ENGINES_KEY].filter((e) => e && e.id && e.name && /^https?:\/\//i.test(e.url || ''));
+                const saved = data[ENGINES_KEY].filter((e) => e && e.id && e.name && /^https?:\\/\\//i.test(e.url || ''));
                 if (saved.length) engines = saved;
             }
             if (data && data[ENGINE_KEY] && engines.some((e) => e.id === data[ENGINE_KEY])) {
@@ -2004,7 +2004,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const name = engineNameInput.value.trim();
         let url = engineUrlInput.value.trim();
         const nameOk = !!name;
-        const urlOk = /^https?:\/\/\S+$/i.test(url) && (url.includes('%s') || /[=?&]$/.test(url));
+        const urlOk = /^https?:\\/\\/\\S+$/i.test(url) && (url.includes('%s') || /[=?&]$/.test(url));
         engineNameInput.classList.toggle('bad', !nameOk);
         engineUrlInput.classList.toggle('bad', !urlOk);
         if (!nameOk || !urlOk) return;
