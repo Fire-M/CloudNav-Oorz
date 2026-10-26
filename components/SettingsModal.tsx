@@ -1224,13 +1224,62 @@ const extPopupHtml = `<!DOCTYPE html>
         .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
         .engine-wrap { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
           display: flex; align-items: center; padding-left: 6px; border-left: 1px solid var(--line); }
-        .engine-select { appearance: none; -webkit-appearance: none; border: 0; background: transparent;
-          color: var(--ink-soft); font-family: inherit; font-size: 12px; line-height: 1;
-          padding: 6px 18px 6px 6px; border-radius: 7px; cursor: pointer; outline: none;
+        .engine-btn { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 8px 0 8px;
+          border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft);
+          font-family: inherit; font-size: 12px; line-height: 1; cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s; }
-        .engine-select:hover { color: var(--ink); background: rgba(127,127,127,0.1); }
-        .engine-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-        .engine-caret { position: absolute; right: 5px; display: flex; pointer-events: none; color: var(--ink-soft); }
+        .engine-btn:hover { color: var(--ink); background: var(--chip-hi); }
+        .engine-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .engine-btn svg { flex: 0 0 auto; }
+        .engine-menu { position: absolute; top: calc(100% + 8px); right: 0; z-index: 45; width: 316px; padding: 10px;
+          border: 1px solid var(--line); border-radius: 14px; background: var(--surface-solid);
+          box-shadow: 0 12px 28px -12px rgba(15,23,42,0.35); }
+        .engine-menu[hidden] { display: none; }
+        .engine-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 2px; }
+        .engine-item { position: relative; display: flex; flex-direction: column; align-items: center; gap: 6px;
+          padding: 10px 2px 8px; border: 0; border-radius: 10px; background: transparent; cursor: pointer;
+          transition: background-color .14s; }
+        .engine-item:hover { background: var(--chip-hi); }
+        .engine-logo { position: relative; width: 40px; height: 40px; border-radius: 11px; background: var(--surface-solid);
+          border: 1px solid var(--line); display: flex; align-items: center; justify-content: center; overflow: hidden;
+          transition: box-shadow .14s, border-color .14s; }
+        .engine-item.active .engine-logo { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+        .engine-logo img { width: 24px; height: 24px; object-fit: contain; }
+        .engine-letter { display: none; position: absolute; inset: 0; align-items: center; justify-content: center;
+          font-size: 15px; font-weight: 600; }
+        .engine-logo.fb { background: linear-gradient(135deg, hsl(var(--h), 72%, 90%), hsl(var(--h), 60%, 80%));
+          border-color: transparent; }
+        .engine-logo.fb .engine-letter { display: flex; color: hsl(var(--h), 42%, 36%); }
+        .engine-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+          font-size: 11.5px; color: var(--ink-soft); }
+        .engine-item.active .engine-name { color: var(--ink); font-weight: 500; }
+        .engine-del { position: absolute; top: 3px; right: 3px; width: 18px; height: 18px; border-radius: 999px;
+          border: 1px solid var(--line); background: var(--surface-solid); color: var(--ink-soft); opacity: 0;
+          display: inline-flex; align-items: center; justify-content: center; cursor: pointer;
+          transition: opacity .14s, color .14s, background-color .14s; }
+        .engine-item:hover .engine-del { opacity: 1; }
+        .engine-del:hover { color: var(--danger); background: var(--danger-soft); border-color: var(--danger); }
+        .engine-add-btn { border: 1px dashed var(--line-strong); background: transparent; color: var(--ink-soft); }
+        .engine-add-btn:hover { border-color: var(--accent); color: var(--ink); background: var(--chip-hi); }
+        .engine-plus { width: 40px; height: 40px; border-radius: 999px; border: 1px solid var(--line-strong);
+          background: var(--chip); color: var(--ink-soft); display: flex; align-items: center; justify-content: center; }
+        .engine-form { grid-column: 1 / -1; display: none; gap: 6px; padding-top: 10px; margin-top: 4px;
+          border-top: 1px solid var(--line); }
+        .engine-form.open { display: grid; }
+        .engine-input { height: 28px; min-width: 0; padding: 0 8px; border: 1px solid var(--line); border-radius: 7px;
+          background: var(--chip); color: var(--ink); font-family: inherit; font-size: 12px; outline: none;
+          transition: border-color .14s; }
+        .engine-input:focus { border-color: var(--accent); }
+        .engine-input.bad { border-color: var(--danger); }
+        .engine-input::placeholder { color: var(--ink-soft); opacity: .7; }
+        .engine-form-row { display: flex; gap: 6px; }
+        .engine-save { flex: 1; height: 28px; border: 1px solid transparent; border-radius: 7px; background: var(--accent);
+          color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; transition: filter .14s; }
+        .engine-save:hover { filter: brightness(.95); }
+        .engine-cancel { height: 28px; padding: 0 10px; border: 1px solid var(--line); border-radius: 7px;
+          background: transparent; color: var(--ink-soft); font-family: inherit; font-size: 12px; cursor: pointer;
+          transition: color .14s, background-color .14s; }
+        .engine-cancel:hover { color: var(--ink); background: var(--chip-hi); }
 
         .panel { flex: 1; min-height: 0; overflow-y: auto; position: relative; overflow-anchor: none;
           padding: 16px 2px 8px; scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.32) transparent; }
@@ -1387,7 +1436,8 @@ const extPopupHtml = `<!DOCTYPE html>
         html[data-theme="glass"] .search,
         html[data-theme="glass"] .dir-item,
         html[data-theme="glass"] .app-icon,
-        html[data-theme="glass"] .theme-menu {
+        html[data-theme="glass"] .theme-menu,
+        html[data-theme="glass"] .engine-menu {
             -webkit-backdrop-filter: blur(16px) saturate(160%);
             backdrop-filter: blur(16px) saturate(160%);
         }
@@ -1450,14 +1500,21 @@ const extPopupHtml = `<!DOCTYPE html>
                     </span>
                     <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
                     <span class="engine-wrap">
-                        <select id="engineSelect" class="engine-select" aria-label="选择搜索引擎">
-                            <option value="baidu">百度</option>
-                            <option value="bing">必应</option>
-                            <option value="google">Google</option>
-                        </select>
-                        <span class="engine-caret" aria-hidden="true">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
-                        </span>
+                        <button id="engineBtn" class="engine-btn" type="button" aria-haspopup="true" aria-expanded="false" title="搜索引擎">
+                            <span id="engineLabel">百度</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div class="engine-menu" id="engineMenu" role="listbox" aria-label="搜索引擎" hidden>
+                            <div class="engine-grid" id="engineGrid"></div>
+                            <div class="engine-form" id="engineForm">
+                                <input id="engineName" class="engine-input" type="text" placeholder="名称，如 DuckDuckGo" autocomplete="off" maxlength="20">
+                                <input id="engineUrl" class="engine-input" type="text" placeholder="https://…/search?q=%s" autocomplete="off" spellcheck="false">
+                                <div class="engine-form-row">
+                                    <button id="engineSave" class="engine-save" type="button">添加</button>
+                                    <button id="engineCancel" class="engine-cancel" type="button">取消</button>
+                                </div>
+                            </div>
+                        </div>
                     </span>
                 </div>
                 <div class="tools">
@@ -1806,17 +1863,160 @@ document.addEventListener('DOMContentLoaded', async () => {
     ];
     document.getElementById('daily').textContent = TIPS[Math.floor(Date.now() / 86400000) % TIPS.length];
 
-    // --- 搜索引擎 ---
-    const ENGINES = {
-        baidu: 'https://www.baidu.com/s?wd=',
-        bing: 'https://www.bing.com/search?q=',
-        google: 'https://www.google.com/search?q=',
+    // --- 搜索引擎：可自定义增删，存 chrome.storage.local ---
+    const ENGINES_KEY = 'cloudnav_ext_engines';
+    const ENGINE_KEY = 'cloudnav_ext_engine';
+    const DEFAULT_ENGINES = [
+        { id: 'baidu', name: '百度', url: 'https://www.baidu.com/s?wd=%s' },
+        { id: 'bing', name: '必应', url: 'https://www.bing.com/search?q=%s' },
+        { id: 'google', name: 'Google', url: 'https://www.google.com/search?q=%s' }
+    ];
+    let engines = DEFAULT_ENGINES.slice();
+    let activeEngineId = 'baidu';
+    const engineBtn = document.getElementById('engineBtn');
+    const engineLabel = document.getElementById('engineLabel');
+    const engineMenu = document.getElementById('engineMenu');
+    const engineGrid = document.getElementById('engineGrid');
+    const engineForm = document.getElementById('engineForm');
+    const engineNameInput = document.getElementById('engineName');
+    const engineUrlInput = document.getElementById('engineUrl');
+
+    const currentEngine = () => engines.find((e) => e.id === activeEngineId) || engines[0];
+    const engineUrlFor = (query) => {
+        const engine = currentEngine();
+        if (!engine) return '';
+        return engine.url.includes('%s')
+            ? engine.url.replace('%s', encodeURIComponent(query))
+            : engine.url + encodeURIComponent(query);
     };
-    let activeEngine = 'baidu';
-    const engineSelect = document.getElementById('engineSelect');
-    engineSelect.addEventListener('change', () => {
-        activeEngine = ENGINES[engineSelect.value] ? engineSelect.value : 'baidu';
+
+    // 用引擎站点自己的 favicon.ico 当图标，加载失败退回彩色字母块
+    const engineFavicon = (engine) => {
+        try { return new URL(engine.url).origin + '/favicon.ico'; } catch (e) { return ''; }
+    };
+
+    const renderEngineMenu = () => {
+        const tiles = engines.map((engine) => {
+            const letter = (String(engine.name).trim().charAt(0) || '?').toUpperCase();
+            return '<div class="engine-item' + (engine.id === activeEngineId ? ' active' : '') + '" role="option"'
+                + ' aria-selected="' + (engine.id === activeEngineId) + '" data-id="' + engine.id + '"'
+                + ' title="' + escapeHtml(engine.name) + '">'
+                + '<span class="engine-logo" style="--h:' + hueFor(engine) + '">'
+                + '<img src="' + escapeHtml(engineFavicon(engine)) + '" alt="" loading="lazy" decoding="async">'
+                + '<span class="engine-letter">' + escapeHtml(letter) + '</span></span>'
+                + '<span class="engine-name">' + escapeHtml(engine.name) + '</span>'
+                + (engines.length > 1
+                    ? '<span class="engine-del" role="button" title="删除" aria-label="删除 ' + escapeHtml(engine.name) + '" data-del="' + engine.id + '">'
+                        + '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M18 6 6 18M6 6l12 12"/></svg>'
+                        + '</span>'
+                    : '')
+                + '</div>';
+        }).join('');
+        engineGrid.innerHTML = tiles
+            + '<div class="engine-item engine-add-btn" id="engineAdd" role="button" title="添加搜索引擎">'
+            + '<span class="engine-plus"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span>'
+            + '<span class="engine-name">添加</span></div>';
+        engineLabel.textContent = currentEngine().name;
+    };
+
+    const persistEngines = () => {
+        chrome.storage.local.set({ [ENGINES_KEY]: engines, [ENGINE_KEY]: activeEngineId }).catch(() => {});
+    };
+
+    const closeEngineMenu = () => {
+        if (!engineMenu || engineMenu.hidden) return;
+        engineMenu.hidden = true;
+        engineForm.classList.remove('open');
+        engineBtn.setAttribute('aria-expanded', 'false');
+    };
+
+    const loadEngines = () => {
+        chrome.storage.local.get([ENGINES_KEY, ENGINE_KEY]).then((data) => {
+            if (data && Array.isArray(data[ENGINES_KEY])) {
+                const saved = data[ENGINES_KEY].filter((e) => e && e.id && e.name && /^https?:\/\//i.test(e.url || ''));
+                if (saved.length) engines = saved;
+            }
+            if (data && data[ENGINE_KEY] && engines.some((e) => e.id === data[ENGINE_KEY])) {
+                activeEngineId = data[ENGINE_KEY];
+            }
+            renderEngineMenu();
+        }).catch(() => {});
+    };
+
+    engineBtn.addEventListener('click', (event) => {
+        event.stopPropagation();
+        const willOpen = engineMenu.hidden;
+        engineMenu.hidden = !willOpen;
+        engineBtn.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
     });
+
+    // 磁贴 favicon 加载失败 → 彩色字母块（error 不冒泡，用捕获）
+    engineGrid.addEventListener('error', (event) => {
+        const img = event.target;
+        if (!img || img.tagName !== 'IMG') return;
+        img.style.display = 'none';
+        img.parentNode.classList.add('fb');
+    }, true);
+
+    engineGrid.addEventListener('click', (event) => {
+        const del = event.target.closest('.engine-del');
+        if (del) {
+            event.stopPropagation();
+            engines = engines.filter((e) => e.id !== del.dataset.del);
+            if (!engines.some((e) => e.id === activeEngineId)) activeEngineId = engines[0].id;
+            persistEngines();
+            renderEngineMenu();
+            return;
+        }
+        if (event.target.closest('.engine-add-btn')) {
+            engineForm.classList.toggle('open');
+            if (engineForm.classList.contains('open')) engineNameInput.focus();
+            return;
+        }
+        const item = event.target.closest('.engine-item[data-id]');
+        if (!item) return;
+        activeEngineId = item.dataset.id;
+        persistEngines();
+        renderEngineMenu();
+        closeEngineMenu();
+    });
+
+    const addEngine = () => {
+        const name = engineNameInput.value.trim();
+        let url = engineUrlInput.value.trim();
+        const nameOk = !!name;
+        const urlOk = /^https?:\/\/\S+$/i.test(url) && (url.includes('%s') || /[=?&]$/.test(url));
+        engineNameInput.classList.toggle('bad', !nameOk);
+        engineUrlInput.classList.toggle('bad', !urlOk);
+        if (!nameOk || !urlOk) return;
+        // 结尾是 ?、= 或 & 时自动补 %s 占位符
+        if (!url.includes('%s')) url += '%s';
+        engines.push({ id: 'e' + Date.now().toString(36), name: name, url: url });
+        activeEngineId = engines[engines.length - 1].id;
+        engineNameInput.value = '';
+        engineUrlInput.value = '';
+        engineNameInput.classList.remove('bad');
+        engineUrlInput.classList.remove('bad');
+        persistEngines();
+        renderEngineMenu();
+        engineForm.classList.remove('open');
+    };
+
+    const engineSaveBtn = document.getElementById('engineSave');
+    engineSaveBtn.addEventListener('click', addEngine);
+    document.getElementById('engineCancel').addEventListener('click', () => {
+        engineForm.classList.remove('open');
+    });
+    [engineNameInput, engineUrlInput].forEach((input) => {
+        input.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter') addEngine();
+        });
+    });
+    document.addEventListener('click', (event) => {
+        if (!engineMenu.hidden && !event.target.closest('.engine-wrap')) closeEngineMenu();
+    });
+    loadEngines();
+    renderEngineMenu();
 
     let searchTimer = 0;
     searchInput.addEventListener('input', () => {
@@ -1833,7 +2033,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         const query = searchInput.value.trim();
         if (!query) return;
         // 输入框会实时筛出本地收藏，回车则是用搜索引擎搜网络
-        window.open(ENGINES[activeEngine] + encodeURIComponent(query), '_blank');
+        window.open(engineUrlFor(query), '_blank');
     });
 
     // 全局按「/」聚焦搜索框（输入控件内不拦截）
@@ -1902,7 +2102,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (!themeMenu.hidden && !event.target.closest('.theme-wrap')) closeThemeMenu();
     });
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') closeThemeMenu();
+        if (event.key === 'Escape') { closeThemeMenu(); closeEngineMenu(); }
     });
 
     // --- 锁定：清除本机保存的密码 ---
