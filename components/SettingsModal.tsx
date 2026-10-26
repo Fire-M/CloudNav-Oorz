@@ -1058,98 +1058,131 @@ const extPopupHtml = `<!DOCTYPE html>
 <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="color-scheme" content="light">
+    <meta name="theme-color" content="#fff8fa">
     <style>
         :root {
-            --card: rgba(255,255,255,0.72);
-            --text: #4a2545;
-            --muted: #9a7f95;
-            --line: rgba(236,72,153,0.14);
-            --accent: #ec4899;
-            --accent-soft: rgba(236,72,153,0.12);
+            --ink: #2b1a28;
+            --ink-soft: #7d6178;
+            --line: rgba(43,26,40,0.09);
+            --surface: rgba(255,255,255,0.76);
+            --accent: #db2777;
+            --accent-soft: rgba(219,39,119,0.10);
         }
         * { box-sizing: border-box; }
-        html, body { margin: 0; width: 100%; min-height: 100vh; color: var(--text);
-          background: linear-gradient(165deg, #ffe3ee 0%, #fff4f8 32%, #ffffff 72%);
+        html, body { margin: 0; width: 100%; min-height: 100vh; color: var(--ink);
+          background:
+            radial-gradient(1100px 520px at 50% -8%, rgba(236,72,153,0.15), transparent 68%),
+            linear-gradient(180deg, #fff8fa 0%, #fdeef4 48%, #fffafc 100%);
           background-attachment: fixed;
-          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif; }
-        body { padding: 40px 40px 36px; }
-        .shell { display: flex; flex-direction: column; gap: 22px; max-width: 1560px; margin: 0 auto; }
-        .hero { padding: 30px 32px 26px; border-radius: 28px; background: var(--card); backdrop-filter: blur(18px);
-          border: 1px solid var(--line); box-shadow: 0 24px 70px rgba(236,72,153,0.12); text-align: center; }
+          font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
+          -webkit-font-smoothing: antialiased; }
+        body { padding: 44px 40px 36px; }
+        .shell { display: flex; flex-direction: column; gap: 24px; max-width: 1480px; margin: 0 auto; }
+        .sr-only { position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px; overflow: hidden;
+          clip: rect(0,0,0,0); white-space: nowrap; border: 0; }
+        .hero { padding: 32px 32px 28px; border-radius: 24px; background: var(--surface);
+          -webkit-backdrop-filter: blur(20px) saturate(150%); backdrop-filter: blur(20px) saturate(150%);
+          border: 1px solid rgba(255,255,255,0.92); text-align: center;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.95), 0 18px 44px -20px rgba(157,23,77,0.30), 0 2px 6px rgba(157,23,77,0.04); }
         .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .date { font-size: 13px; color: var(--muted); letter-spacing: .3px; }
-        .tools { display: flex; gap: 8px; }
-        .tool-btn { width: 34px; height: 34px; border-radius: 11px; border: 1px solid var(--line); background: rgba(255,255,255,0.6);
-          color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all .18s; }
-        .tool-btn:hover { color: var(--accent); border-color: rgba(236,72,153,0.32); background: #fff; }
+        .date { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.14em; }
+        .tools { display: flex; gap: 6px; }
+        .tool-btn { width: 32px; height: 32px; border-radius: 9px; border: 1px solid var(--line);
+          background: rgba(255,255,255,0.55); color: var(--ink-soft); display: inline-flex; align-items: center;
+          justify-content: center; cursor: pointer; touch-action: manipulation;
+          transition: color .16s, background-color .16s, border-color .16s; }
+        .tool-btn:hover { color: var(--accent); border-color: rgba(219,39,119,0.3); background: #fff; }
+        .tool-btn:focus-visible, .engine:focus-visible, .chip:focus-visible, .app:focus-visible {
+          outline: 2px solid var(--accent); outline-offset: 2px; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .clock { margin-top: 8px; font-size: 78px; font-weight: 200; line-height: 1.05; letter-spacing: -2px; color: #3d2039; }
-        .search-wrap { position: relative; margin: 24px auto 0; max-width: 620px; }
-        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; display: flex; }
-        .search { width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,0.85); color: var(--text); border-radius: 999px;
-          padding: 12px 16px 12px 40px; outline: none; font-size: 14px; transition: all .18s; }
-        .search:focus { border-color: rgba(236,72,153,0.4); box-shadow: 0 0 0 4px rgba(236,72,153,0.10); }
-        .engines { display: flex; gap: 8px; margin: 14px auto 0; max-width: 620px; justify-content: center; }
-        .engine { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.55); color: var(--muted);
-          border-radius: 999px; padding: 6px 20px; font-size: 12px; cursor: pointer; transition: all .18s; }
-        .engine:hover { color: var(--accent); border-color: rgba(236,72,153,0.3); }
-        .engine.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 6px 16px rgba(236,72,153,0.22); }
-        .chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 2px; }
-        .chip { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.6); color: var(--muted); border-radius: 999px;
-          padding: 7px 16px; font-size: 13px; cursor: pointer; transition: all .18s; }
-        .chip.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 8px 20px rgba(236,72,153,0.25); }
-        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 26px 16px; }
-        .app { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
-        .app-icon { width: 64px; height: 64px; border-radius: 20px; background: #fff; display: flex; align-items: center; justify-content: center;
-          overflow: hidden; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 22px rgba(236,72,153,0.12); transition: transform .18s, box-shadow .18s; }
-        .app:hover .app-icon { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(236,72,153,0.22); }
-        .app-icon img { width: 58%; height: 58%; object-fit: contain; }
-        .app-name { font-size: 12px; color: #6b4c68; text-align: center; max-width: 100%; line-height: 1.2;
+        .clock { margin-top: 10px; font-size: 82px; font-weight: 200; line-height: 1; letter-spacing: -0.045em;
+          color: var(--ink); font-variant-numeric: tabular-nums; }
+        .search-wrap { position: relative; margin: 26px auto 0; max-width: 560px; }
+        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
+          pointer-events: none; display: flex; }
+        .search { width: 100%; height: 46px; border: 1px solid var(--line); background: rgba(255,255,255,0.92);
+          color: var(--ink); border-radius: 13px; padding: 0 16px 0 44px; outline: none; font-size: 14px;
+          transition: border-color .16s, box-shadow .16s, background-color .16s; }
+        .search::placeholder { color: rgba(125,97,120,0.75); }
+        .search:hover { border-color: rgba(219,39,119,0.22); }
+        .search:focus-visible { border-color: var(--accent); background: #fff; box-shadow: 0 0 0 4px var(--accent-soft); }
+        .engines { display: flex; gap: 6px; margin: 12px auto 0; max-width: 560px; justify-content: center; }
+        .engine { white-space: nowrap; border: 1px solid transparent; background: transparent; color: var(--ink-soft);
+          border-radius: 8px; padding: 5px 14px; font-size: 12px; cursor: pointer; touch-action: manipulation;
+          transition: color .16s, background-color .16s, border-color .16s; }
+        .engine:hover { color: var(--accent); background: rgba(255,255,255,0.8); border-color: rgba(219,39,119,0.2); }
+        .engine.active { color: #fff; background: var(--accent); border-color: transparent;
+          box-shadow: 0 4px 12px -2px rgba(219,39,119,0.35); }
+        .chips { display: flex; gap: 8px; flex-wrap: wrap; justify-content: center; padding: 2px; }
+        .chip { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.62); color: var(--ink-soft);
+          border-radius: 8px; padding: 6px 14px; font-size: 12px; cursor: pointer; touch-action: manipulation;
+          transition: color .16s, background-color .16s, border-color .16s; }
+        .chip:hover { color: var(--accent); border-color: rgba(219,39,119,0.28); background: #fff; }
+        .chip.active { color: #fff; background: var(--accent); border-color: transparent;
+          box-shadow: 0 4px 12px -2px rgba(219,39,119,0.35); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap: 28px 18px; }
+        .app { display: flex; flex-direction: column; align-items: center; gap: 9px; text-decoration: none;
+          color: inherit; touch-action: manipulation; content-visibility: auto; contain-intrinsic-size: auto 88px; }
+        .app-icon { width: 60px; height: 60px; border-radius: 16px; background: #fff; display: flex; align-items: center;
+          justify-content: center; overflow: hidden; border: 1px solid rgba(43,26,40,0.06);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 8px rgba(157,23,77,0.07);
+          transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s; }
+        .app:hover .app-icon { transform: translateY(-2px);
+          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 10px 22px -8px rgba(157,23,77,0.35); }
+        .app-icon img { width: 36px; height: 36px; object-fit: contain; }
+        .app-name { font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.35;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
-          background: rgba(255,255,255,0.7); border: 1px solid var(--line); text-decoration: none; color: inherit; }
+        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 14px;
+          background: rgba(255,255,255,0.72); border: 1px solid var(--line); text-decoration: none; color: inherit; }
         .meta { min-width: 0; flex: 1; }
-        .title { font-size: 14px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .url { margin-top: 3px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .badge { margin-top: 8px; display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
-        .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px 12px; font-size: 13px; }
-        .status { text-align: center; font-size: 12px; color: var(--muted); line-height: 1.5; min-height: 18px; }
-        .status.error { color: #ef4444; }
-        .daily { margin-top: 8px; padding: 18px 10px 0; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.5; }
+        .title { font-size: 13px; font-weight: 600; line-height: 1.35; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .url { margin-top: 2px; font-size: 12px; color: var(--ink-soft); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .badge { margin-top: 8px; display: inline-flex; padding: 3px 8px; border-radius: 6px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
+        .empty { grid-column: 1/-1; text-align: center; color: var(--ink-soft); padding: 44px 12px; font-size: 13px; }
+        .status { text-align: center; font-size: 12px; color: var(--ink-soft); line-height: 1.55; min-height: 18px; }
+        .status.error { color: #c0264a; }
+        .daily { margin-top: 4px; padding: 16px 10px 0; text-align: center; font-size: 12px; color: var(--ink-soft);
+          line-height: 1.6; letter-spacing: 0.02em; opacity: 0.9; }
         @media (max-width: 720px) {
             body { padding: 24px 18px 24px; }
             .clock { font-size: 58px; }
             .hero { padding: 22px 18px 20px; }
         }
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+            .rotating { animation: none; }
+        }
     </style>
 </head>
 <body>
+    <h1 class="sr-only">收藏夹导航</h1>
     <div class="shell">
         <section class="hero">
             <div class="hero-top">
                 <div class="date" id="dateLine">—</div>
                 <div class="tools">
-                    <button id="openSidepanel" class="tool-btn" title="打开侧边栏">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+                    <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
                     </button>
-                    <button id="refresh" class="tool-btn" title="重新读取浏览器收藏夹">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                    <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                     </button>
-                    <button id="syncToSite" class="tool-btn" title="把浏览器收藏夹同步到站点">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+                    <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
                     </button>
-                    <button id="lock" class="tool-btn" title="锁定（清除本机保存的密码）">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </button>
                 </div>
             </div>
             <div class="clock" id="clockLine">--:--</div>
             <div class="search-wrap">
-                <span class="search-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+                <span class="search-icon" aria-hidden="true">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 </span>
-                <input id="search" class="search" type="text" placeholder="搜收藏，回车用搜索引擎搜网络" autocomplete="off">
+                <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
             </div>
             <div class="engines" id="engines">
                 <button class="engine active" data-engine="baidu">百度</button>
@@ -1157,10 +1190,10 @@ const extPopupHtml = `<!DOCTYPE html>
                 <button class="engine" data-engine="google">Google</button>
             </div>
         </section>
-        <div id="statusBar" class="status"></div>
+        <div id="statusBar" class="status" role="status" aria-live="polite"></div>
         <div id="chips" class="chips"></div>
         <div id="content" class="grid">
-            <div class="empty">读取收藏夹中...</div>
+            <div class="empty">读取收藏夹中…</div>
         </div>
         <footer class="daily" id="daily"></footer>
     </div>
@@ -1252,7 +1285,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         content.innerHTML = filteredLinks.map((link) => \`
             <a class="app" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
-                <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" onerror="this.style.display='none'"></div>
+                <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none'"></div>
                 <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
             </a>
         \`).join('');
@@ -1261,11 +1294,14 @@ document.addEventListener('DOMContentLoaded', async () => {
     // --- 时钟与日期 ---
     const dateLine = document.getElementById('dateLine');
     const clockLine = document.getElementById('clockLine');
-    const WEEKDAYS = ['星期日', '星期一', '星期二', '星期三', '星期四', '星期五', '星期六'];
+    // 交给 Intl，避免手写「X月Y日 星期Z」这类硬编码格式
+    const timeFmt = new Intl.DateTimeFormat('zh-CN', { hour: '2-digit', minute: '2-digit', hour12: false });
+    const monthDayFmt = new Intl.DateTimeFormat('zh-CN', { month: 'long', day: 'numeric' });
+    const weekdayFmt = new Intl.DateTimeFormat('zh-CN', { weekday: 'long' });
     const tickClock = () => {
         const now = new Date();
-        clockLine.textContent = String(now.getHours()).padStart(2, '0') + ':' + String(now.getMinutes()).padStart(2, '0');
-        dateLine.textContent = (now.getMonth() + 1) + '月' + now.getDate() + '日 ' + WEEKDAYS[now.getDay()];
+        clockLine.textContent = timeFmt.format(now);
+        dateLine.textContent = monthDayFmt.format(now) + ' ' + weekdayFmt.format(now);
     };
     tickClock();
     setInterval(tickClock, 15000);
@@ -1360,7 +1396,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const value = input ? input.value.trim() : '';
             if (!value) return;
             btn.disabled = true;
-            btn.textContent = '验证中...';
+            btn.textContent = '验证中…';
             if (!(await verifyPassword(value))) {
                 showLogin('密码不正确', onSuccess);
                 return;
@@ -1412,7 +1448,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         if (bmSyncing) return;
         bmSyncing = true;
         syncBtn.classList.add('rotating');
-        setStatus('正在同步到站点...');
+        setStatus('正在同步到站点…');
         try {
             const response = await chrome.runtime.sendMessage({ type: 'sync-bookmarks' });
             if (!response || !response.ok) {
