@@ -298,7 +298,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
             service_worker: "background.js"
         },
         action: {
-            default_title: `打开 ${navName} 弹窗`
+            default_title: `打开 ${navName} 导航页`
         },
         side_panel: {
             default_path: "sidebar.html"
@@ -312,7 +312,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
               "default": "Ctrl+Shift+E",
               "mac": "Command+Shift+E"
             },
-            "description": `打开 ${navName} 弹窗`
+            "description": `打开 ${navName} 导航页`
           },
           "open_sidepanel": {
             "suggested_key": {
@@ -323,7 +323,8 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
           }
         }
     };
-    json.action.default_popup = "popup.html";
+    // 不设 default_popup：点图标时改由 background 在标签页里打开整屏导航页。
+    // 弹窗形式受浏览器限制最大 800x600，没法铺满窗口。
     
     if (browserType === 'firefox') {
         json.browser_specific_settings = {
@@ -403,7 +404,20 @@ const CONFIG = {
 };
 ${extAuthHelpers}
 const MODE_KEY = 'cloudnav_ui_mode';
-const POPUP_PATH = 'popup.html';
+const NAV_PAGE_PATH = 'popup.html';
+
+// 整屏导航页：已经开着就切过去，没开就在新标签页打开
+const openNavPage = async () => {
+    const url = chrome.runtime.getURL(NAV_PAGE_PATH);
+    const tabs = await chrome.tabs.query({});
+    const existing = tabs.find((tab) => tab && tab.url && tab.url.split('#')[0] === url);
+    if (existing) {
+        await chrome.tabs.update(existing.id, { active: true });
+        if (existing.windowId) await chrome.windows.update(existing.windowId, { focused: true });
+        return;
+    }
+    await chrome.tabs.create({ url: url });
+};
 
 let linkCache = [];
 let categoryCache = [];
@@ -415,8 +429,9 @@ async function getUiMode() {
 
 async function setUiMode(mode) {
     await chrome.storage.local.set({ [MODE_KEY]: mode });
-    await chrome.action.setPopup({ popup: mode === 'popup' ? POPUP_PATH : '' });
-    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: mode === 'sidepanel' }).catch(() => {});
+    // 刻意不调用 setPopup：点图标统一由 onClicked 打开整屏导航页。
+    // 侧边栏保持"不接管点击"，否则 onClicked 不会触发。
+    await chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: false }).catch(() => {});
 }
 
 chrome.runtime.onInstalled.addListener(() => {
@@ -508,18 +523,21 @@ chrome.runtime.onConnect.addListener((port) => {
   });
 });
 
+// 点插件图标：在标签页里打开整屏导航页（不再走受限的小弹窗）
+chrome.action.onClicked.addListener(() => {
+    openNavPage().catch((e) => console.error('Failed to open nav page', e));
+});
+
 chrome.commands.onCommand.addListener(async (command) => {
     try {
         const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
         if (!tab?.windowId) return;
         if (command === 'open_sidepanel') {
-            await setUiMode('sidepanel');
             await chrome.sidePanel.open({ windowId: tab.windowId });
             return;
         }
         if (command === '_execute_action') {
-            await setUiMode('popup');
-            await chrome.action.openPopup();
+            await openNavPage();
         }
     } catch (e) {
         console.error('Failed to handle command', e);
@@ -1050,53 +1068,58 @@ const extPopupHtml = `<!DOCTYPE html>
             --accent-soft: rgba(236,72,153,0.12);
         }
         * { box-sizing: border-box; }
-        html, body { margin: 0; width: 388px; min-width: 388px; max-width: 388px; color: var(--text);
-          background: linear-gradient(165deg, #ffe3ee 0%, #fff4f8 42%, #ffffff 100%);
+        html, body { margin: 0; width: 100%; min-height: 100vh; color: var(--text);
+          background: linear-gradient(165deg, #ffe3ee 0%, #fff4f8 32%, #ffffff 72%);
+          background-attachment: fixed;
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif; }
-        body { padding: 16px 14px 12px; }
-        .shell { display: flex; flex-direction: column; gap: 12px; max-height: 600px; }
-        .hero { padding: 16px 14px 14px; border-radius: 22px; background: var(--card); backdrop-filter: blur(18px);
-          border: 1px solid var(--line); box-shadow: 0 18px 50px rgba(236,72,153,0.10); }
+        body { padding: 40px 40px 36px; }
+        .shell { display: flex; flex-direction: column; gap: 22px; max-width: 1560px; margin: 0 auto; }
+        .hero { padding: 30px 32px 26px; border-radius: 28px; background: var(--card); backdrop-filter: blur(18px);
+          border: 1px solid var(--line); box-shadow: 0 24px 70px rgba(236,72,153,0.12); text-align: center; }
         .hero-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
-        .date { font-size: 12px; color: var(--muted); letter-spacing: .3px; }
-        .tools { display: flex; gap: 6px; }
-        .tool-btn { width: 30px; height: 30px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.6);
+        .date { font-size: 13px; color: var(--muted); letter-spacing: .3px; }
+        .tools { display: flex; gap: 8px; }
+        .tool-btn { width: 34px; height: 34px; border-radius: 11px; border: 1px solid var(--line); background: rgba(255,255,255,0.6);
           color: var(--muted); display: inline-flex; align-items: center; justify-content: center; cursor: pointer; transition: all .18s; }
         .tool-btn:hover { color: var(--accent); border-color: rgba(236,72,153,0.32); background: #fff; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .clock { margin-top: 4px; font-size: 46px; font-weight: 250; line-height: 1.05; letter-spacing: -1px; color: #3d2039; }
-        .search-wrap { position: relative; margin-top: 14px; }
-        .search-icon { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; display: flex; }
+        .clock { margin-top: 8px; font-size: 78px; font-weight: 200; line-height: 1.05; letter-spacing: -2px; color: #3d2039; }
+        .search-wrap { position: relative; margin: 24px auto 0; max-width: 620px; }
+        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--muted); pointer-events: none; display: flex; }
         .search { width: 100%; border: 1px solid var(--line); background: rgba(255,255,255,0.85); color: var(--text); border-radius: 999px;
-          padding: 10px 14px 10px 36px; outline: none; font-size: 13px; transition: all .18s; }
-        .search:focus { border-color: rgba(236,72,153,0.4); box-shadow: 0 0 0 3px rgba(236,72,153,0.10); }
-        .engines { display: flex; gap: 6px; margin-top: 10px; }
-        .engine { flex: 1; white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.55); color: var(--muted);
-          border-radius: 999px; padding: 5px 6px; font-size: 11px; cursor: pointer; transition: all .18s; }
+          padding: 12px 16px 12px 40px; outline: none; font-size: 14px; transition: all .18s; }
+        .search:focus { border-color: rgba(236,72,153,0.4); box-shadow: 0 0 0 4px rgba(236,72,153,0.10); }
+        .engines { display: flex; gap: 8px; margin: 14px auto 0; max-width: 620px; justify-content: center; }
+        .engine { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.55); color: var(--muted);
+          border-radius: 999px; padding: 6px 20px; font-size: 12px; cursor: pointer; transition: all .18s; }
         .engine:hover { color: var(--accent); border-color: rgba(236,72,153,0.3); }
         .engine.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 6px 16px rgba(236,72,153,0.22); }
-        .chips { display: flex; gap: 8px; overflow-x: auto; padding: 2px 2px 0; scrollbar-width: none; }
-        .chips::-webkit-scrollbar { display: none; }
+        .chips { display: flex; gap: 10px; flex-wrap: wrap; justify-content: center; padding: 2px; }
         .chip { white-space: nowrap; border: 1px solid var(--line); background: rgba(255,255,255,0.6); color: var(--muted); border-radius: 999px;
-          padding: 6px 12px; font-size: 12px; cursor: pointer; transition: all .18s; }
+          padding: 7px 16px; font-size: 13px; cursor: pointer; transition: all .18s; }
         .chip.active { color: #fff; background: var(--accent); border-color: transparent; box-shadow: 0 8px 20px rgba(236,72,153,0.25); }
-        .grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px 6px; }
-        .app { display: flex; flex-direction: column; align-items: center; gap: 6px; text-decoration: none; color: inherit; }
-        .app-icon { width: 54px; height: 54px; border-radius: 18px; background: #fff; display: flex; align-items: center; justify-content: center;
-          overflow: hidden; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 20px rgba(236,72,153,0.10); transition: transform .18s, box-shadow .18s; }
-        .app:hover .app-icon { transform: translateY(-3px); box-shadow: 0 12px 26px rgba(236,72,153,0.20); }
+        .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(104px, 1fr)); gap: 26px 16px; }
+        .app { display: flex; flex-direction: column; align-items: center; gap: 8px; text-decoration: none; color: inherit; }
+        .app-icon { width: 64px; height: 64px; border-radius: 20px; background: #fff; display: flex; align-items: center; justify-content: center;
+          overflow: hidden; border: 1px solid rgba(255,255,255,0.9); box-shadow: 0 8px 22px rgba(236,72,153,0.12); transition: transform .18s, box-shadow .18s; }
+        .app:hover .app-icon { transform: translateY(-4px); box-shadow: 0 14px 30px rgba(236,72,153,0.22); }
         .app-icon img { width: 58%; height: 58%; object-fit: contain; }
-        .app-name { font-size: 11px; color: #6b4c68; text-align: center; max-width: 100%; line-height: 1.2;
+        .app-name { font-size: 12px; color: #6b4c68; text-align: center; max-width: 100%; line-height: 1.2;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 11px 12px; border-radius: 16px;
+        .card { grid-column: 1/-1; display: flex; align-items: center; gap: 12px; padding: 12px 14px; border-radius: 16px;
           background: rgba(255,255,255,0.7); border: 1px solid var(--line); text-decoration: none; color: inherit; }
         .meta { min-width: 0; flex: 1; }
-        .title { font-size: 13px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .url { margin-top: 3px; font-size: 11px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .title { font-size: 14px; font-weight: 600; line-height: 1.3; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .url { margin-top: 3px; font-size: 12px; color: var(--muted); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .badge { margin-top: 8px; display: inline-flex; padding: 4px 8px; border-radius: 999px; background: var(--accent-soft); color: var(--accent); font-size: 11px; }
-        .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 28px 12px; font-size: 12px; }
-        .daily { padding: 2px 10px 0; text-align: center; font-size: 11px; color: var(--muted); line-height: 1.5; }
+        .empty { grid-column: 1/-1; text-align: center; color: var(--muted); padding: 40px 12px; font-size: 13px; }
+        .daily { margin-top: 8px; padding: 18px 10px 0; text-align: center; font-size: 13px; color: var(--muted); line-height: 1.5; }
+        @media (max-width: 720px) {
+            body { padding: 24px 18px 24px; }
+            .clock { font-size: 58px; }
+            .hero { padding: 22px 18px 20px; }
+        }
     </style>
 </head>
 <body>
@@ -1392,7 +1415,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         try {
             const currentWindow = await chrome.windows.getCurrent();
             await chrome.runtime.sendMessage({ type: 'open-sidepanel', windowId: currentWindow.id });
-            window.close();
+            // 这里是整屏标签页，打开侧边栏后不关掉自己
         } catch (e) {
             console.error('Open side panel failed', e);
         }
