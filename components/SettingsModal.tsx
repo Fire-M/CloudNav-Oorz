@@ -1087,68 +1087,79 @@ const extPopupHtml = `<!DOCTYPE html>
 
         /* 左：插件目录 */
         .dock { flex: 0 0 236px; width: 236px; display: flex; flex-direction: column; min-height: 0;
-          padding: 14px 10px 10px; border-radius: 18px; background: var(--surface);
+          padding: 16px 10px 10px; border-radius: 18px; background: var(--surface);
           border: 1px solid rgba(255,255,255,0.9);
           -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 40px -30px rgba(15,23,42,0.5); }
-        .dock-brand { display: flex; align-items: center; gap: 9px; padding: 2px 8px 12px; }
-        .dock-mark { flex: 0 0 28px; width: 28px; height: 28px; border-radius: 9px; background: #15181d; color: #fff;
+        .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 6px 13px; }
+        .dock-mark { flex: 0 0 26px; width: 26px; height: 26px; border-radius: 8px; background: #15181d; color: #fff;
           display: inline-flex; align-items: center; justify-content: center; }
-        .dock-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em;
+        .dock-title { font-size: 13.5px; font-weight: 600; letter-spacing: 0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dock-label { padding: 0 8px 6px; font-size: 11px; letter-spacing: 0.08em; color: var(--ink-soft); }
-        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px; }
-        .dir-item { display: flex; align-items: center; gap: 9px; width: 100%; height: 34px; padding: 0 8px;
-          border: 0; background: transparent; border-radius: 9px; color: var(--ink-soft); font-size: 13px;
-          font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
+        .dock-label { padding: 0 9px 6px; font-size: 10.5px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
+        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
+          scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
+        .dock-list::-webkit-scrollbar { width: 8px; height: 8px; }
+        .dock-list::-webkit-scrollbar-button { display: none; }
+        .dock-list::-webkit-scrollbar-track { background: transparent; }
+        .dock-list::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border: 2px solid transparent;
+          background-clip: content-box; border-radius: 999px; }
+        .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
+        .dir-item { position: relative; display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
+          padding: 0 10px 0 12px; border: 0; background: transparent; border-radius: 8px; color: var(--ink-soft);
+          font-size: 13px; font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
           transition: background-color .14s, color .14s; }
-        .dir-item:hover { background: rgba(255,255,255,0.62); color: var(--ink); }
+        .dir-item::before { content: ""; position: absolute; left: 3px; top: 50%; width: 2px; height: 14px;
+          border-radius: 2px; background: var(--accent); transform: translateY(-50%) scaleY(0);
+          transition: transform .16s ease; }
+        .dir-item:hover { background: rgba(255,255,255,0.6); color: var(--ink); }
         .dir-item.active { background: var(--surface-solid); color: var(--ink); font-weight: 500;
-          box-shadow: 0 1px 2px rgba(15,23,42,0.07); }
-        .dir-dot { flex: 0 0 6px; width: 6px; height: 6px; border-radius: 2px; background: currentColor; opacity: .35; }
-        .dir-item.active .dir-dot { background: var(--accent); opacity: 1; }
+          box-shadow: 0 1px 2px rgba(15,23,42,0.06); }
+        .dir-item.active::before { transform: translateY(-50%) scaleY(1); }
         .dir-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dir-count { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; opacity: .85; }
-        .dock-foot { margin-top: 8px; padding: 9px 8px 2px; border-top: 1px solid var(--line);
+        .dir-count { font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; opacity: .7; }
+        .dir-item.active .dir-count { opacity: .95; }
+        .dock-foot { margin-top: 10px; padding: 10px 9px 2px; border-top: 1px solid var(--line);
           font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
         /* 右：内容区 */
         .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
-        .hero { position: relative; flex: 0 0 auto; padding: 24px 22px 20px; border-radius: 18px;
-          background: var(--surface); border: 1px solid rgba(255,255,255,0.9); text-align: center;
-          -webkit-backdrop-filter: blur(22px) saturate(150%); backdrop-filter: blur(22px) saturate(150%);
-          box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 18px 40px -30px rgba(15,23,42,0.5); }
-        .date { margin-top: 6px; font-size: 12px; color: var(--ink-soft); letter-spacing: 0.04em; }
-        .clock { font-size: 54px; font-weight: 300; line-height: 1.02;
-          letter-spacing: -0.04em; color: var(--ink); font-variant-numeric: tabular-nums; }
-        .tools { position: absolute; top: 10px; right: 10px; display: flex; gap: 2px; }
+        .topbar { flex: 0 0 auto; display: flex; align-items: center; gap: 16px; padding: 2px 2px 14px; }
+        .clock-wrap { display: flex; align-items: baseline; gap: 10px; flex: 0 0 auto; }
+        .clock { font-size: 30px; font-weight: 300; line-height: 1;
+          letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
+        .date { font-size: 12px; color: var(--ink-soft); letter-spacing: 0.03em; white-space: nowrap; }
+        .tools { flex: 0 0 auto; display: flex; gap: 2px; margin-left: 2px; }
         .tool-btn { width: 30px; height: 30px; border-radius: 9px; border: 1px solid transparent; background: transparent;
           color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
           cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s, border-color .16s; }
         .tool-btn:hover { color: var(--ink); background: rgba(255,255,255,0.75); border-color: var(--line); }
-        .tool-btn:focus-visible, .engine:focus-visible, .tab:focus-visible, .app:focus-visible, .dir-item:focus-visible {
+        .tool-btn:focus-visible, .tab:focus-visible, .app:focus-visible, .dir-item:focus-visible {
           outline: 2px solid var(--accent); outline-offset: 2px; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .search-wrap { position: relative; margin: 16px auto 0; max-width: 520px; }
-        .search-icon { position: absolute; left: 15px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
+        .search-wrap { position: relative; flex: 1 1 auto; max-width: 440px; margin: 0 auto; }
+        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
           pointer-events: none; display: flex; }
-        .search { width: 100%; height: 42px; border: 1px solid var(--line); background: var(--surface-solid);
-          color: var(--ink); border-radius: 12px; padding: 0 15px 0 42px; outline: none; font-size: 13px;
+        .search { width: 100%; height: 40px; border: 1px solid var(--line); background: var(--surface-solid);
+          color: var(--ink); border-radius: 11px; padding: 0 104px 0 40px; outline: none; font-size: 13px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
         .search::placeholder { color: rgba(108,116,128,0.8); }
         .search:hover { border-color: var(--line-strong); }
         .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-        .engines { display: flex; gap: 2px; margin: 10px 0 0; justify-content: center; }
-        .engine { white-space: nowrap; border: 0; background: transparent; color: var(--ink-soft); border-radius: 7px;
-          padding: 4px 9px; font-size: 12px; font-family: inherit; cursor: pointer; touch-action: manipulation;
+        .engine-wrap { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
+          display: flex; align-items: center; padding-left: 6px; border-left: 1px solid var(--line); }
+        .engine-select { appearance: none; -webkit-appearance: none; border: 0; background: transparent;
+          color: var(--ink-soft); font-family: inherit; font-size: 12px; line-height: 1;
+          padding: 6px 18px 6px 6px; border-radius: 7px; cursor: pointer; outline: none;
           transition: color .16s, background-color .16s; }
-        .engine:hover { color: var(--ink); background: rgba(255,255,255,0.7); }
-        .engine.active { color: var(--accent); background: var(--accent-soft); font-weight: 500; }
+        .engine-select:hover { color: var(--ink); background: rgba(127,127,127,0.1); }
+        .engine-select:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .engine-caret { position: absolute; right: 5px; display: flex; pointer-events: none; color: var(--ink-soft); }
 
         /* 内容标签 */
-        .tabbar { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; margin-top: 14px;
+        .tabbar { flex: 0 0 auto; display: flex; align-items: center; gap: 2px; margin-top: 2px;
           border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
         .tabbar::-webkit-scrollbar { display: none; }
         .tab { position: relative; display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 11px;
@@ -1196,9 +1207,13 @@ const extPopupHtml = `<!DOCTYPE html>
             .dock-brand, .dock-label, .dock-foot { display: none; }
             .dock-list { flex-direction: row; gap: 2px; overflow: visible; }
             .dir-item { width: auto; height: 30px; padding: 0 10px; white-space: nowrap; }
+            .dir-item::before { display: none; }
             .dir-count { display: none; }
-            .hero { padding: 16px 16px 14px; }
-            .clock { font-size: 34px; }
+            .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 0 2px 10px; }
+            .clock-wrap { gap: 8px; }
+            .clock { font-size: 24px; }
+            .search-wrap { order: 3; flex: 1 1 100%; max-width: none; margin: 0; }
+            .tools { margin-left: auto; }
             .panel { overflow: visible; padding-top: 14px; }
             .grid { grid-template-columns: repeat(auto-fill, minmax(84px, 1fr)); gap: 18px 10px; }
         }
@@ -1224,33 +1239,40 @@ const extPopupHtml = `<!DOCTYPE html>
         </aside>
 
         <section class="stage">
-            <header class="hero">
-                <div class="clock" id="clockLine">--:--</div>
-                <div class="date" id="dateLine">—</div>
-                <div class="tools">
-                        <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
-                        </button>
-                        <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
-                        </button>
-                        <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
-                        </button>
-                        <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
-                        </button>
-                    </div>
+            <header class="topbar">
+                <div class="clock-wrap">
+                    <span class="clock" id="clockLine">--:--</span>
+                    <span class="date" id="dateLine">—</span>
+                </div>
                 <div class="search-wrap">
                     <span class="search-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     </span>
                     <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
+                    <span class="engine-wrap">
+                        <select id="engineSelect" class="engine-select" aria-label="选择搜索引擎">
+                            <option value="baidu">百度</option>
+                            <option value="bing">必应</option>
+                            <option value="google">Google</option>
+                        </select>
+                        <span class="engine-caret" aria-hidden="true">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
+                        </span>
+                    </span>
                 </div>
-                <div class="engines" id="engines">
-                    <button class="engine active" data-engine="baidu">百度</button>
-                    <button class="engine" data-engine="bing">必应</button>
-                    <button class="engine" data-engine="google">Google</button>
+                <div class="tools">
+                    <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
+                    </button>
+                    <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
+                    </button>
+                    <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+                    </button>
+                    <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+                    </button>
                 </div>
             </header>
 
@@ -1289,6 +1311,11 @@ document.addEventListener('DOMContentLoaded', async () => {
     let allCategories = [];
     let activeCategory = 'all';
     let openTabs = ['all'];
+    let renderToken = 0;
+    let liveLoaded = false;
+    // 收藏夹快照缓存：下次打开先用它出首屏，再拉最新数据
+    const CACHE_KEY = 'cloudnav_bm_cache';
+    let cachedJson = '';
 
     const escapeHtml = (value) => String(value ?? '')
         .replace(/&/g, '&amp;')
@@ -1326,9 +1353,17 @@ document.addEventListener('DOMContentLoaded', async () => {
             .filter(Boolean)
             .map((categoryId) => ({ id: categoryId, name: categoryId }));
 
-    const countOf = (id) => id === 'all'
-        ? allLinks.length
-        : allLinks.filter((link) => link.categoryId === id).length;
+    // 一次性统计各目录数量，避免每次渲染都为每个目录扫一遍全量收藏
+    let countMap = new Map();
+    const rebuildCounts = () => {
+        countMap = new Map([['all', allLinks.length]]);
+        allLinks.forEach((link) => {
+            const id = link.categoryId || '';
+            countMap.set(id, (countMap.get(id) || 0) + 1);
+        });
+    };
+
+    const countOf = (id) => countMap.get(id) || (id === 'all' ? allLinks.length : 0);
 
     const categoryName = (id) => {
         if (id === 'all') return '全部';
@@ -1341,7 +1376,6 @@ document.addEventListener('DOMContentLoaded', async () => {
         const items = [{ id: 'all', name: '全部收藏' }, ...categoryList()];
         dirList.innerHTML = items.map((category) => \`
             <button class="dir-item \${activeCategory === category.id ? 'active' : ''}" type="button" data-id="\${escapeHtml(category.id)}">
-                <span class="dir-dot" aria-hidden="true"></span>
                 <span class="dir-name" title="\${escapeHtml(category.name)}">\${escapeHtml(category.name)}</span>
                 <span class="dir-count">\${countOf(category.id)}</span>
             </button>
@@ -1363,27 +1397,44 @@ document.addEventListener('DOMContentLoaded', async () => {
         \`).join('');
     };
 
-    const render = () => {
-        const query = searchInput.value.trim().toLowerCase();
-        const filteredLinks = allLinks.filter((link) => {
-            if (activeCategory !== 'all' && link.categoryId !== activeCategory) return false;
-            if (!query) return true;
-            return link.title.toLowerCase().includes(query) ||
-                link.url.toLowerCase().includes(query) ||
-                (link.description && link.description.toLowerCase().includes(query));
-        });
+    // 上千条收藏一次性插入会长时间卡住主线程：先画首屏，其余分批补
+    const FIRST_BATCH = 96;
+    const NEXT_BATCH = 240;
 
-        if (filteredLinks.length === 0) {
-            content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
-            return;
-        }
-
-        content.innerHTML = filteredLinks.map((link) => \`
+    const appHtml = (link) => \`
             <a class="app" href="\${escapeHtml(link.url)}" target="_blank" rel="noopener noreferrer" title="\${escapeHtml(link.title)}">
                 <div class="app-icon"><img src="\${escapeHtml(getFaviconUrl(link))}" alt="" width="36" height="36" loading="lazy" decoding="async" onerror="this.style.display='none'"></div>
                 <div class="app-name">\${escapeHtml(shortName(link.title))}</div>
             </a>
-        \`).join('');
+        \`;
+
+    const render = () => {
+        const query = searchInput.value.trim().toLowerCase();
+        const token = ++renderToken;
+        const pool = activeCategory === 'all'
+            ? allLinks
+            : allLinks.filter((link) => link.categoryId === activeCategory);
+        const list = query
+            ? pool.filter((link) => link.title.toLowerCase().includes(query) ||
+                link.url.toLowerCase().includes(query))
+            : pool;
+
+        if (list.length === 0) {
+            content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
+            return;
+        }
+
+        content.innerHTML = '';
+        let cursor = 0;
+        const paint = (size) => {
+            if (token !== renderToken) return;
+            content.insertAdjacentHTML('beforeend', list.slice(cursor, cursor + size).map(appHtml).join(''));
+            cursor += size;
+            if (cursor < list.length) {
+                window.setTimeout(() => paint(NEXT_BATCH), 16);
+            }
+        };
+        paint(FIRST_BATCH);
     };
 
     // --- 时钟与日期 ---
@@ -1421,19 +1472,16 @@ document.addEventListener('DOMContentLoaded', async () => {
         google: 'https://www.google.com/search?q=',
     };
     let activeEngine = 'baidu';
-    const enginesBox = document.getElementById('engines');
-    enginesBox.addEventListener('click', (event) => {
-        const btn = event.target.closest('.engine');
-        if (!btn) return;
-        activeEngine = btn.dataset.engine || 'baidu';
-        enginesBox.querySelectorAll('.engine').forEach((item) => {
-            item.classList.toggle('active', item === btn);
-        });
-        const query = searchInput.value.trim();
-        if (query) window.open(ENGINES[activeEngine] + encodeURIComponent(query), '_blank');
+    const engineSelect = document.getElementById('engineSelect');
+    engineSelect.addEventListener('change', () => {
+        activeEngine = ENGINES[engineSelect.value] ? engineSelect.value : 'baidu';
     });
 
-    searchInput.addEventListener('input', render);
+    let searchTimer = 0;
+    searchInput.addEventListener('input', () => {
+        window.clearTimeout(searchTimer);
+        searchTimer = window.setTimeout(render, 120);
+    });
     searchInput.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter') return;
         const query = searchInput.value.trim();
@@ -1530,6 +1578,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         });
     };
 
+    const applyData = (folders, links) => {
+        allCategories = folders;
+        allLinks = links;
+        rebuildCounts();
+        tabs.style.display = '';
+        if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
+            activeCategory = 'all';
+        }
+        renderDir();
+        renderTabs();
+        render();
+    };
+
+    // 先用上次的快照铺满首屏，避免每次打开都白屏等消息往返
+    const readCache = async () => {
+        try {
+            const stored = await chrome.storage.local.get(CACHE_KEY);
+            const cached = stored && stored[CACHE_KEY];
+            if (liveLoaded) return;
+            if (cached && Array.isArray(cached.links) && cached.links.length) {
+                cachedJson = JSON.stringify(cached.links);
+                applyData(cached.folders || [], cached.links);
+            }
+        } catch (e) {}
+    };
+
     // 主数据源就是浏览器收藏夹，浏览时完全不连站点
     const loadBookmarks = async () => {
         try {
@@ -1539,20 +1613,25 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error((response && response.error) || '读取收藏夹失败');
             }
             // 收藏夹文件夹当分类、书签当链接，喂给现成的渲染逻辑
-            allCategories = (response.folders || []).map((folder) => ({ id: folder.id, name: folder.title }));
-            allLinks = (response.links || []).map((link) => ({
+            const folders = (response.folders || []).map((folder) => ({ id: folder.id, name: folder.title }));
+            const links = (response.links || []).map((link) => ({
                 id: link.id,
                 title: link.title,
                 url: link.url,
                 categoryId: link.folderId || ''
             }));
-            tabs.style.display = '';
-            if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
-                activeCategory = 'all';
+            // 数据没变化就不重绘、也不重写快照，省掉一次全量渲染和上百 KB 存储 IO
+            const nextJson = JSON.stringify(links);
+            if (nextJson === cachedJson && allLinks.length) {
+                liveLoaded = true;
+                return;
             }
-            renderDir();
-            renderTabs();
-            render();
+            liveLoaded = true;
+            applyData(folders, links);
+            cachedJson = nextJson;
+            try {
+                chrome.storage.local.set({ [CACHE_KEY]: { folders: folders, links: links, savedAt: Date.now() } });
+            } catch (e) {}
         } catch (e) {
             content.innerHTML = \`<div class="empty" style="color:#ef4444">读取收藏夹失败<br>\${escapeHtml(e.message)}</div>\`;
         } finally {
