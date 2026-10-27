@@ -1319,6 +1319,25 @@ const extPopupHtml = `<!DOCTYPE html>
           font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
           overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
+        /* 悬浮信息卡：默认贴在元素正下方，完整标题 + 域名 */
+        .tip { position: fixed; left: -999px; top: -999px; z-index: 900; max-width: 268px;
+          padding: 9px 13px 9px 15px;
+          border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
+          box-shadow: 0 1px 2px rgba(15,23,42,0.06), 0 16px 32px -18px rgba(15,23,42,0.5);
+          opacity: 0; pointer-events: none; transform: translateY(-4px);
+          transition: opacity .13s ease, transform .13s ease; }
+        .tip.show { opacity: 1; transform: translateY(0); }
+        /* 左侧强调色细条：给卡片一点识别度，但不抢图标颜色 */
+        .tip::before { content: ""; position: absolute; left: 6px; top: 9px; bottom: 9px; width: 3px;
+          border-radius: 999px; background: linear-gradient(180deg, var(--accent), var(--accent-2)); }
+        /* 指向元素的小箭头 */
+        .tip::after { content: ""; position: absolute; width: 9px; height: 9px; left: var(--arrow-x, 20px);
+          background: var(--surface-solid); border-left: 1px solid var(--line); border-top: 1px solid var(--line);
+          transform: rotate(45deg); }
+        .tip.below::after { top: -5px; }
+        .tip.above::after { bottom: -5px; transform: rotate(225deg); }
+        .tip-name { font-size: 12.5px; font-weight: 500; line-height: 1.45; color: var(--ink); word-break: break-word; }
+        .tip-host { margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--ink-soft); word-break: break-all; }
         .empty { text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
         .status { flex: 0 0 auto; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
         .status:empty { display: none; }
@@ -1448,6 +1467,7 @@ const extPopupHtml = `<!DOCTYPE html>
         html[data-theme="glass"] .dir-item,
         html[data-theme="glass"] .app-icon,
         html[data-theme="glass"] .theme-menu,
+        html[data-theme="glass"] .tip,
         html[data-theme="glass"] .engine-menu {
             -webkit-backdrop-filter: blur(16px) saturate(160%);
             backdrop-filter: blur(16px) saturate(160%);
@@ -1538,6 +1558,9 @@ const extPopupHtml = `<!DOCTYPE html>
                     </button>
                     <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
+                    </button>
+                    <button id="openSite" class="tool-btn" type="button" title="打开站点首页" aria-label="打开站点首页">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                     </button>
                     <span class="theme-wrap">
                         <button id="themeBtn" class="tool-btn" type="button" title="主题配色" aria-label="主题配色"
@@ -1668,8 +1691,8 @@ document.addEventListener('DOMContentLoaded', async () => {
     const renderDir = () => {
         const items = [{ id: 'all', name: '全部收藏' }, ...categoryList()];
         dirList.innerHTML = items.map((category) => \`
-            <button class="dir-item \${activeCategory === category.id ? 'active' : ''}" type="button" data-id="\${escapeHtml(category.id)}">
-                <span class="dir-name" title="\${escapeHtml(category.name)}">\${escapeHtml(category.name)}</span>
+            <button class="dir-item \${activeCategory === category.id ? 'active' : ''}" type="button" data-id="\${escapeHtml(category.id)}" data-full="\${escapeHtml(category.name)}">
+                <span class="dir-name">\${escapeHtml(category.name)}</span>
                 <span class="dir-count">\${countOf(category.id)}</span>
             </button>
         \`).join('');
@@ -1733,7 +1756,10 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     const fillTile = (el, link) => {
         el.href = link.url;
-        el.title = link.title;
+        // 不用原生 title（延迟 1s、样式不可控），改用统一的悬浮信息卡
+        el.dataset.full = link.title || '';
+        el.dataset.host = getHostname(link.url);
+        el.setAttribute('aria-label', link.title || '');
         const icon = el.firstChild;
         const img = icon.firstChild;
         img.src = getFaviconUrl(link);
@@ -1811,6 +1837,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     const render = () => {
+        hideTip();
         const query = searchInput.value.trim().toLowerCase();
         const pool = activeCategory === 'all'
             ? allLinks
@@ -1931,7 +1958,7 @@ document.addEventListener('DOMContentLoaded', async () => {
             const letter = (String(engine.name).trim().charAt(0) || '?').toUpperCase();
             return '<div class="engine-item' + (engine.id === activeEngineId ? ' active' : '') + '" role="option"'
                 + ' aria-selected="' + (engine.id === activeEngineId) + '" data-id="' + engine.id + '"'
-                + ' title="' + escapeHtml(engine.name) + '">'
+                + ' data-full="' + escapeHtml(engine.name) + '" data-host="' + escapeHtml(engine.url) + '">'
                 + '<span class="engine-logo" style="--h:' + hueFor(engine) + '">'
                 + '<img src="' + escapeHtml(engineFavicon(engine)) + '" alt="" loading="lazy" decoding="async">'
                 + '<span class="engine-letter">' + escapeHtml(letter) + '</span></span>'
@@ -1944,7 +1971,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 + '</div>';
         }).join('');
         engineGrid.innerHTML = tiles
-            + '<div class="engine-item engine-add-btn" id="engineAdd" role="button" title="添加搜索引擎">'
+            + '<div class="engine-item engine-add-btn" id="engineAdd" role="button" data-full="添加搜索引擎" data-host="名称 + 搜索地址，%s 处替换成关键词">'
             + '<span class="engine-plus"><svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true" focusable="false"><path d="M12 5v14M5 12h14"/></svg></span>'
             + '<span class="engine-name">添加</span></div>';
         engineLabel.textContent = currentEngine().name;
@@ -2070,6 +2097,87 @@ document.addEventListener('DOMContentLoaded', async () => {
         renderEngineMenu();
     } catch (e) { /* 引擎菜单初始化失败不阻断收藏夹加载 */ }
 
+    // --- 悬浮信息卡：延时出现、贴边自动翻转，替代原生 title ---
+    const tipEl = document.createElement('div');
+    tipEl.className = 'tip';
+    tipEl.setAttribute('role', 'tooltip');
+    document.body.appendChild(tipEl);
+    let tipTimer = 0;
+    let tipTarget = null;
+    const TIP_DELAY = 260;
+    const TIP_SELECTOR = '.app, .engine-item[data-full], .dir-item[data-full]';
+
+    const hideTip = () => {
+        window.clearTimeout(tipTimer);
+        tipTimer = 0;
+        tipTarget = null;
+        tipEl.classList.remove('show');
+    };
+
+    const placeTip = (target) => {
+        const rect = target.getBoundingClientRect();
+        const gap = 8;
+        const w = tipEl.offsetWidth;
+        const h = tipEl.offsetHeight;
+        // 水平居中于元素，贴边时夹住不超出视口
+        let left = rect.left + rect.width / 2 - w / 2;
+        left = Math.max(gap, Math.min(left, window.innerWidth - w - gap));
+        // 默认就在元素正下方；底部放不下才翻到上方
+        let below = true;
+        let top = rect.bottom + gap;
+        if (top + h > window.innerHeight - gap) {
+            const above = rect.top - h - gap;
+            if (above >= gap) { below = false; top = above; }
+            else { top = Math.max(gap, window.innerHeight - h - gap); }
+        }
+        tipEl.classList.toggle('below', below);
+        tipEl.classList.toggle('above', !below);
+        tipEl.style.left = Math.round(left) + 'px';
+        tipEl.style.top = Math.round(top) + 'px';
+        // 小箭头始终对准元素中心
+        const arrow = Math.round(rect.left + rect.width / 2 - left - 4.5);
+        tipEl.style.setProperty('--arrow-x', Math.max(9, Math.min(arrow, w - 18)) + 'px');
+    };
+
+    const showTip = (target) => {
+        const name = target.dataset.full || '';
+        if (!name) return;
+        const host = target.dataset.host || '';
+        tipEl.innerHTML = '<div class="tip-name"></div>' + (host ? '<div class="tip-host"></div>' : '');
+        tipEl.querySelector('.tip-name').textContent = name;
+        if (host) tipEl.querySelector('.tip-host').textContent = host;
+        // 先量尺寸再定位，避免出现在错误位置再跳
+        tipEl.style.left = '-999px';
+        tipEl.style.top = '-999px';
+        tipEl.classList.add('show');
+        placeTip(target);
+    };
+
+    const bindTip = (zone) => {
+        if (!zone) return;
+        zone.addEventListener('mouseover', (event) => {
+            const target = event.target.closest(TIP_SELECTOR);
+            if (!target || target === tipTarget) return;
+            window.clearTimeout(tipTimer);
+            tipTarget = target;
+            tipTimer = window.setTimeout(() => {
+                if (tipTarget === target) showTip(target);
+            }, TIP_DELAY);
+        });
+        zone.addEventListener('mouseout', (event) => {
+            const target = event.target.closest(TIP_SELECTOR);
+            if (!target) return;
+            // 在同一个磁贴内部移动不算移出
+            if (event.relatedTarget && target.contains(event.relatedTarget)) return;
+            hideTip();
+        });
+    };
+    bindTip(content);
+    bindTip(engineGrid);
+    bindTip(dirList);
+    panel.addEventListener('scroll', hideTip, { passive: true });
+    document.addEventListener('mousedown', hideTip);
+
     let searchTimer = 0;
     searchInput.addEventListener('input', () => {
         window.clearTimeout(searchTimer);
@@ -2183,13 +2291,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     });
 
 
-    openSidepanelBtn?.addEventListener('click', async () => {
+    // 侧边栏：chrome.sidePanel.open 必须在用户手势里同步调用，
+    // 之前 await 过任何东西（哪怕是 getCurrent）都会丢手势导致点击无反应。
+    // 所以先把当前窗口 id 缓存好，点击时直接同步调用。
+    let navWindowId = null;
+    try {
+        chrome.windows.getCurrent().then((win) => { navWindowId = (win && win.id) || null; }).catch(() => {});
+    } catch (e) {}
+
+    openSidepanelBtn?.addEventListener('click', () => {
+        const fallback = () => {
+            // 极少数环境（窗口 id 还没取到 / 版本不支持）退回让后台试一次
+            try {
+                chrome.runtime.sendMessage({ type: 'open-sidepanel' }).catch(() => {});
+            } catch (e) {}
+            setStatus('当前环境无法直接打开侧边栏，请再点一次或从工具栏图标进入', true);
+        };
+        if (!navWindowId || !chrome.sidePanel || typeof chrome.sidePanel.open !== 'function') {
+            fallback();
+            return;
+        }
         try {
-            const currentWindow = await chrome.windows.getCurrent();
-            await chrome.runtime.sendMessage({ type: 'open-sidepanel', windowId: currentWindow.id });
-            // 这里是整屏标签页，打开侧边栏后不关掉自己
+            // 同步调用，保持在手势上下文内
+            const opening = chrome.sidePanel.open({ windowId: navWindowId });
+            if (opening && typeof opening.catch === 'function') opening.catch(fallback);
         } catch (e) {
-            console.error('Open side panel failed', e);
+            fallback();
         }
     });
 
@@ -2218,13 +2345,23 @@ document.addEventListener('DOMContentLoaded', async () => {
             if (!value) return;
             btn.disabled = true;
             btn.textContent = '验证中…';
-            if (!(await verifyPassword(value))) {
+            let ok = false;
+            try {
+                ok = await verifyPassword(value);
+            } catch (e) {
+                // 网络异常不能让按钮永远停在“验证中”
+                showLogin('验证失败：连不上站点，检查网络后重试', onSuccess);
+                return;
+            }
+            if (!ok) {
                 showLogin('密码不正确', onSuccess);
                 return;
             }
-            // 解锁后接着做被打断的事（比如同步），没指定就刷新收藏夹
+            // 关键：先恢复列表视图。否则收藏夹数据没变化时 loadBookmarks 会提前返回，
+            // 页面就永远停在登录框、按钮停在“验证中…”。
+            render();
             if (onSuccess) onSuccess();
-            else loadBookmarks();
+            else loadBookmarks(true);
         };
         btn?.addEventListener('click', submit);
         input?.addEventListener('keydown', (event) => {
@@ -2257,7 +2394,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     };
 
     // 主数据源就是浏览器收藏夹，浏览时完全不连站点
-    const loadBookmarks = async () => {
+    const loadBookmarks = async (force) => {
         try {
             refreshBtn.classList.add('rotating');
             const response = await chrome.runtime.sendMessage({ type: 'get-bookmarks-preview' });
@@ -2273,8 +2410,9 @@ document.addEventListener('DOMContentLoaded', async () => {
                 categoryId: link.folderId || ''
             }));
             // 数据没变化就不重绘、也不重写快照，省掉一次全量渲染和上百 KB 存储 IO
+            // force=true 时强制重绘（解锁后要把登录框换回列表）
             const nextJson = JSON.stringify(links);
-            if (nextJson === cachedJson && allLinks.length) {
+            if (!force && nextJson === cachedJson && allLinks.length) {
                 liveLoaded = true;
                 return;
             }
@@ -2310,12 +2448,13 @@ document.addEventListener('DOMContentLoaded', async () => {
             }
             const result = response.result || {};
             setStatus('已同步：新增 ' + (result.added || 0) + ' · 归位 ' + (result.moved || 0) + ' · 删除 ' + (result.removed || 0));
-            await loadBookmarks();
+            // 强制重绘：同步前可能停在登录框，数据没变化时也要把列表换回来
+            await loadBookmarks(true);
         } catch (e) {
             const message = String((e && e.message) || '同步失败');
             if (message.indexOf('需要登录') !== -1) {
                 // 解锁后自动重试这一次同步
-                showLogin('请先用站点密码解锁', doSync);
+                showLogin('同步需要站点密码，输入后自动继续', doSync);
             } else {
                 setStatus(message, true);
             }
@@ -2327,6 +2466,20 @@ document.addEventListener('DOMContentLoaded', async () => {
 
     syncBtn?.addEventListener('click', doSync);
     refreshBtn.addEventListener('click', () => loadBookmarks());
+
+    // 跳转站点：新标签打开站点首页（扩展页面里 window.open 可能被拦，优先用 chrome.tabs.create）
+    document.getElementById('openSite')?.addEventListener('click', () => {
+        const openInTab = () => {
+            try {
+                const created = chrome.tabs && chrome.tabs.create ? chrome.tabs.create({ url: CONFIG.apiBase }) : null;
+                if (created && typeof created.catch === 'function') created.catch(() => window.open(CONFIG.apiBase, '_blank'));
+                else if (!created) window.open(CONFIG.apiBase, '_blank');
+            } catch (e) {
+                window.open(CONFIG.apiBase, '_blank');
+            }
+        };
+        openInTab();
+    });
 
     chrome.runtime.onMessage.addListener((msg) => {
         if (msg.type === 'refresh') {
