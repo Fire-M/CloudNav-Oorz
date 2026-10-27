@@ -1136,34 +1136,35 @@ const extPopupHtml = `<!DOCTYPE html>
             --bg-2: #eeeafc; --bg-2e: rgba(238,234,252,0);
             --bg-3: #f8f7fd; --bg-4: #eeecf7;
         }
-        /* 磨砂玻璃：面板半透明 + 背景模糊，靠彩色环境光透出质感 */
+        /* 磨砂玻璃：单色冷光 + 顶部镀膜高光（不再是粉紫泡泡） */
         html[data-theme="glass"] {
-            --ink: #12161f; --ink-soft: #5f6a7d;
-            --line: rgba(255,255,255,0.60); --line-strong: rgba(255,255,255,0.85);
-            --surface: rgba(255,255,255,0.45); --surface-solid: rgba(255,255,255,0.55);
-            --chip: rgba(255,255,255,0.45); --chip-hi: rgba(255,255,255,0.68);
-            --solid: rgba(18,22,31,0.82); --solid-ink: #ffffff;
-            --accent: #2f6bd8; --accent-2: #6ea8ff; --accent-soft: rgba(47,107,216,0.14);
-            --bg-1: #d6e4ff; --bg-1e: rgba(214,228,255,0);
-            --bg-2: #ffe0ef; --bg-2e: rgba(255,224,239,0);
-            --bg-3: #f5f8ff; --bg-4: #e8eefc;
+            --ink: #101623; --ink-soft: #5b6676;
+            --line: rgba(255,255,255,0.55); --line-strong: rgba(255,255,255,0.80);
+            --surface: rgba(255,255,255,0.46); --surface-solid: rgba(255,255,255,0.60);
+            --chip: rgba(255,255,255,0.42); --chip-hi: rgba(255,255,255,0.66);
+            --solid: rgba(16,22,35,0.84); --solid-ink: #ffffff;
+            --accent: #2f6bd8; --accent-2: #7fb0ff; --accent-soft: rgba(47,107,216,0.13);
+            --bg-1: #dfe9fb; --bg-1e: rgba(223,233,251,0);
+            --bg-2: #e6f3fb; --bg-2e: rgba(230,243,251,0);
+            --bg-3: #f4f8ff; --bg-4: #e6eef9;
         }
+        /* 赛博朋克：只留一处霓虹（强调色），尾色走同色系紫，不做双霓虹 */
         html[data-theme="cyber"] {
-            --ink: #170a24; --ink-soft: #6b5f86;
-            --line: rgba(23,10,36,0.12); --line-strong: rgba(23,10,36,0.22);
+            --ink: #1a1027; --ink-soft: #6a6180;
+            --line: rgba(26,16,39,0.12); --line-strong: rgba(26,16,39,0.22);
             --surface: rgba(255,255,255,0.80); --surface-solid: rgba(255,255,255,0.95);
             --chip: rgba(255,255,255,0.66); --chip-hi: rgba(255,255,255,0.88);
-            --solid: #170a24; --solid-ink: #f6f0ff;
-            --accent: #a21caf; --accent-2: #06b6d4; --accent-soft: rgba(162,28,175,0.14);
-            --bg-1: #f0e6ff; --bg-1e: rgba(240,230,255,0);
-            --bg-2: #e2f7ff; --bg-2e: rgba(226,247,255,0);
-            --bg-3: #f7f5fd; --bg-4: #eae6f6;
+            --solid: #1a1027; --solid-ink: #f7f2ff;
+            --accent: #9d2bb5; --accent-2: #7c5cf0; --accent-soft: rgba(157,43,181,0.13);
+            --bg-1: #f1e9fb; --bg-1e: rgba(241,233,251,0);
+            --bg-2: #eef0fa; --bg-2e: rgba(238,240,250,0);
+            --bg-3: #f8f6fd; --bg-4: #edeaf6;
         }
         :root { --danger: #b42318; --danger-soft: rgba(180,35,24,0.09); }
         * { box-sizing: border-box; }
         html, body { margin: 0; width: 100%; height: 100%; color: var(--ink);
           font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", Roboto, sans-serif;
-          -webkit-font-smoothing: antialiased; }
+          -webkit-font-smoothing: antialiased; transition: color .18s ease; }
         body { padding: 16px;
           background:
             radial-gradient(1100px 600px at 8% -12%, var(--bg-1) 0%, var(--bg-1e) 62%),
@@ -1306,7 +1307,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .app-icon { position: relative; width: 46px; height: 46px; border-radius: 12px; background: var(--surface-solid);
           display: flex; align-items: center; justify-content: center; overflow: hidden; border: 1px solid var(--line);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 2px 6px rgba(15,23,42,0.06);
-          transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s, border-color .18s; }
+          transition: transform .18s cubic-bezier(.22,.61,.36,1), box-shadow .18s, border-color .18s,
+            background-color .18s, color .18s; }
         .app:hover .app-icon { transform: translateY(-2px); border-color: var(--line-strong);
           box-shadow: inset 0 1px 0 rgba(255,255,255,0.9), 0 12px 24px -12px rgba(15,23,42,0.42); }
         .app-icon img { width: 26px; height: 26px; object-fit: contain; }
@@ -1419,25 +1421,25 @@ const extPopupHtml = `<!DOCTYPE html>
                 --bg-3: #13111d; --bg-4: #0b0a12;
             }
             html[data-theme="glass"] {
-                --ink: #eaf0f8; --ink-soft: #9fb0c6;
-                --line: rgba(255,255,255,0.16); --line-strong: rgba(255,255,255,0.30);
+                --ink: #e8eef8; --ink-soft: #98a6ba;
+                --line: rgba(255,255,255,0.14); --line-strong: rgba(255,255,255,0.26);
                 --surface: rgba(255,255,255,0.08); --surface-solid: rgba(255,255,255,0.12);
                 --chip: rgba(255,255,255,0.07); --chip-hi: rgba(255,255,255,0.14);
-                --solid: rgba(234,240,248,0.85); --solid-ink: #0b0f16;
-                --accent: #8ab4ff; --accent-2: #b7e0ff; --accent-soft: rgba(138,180,255,0.20);
-                --bg-1: #1b2b4d; --bg-1e: rgba(27,43,77,0);
-                --bg-2: #3a1d38; --bg-2e: rgba(58,29,56,0);
+                --solid: rgba(232,238,248,0.86); --solid-ink: #0b0f16;
+                --accent: #8ab4ff; --accent-2: #a9c6ff; --accent-soft: rgba(138,180,255,0.18);
+                --bg-1: #1b2740; --bg-1e: rgba(27,39,64,0);
+                --bg-2: #16283a; --bg-2e: rgba(22,40,58,0);
                 --bg-3: #0d1220; --bg-4: #070a12;
             }
             html[data-theme="cyber"] {
-                --ink: #f2e9ff; --ink-soft: #a58fc4;
-                --line: rgba(255,255,255,0.12); --line-strong: rgba(255,255,255,0.24);
-                --surface: rgba(24,14,38,0.66); --surface-solid: rgba(32,19,50,0.94);
+                --ink: #f1ecfa; --ink-soft: #a294bd;
+                --line: rgba(255,255,255,0.11); --line-strong: rgba(255,255,255,0.22);
+                --surface: rgba(22,16,34,0.66); --surface-solid: rgba(29,22,44,0.94);
                 --chip: rgba(255,255,255,0.06); --chip-hi: rgba(255,255,255,0.12);
-                --solid: #f2e9ff; --solid-ink: #170a24;
-                --accent: #ff3ecb; --accent-2: #22e3ff; --accent-soft: rgba(255,62,203,0.20);
-                --bg-1: #2a0a3d; --bg-1e: rgba(42,10,61,0);
-                --bg-2: #052b3d; --bg-2e: rgba(5,43,61,0);
+                --solid: #f1ecfa; --solid-ink: #1a1027;
+                --accent: #f055d0; --accent-2: #b07cff; --accent-soft: rgba(240,85,208,0.16);
+                --bg-1: #1c1030; --bg-1e: rgba(28,16,48,0);
+                --bg-2: #101c2b; --bg-2e: rgba(16,28,43,0);
                 --bg-3: #0a0713; --bg-4: #05040a;
             }
             :root { --danger: #ff9c8b; --danger-soft: rgba(255,156,139,0.12); }
@@ -1466,19 +1468,31 @@ const extPopupHtml = `<!DOCTYPE html>
         html[data-theme="glass"] .search,
         html[data-theme="glass"] .dir-item,
         html[data-theme="glass"] .app-icon,
+        html[data-theme="glass"] .tool-btn,
         html[data-theme="glass"] .theme-menu,
         html[data-theme="glass"] .tip,
-        html[data-theme="glass"] .engine-menu {
-            -webkit-backdrop-filter: blur(16px) saturate(160%);
-            backdrop-filter: blur(16px) saturate(160%);
+        html[data-theme="glass"] .engine-menu,
+        html[data-theme="glass"] .engine-logo {
+            -webkit-backdrop-filter: blur(14px) saturate(125%);
+            backdrop-filter: blur(14px) saturate(125%);
         }
-        html[data-theme="glass"] .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.7), 0 8px 20px -12px rgba(15,23,42,0.35); }
-        html[data-theme="glass"] .app:hover .app-icon { box-shadow: inset 0 1px 0 rgba(255,255,255,0.8), 0 14px 26px -12px rgba(15,23,42,0.45); }
-        /* 赛博朋克：霓虹描边与发光 */
-        html[data-theme="cyber"] .dir-item.active { box-shadow: 0 0 14px var(--accent-soft); }
-        html[data-theme="cyber"] .search:focus-visible { box-shadow: 0 0 0 4px var(--accent-soft), 0 0 12px var(--accent-soft); }
+        /* 镀膜高光：顶部一条内高光 + 很浅的落地阴影，玻璃感来自这里而不是彩色 */
+        html[data-theme="glass"] .search,
+        html[data-theme="glass"] .dir-item,
+        html[data-theme="glass"] .app-icon,
+        html[data-theme="glass"] .theme-menu,
+        html[data-theme="glass"] .tip,
+        html[data-theme="glass"] .engine-menu,
+        html[data-theme="glass"] .engine-logo {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.65), 0 10px 24px -18px rgba(15,23,42,0.4);
+        }
+        html[data-theme="glass"] .app:hover .app-icon {
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.85), 0 14px 26px -14px rgba(15,23,42,0.45);
+        }
+        /* 赛博朋克：只保留一处霓虹（卡片 hover），其余回到常规层次 */
+        html[data-theme="cyber"] .search:focus-visible { box-shadow: 0 0 0 4px var(--accent-soft); }
         html[data-theme="cyber"] .app:hover .app-icon { border-color: var(--accent);
-          box-shadow: 0 0 0 1px var(--accent), 0 10px 22px -12px var(--accent); }
+          box-shadow: 0 0 0 1px var(--accent), 0 12px 24px -16px rgba(15,23,42,0.55); }
 
         @media (max-width: 860px) {
             /* 窄屏仍然保持内部滚动容器：虚拟滚动依赖固定高度的滚动区 */
@@ -2215,8 +2229,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         { id: 'sand', name: '暖砂', a: '#c2410c', b: '#f0a678' },
         { id: 'ocean', name: '午夜蓝', a: '#0e7490', b: '#38bdf8' },
         { id: 'violet', name: '紫霞', a: '#6d28d9', b: '#b08cff' },
-        { id: 'glass', name: '磨砂玻璃', a: '#d6e4ff', b: '#ffe0ef' },
-        { id: 'cyber', name: '赛博朋克', a: '#a21caf', b: '#22e3ff' }
+        { id: 'glass', name: '磨砂玻璃', a: '#dfe9fb', b: '#e6f3fb' },
+        { id: 'cyber', name: '赛博朋克', a: '#9d2bb5', b: '#7c5cf0' }
     ];
     const THEME_KEY = 'cloudnav_ext_theme';
     const themeBtn = document.getElementById('themeBtn');
