@@ -1281,6 +1281,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .engine-input:focus { border-color: var(--accent); }
         .engine-input.bad { border-color: var(--danger); }
         .engine-input::placeholder { color: var(--ink-soft); opacity: .7; }
+        .engine-hint { font-size: 11px; line-height: 1.45; color: var(--ink-soft); opacity: .85; word-break: break-all; }
+        .engine-hint.bad { color: var(--danger); opacity: 1; }
         .engine-form-row { display: flex; gap: 6px; }
         .engine-save { flex: 1; height: 28px; border: 1px solid transparent; border-radius: 7px; background: var(--accent);
           color: #fff; font-family: inherit; font-size: 12px; cursor: pointer; transition: filter .14s; }
@@ -1518,7 +1520,8 @@ const extPopupHtml = `<!DOCTYPE html>
                         <div class="engine-grid" id="engineGrid"></div>
                         <div class="engine-form" id="engineForm">
                             <input id="engineName" class="engine-input" type="text" placeholder="名称，如 DuckDuckGo" autocomplete="off" maxlength="20">
-                            <input id="engineUrl" class="engine-input" type="text" placeholder="https://…/search?q=%s" autocomplete="off" spellcheck="false">
+                            <input id="engineUrl" class="engine-input" type="text" placeholder="https://yandex.com/search/?text=%s" autocomplete="off" spellcheck="false">
+                            <div id="engineHint" class="engine-hint">没写 %s 也行，会自动补成 ?q=关键词（或 &q=）</div>
                             <div class="engine-form-row">
                                 <button id="engineSave" class="engine-save" type="button">添加</button>
                                 <button id="engineCancel" class="engine-cancel" type="button">取消</button>
@@ -1998,7 +2001,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
         if (event.target.closest('.engine-add-btn')) {
             engineForm.classList.toggle('open');
-            if (engineForm.classList.contains('open')) engineNameInput.focus();
+            if (engineForm.classList.contains('open')) {
+                setEngineHint('');
+                engineNameInput.classList.remove('bad');
+                engineUrlInput.classList.remove('bad');
+                engineNameInput.focus();
+            }
             return;
         }
         const item = event.target.closest('.engine-item[data-id]');
@@ -2009,16 +2017,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         closeEngineMenu();
     });
 
+    const engineHint = document.getElementById('engineHint');
+    const ENGINE_TIP = '没写 %s 也行，会自动补成 ?q=关键词（或 &q=）';
+    const setEngineHint = (text, isError) => {
+        if (!engineHint) return;
+        engineHint.textContent = text || ENGINE_TIP;
+        engineHint.classList.toggle('bad', !!isError);
+    };
+
     const addEngine = () => {
         const name = engineNameInput.value.trim();
         let url = engineUrlInput.value.trim();
         const nameOk = !!name;
-        const urlOk = /^https?:\\/\\/\\S+$/i.test(url) && (url.includes('%s') || /[=?&]$/.test(url));
+        const urlOk = /^https?:\\/\\/\\S+$/i.test(url);
         engineNameInput.classList.toggle('bad', !nameOk);
         engineUrlInput.classList.toggle('bad', !urlOk);
-        if (!nameOk || !urlOk) return;
-        // 结尾是 ?、= 或 & 时自动补 %s 占位符
-        if (!url.includes('%s')) url += '%s';
+        if (!nameOk) { setEngineHint('先填一个名称，比如 Yandex', true); return; }
+        if (!urlOk) { setEngineHint('地址要以 http:// 或 https:// 开头，且不能含空格', true); return; }
+        // 没有 %s 就自动补占位符：以 ? = & 结尾直接接上，否则补 ?q= 或 &q=
+        if (!url.includes('%s')) {
+            if (/[?&=]$/.test(url)) url += '%s';
+            else if (url.indexOf('?') >= 0) url += '&q=%s';
+            else url += '?q=%s';
+        }
         engines.push({ id: 'e' + Date.now().toString(36), name: name, url: url });
         activeEngineId = engines[engines.length - 1].id;
         engineNameInput.value = '';
@@ -2028,6 +2049,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         persistEngines();
         renderEngineMenu();
         engineForm.classList.remove('open');
+        setEngineHint('已添加「' + name + '」，搜索地址：' + url, false);
     };
 
     const engineSaveBtn = document.getElementById('engineSave');
