@@ -1179,9 +1179,11 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock { flex: 0 0 244px; width: 244px; display: flex; flex-direction: column; min-height: 0;
           padding: 4px 8px 4px 0; }
         .dock-brand { display: flex; align-items: center; gap: 9px; padding: 0 2px 12px; }
-        .dock-mark { flex: 0 0 30px; width: 30px; height: 30px; border-radius: 9px; background: var(--solid); color: var(--solid-ink);
-          display: inline-flex; align-items: center; justify-content: center; }
-        .dock-title { font-size: 17px; font-weight: 600; letter-spacing: 0.01em;
+        .dock-mark { flex: 0 0 36px; width: 36px; height: 36px; border-radius: 11px; background: var(--solid); color: var(--solid-ink);
+          display: inline-flex; align-items: center; justify-content: center;
+          box-shadow: 0 6px 16px -10px rgba(15,23,42,0.55); }
+        .dock-mark svg { width: 19px; height: 19px; }
+        .dock-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .dock-label { padding: 0 2px 8px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
         .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
@@ -1208,35 +1210,37 @@ const extPopupHtml = `<!DOCTYPE html>
         /* 右：内容区 */
         .stage { flex: 1; min-width: 0; display: flex; flex-direction: column; min-height: 0; }
         /* 顶栏整体抬到内容之上，展开的浮层才不会被磁贴盖住 */
-        .topbar { flex: 0 0 auto; position: relative; z-index: 30; display: flex; align-items: center; gap: 16px; padding: 2px 2px 14px; }
-        .clock-wrap { display: flex; align-items: baseline; gap: 12px; flex: 0 0 auto; }
-        .clock { font-size: 38px; font-weight: 300; line-height: 1;
-          letter-spacing: -0.03em; color: var(--ink); font-variant-numeric: tabular-nums; }
-        .date { font-size: 13px; color: var(--ink-soft); letter-spacing: 0.03em; white-space: nowrap; }
-        .tools { flex: 0 0 auto; display: flex; gap: 2px; margin-left: 2px; }
-        .tool-btn { width: 30px; height: 30px; border-radius: 9px; border: 1px solid transparent; background: transparent;
+        .topbar { flex: 0 0 auto; position: relative; z-index: 30; display: flex; align-items: center; gap: 22px; padding: 8px 2px 20px; }
+        .clock-wrap { display: flex; align-items: baseline; gap: 14px; flex: 0 0 auto; }
+        .clock { font-size: 34px; font-weight: 300; line-height: 1;
+          letter-spacing: -0.04em; color: var(--ink); font-variant-numeric: tabular-nums; }
+        .date { font-size: 12.5px; color: var(--ink-soft); letter-spacing: 0.04em; white-space: nowrap; opacity: .9; }
+        .tools { flex: 0 0 auto; display: flex; gap: 6px; }
+        .tool-btn { width: 34px; height: 34px; border-radius: 10px; border: 1px solid transparent; background: transparent;
           color: var(--ink-soft); display: inline-flex; align-items: center; justify-content: center;
           cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s, border-color .16s; }
+        .tool-btn svg { width: 16px; height: 16px; }
         .tool-btn:hover { color: var(--ink); background: var(--chip-hi); border-color: var(--line); }
         .tool-btn:focus-visible, .app:focus-visible, .dir-item:focus-visible {
           outline: 2px solid var(--accent); outline-offset: 2px; }
         .rotating { animation: spin 1s linear infinite; }
         @keyframes spin { 100% { transform: rotate(360deg); } }
-        .search-wrap { position: relative; flex: 1 1 auto; max-width: 440px; margin: 0 auto; }
-        .search-icon { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
+        .search-wrap { position: relative; flex: 1 1 auto; max-width: 720px; margin: 0 auto; }
+        .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
           pointer-events: none; display: flex; }
-        .search { width: 100%; height: 40px; border: 1px solid var(--line); background: var(--surface-solid);
-          color: var(--ink); border-radius: 11px; padding: 0 104px 0 40px; outline: none; font-size: 13px;
+        .search-icon svg { width: 16px; height: 16px; }
+        .search { width: 100%; height: 44px; border: 1px solid var(--line); background: var(--surface-solid);
+          color: var(--ink); border-radius: 13px; padding: 0 124px 0 46px; outline: none; font-size: 13.5px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
         .search::placeholder { color: var(--ink-soft); }
         .search:hover { border-color: var(--line-strong); }
         .search:focus-visible { border-color: var(--accent); box-shadow: 0 0 0 4px var(--accent-soft); }
-        .engine-wrap { position: absolute; right: 5px; top: 50%; transform: translateY(-50%);
-          display: flex; align-items: center; padding-left: 6px; border-left: 1px solid var(--line); }
-        .engine-btn { display: inline-flex; align-items: center; gap: 5px; height: 30px; padding: 0 8px 0 8px;
-          border: 0; border-radius: 7px; background: transparent; color: var(--ink-soft);
-          font-family: inherit; font-size: 12px; line-height: 1; cursor: pointer; touch-action: manipulation;
+        .engine-wrap { position: absolute; right: 7px; top: 50%; transform: translateY(-50%);
+          display: flex; align-items: center; padding-left: 8px; border-left: 1px solid var(--line); }
+        .engine-btn { display: inline-flex; align-items: center; gap: 5px; height: 34px; padding: 0 10px;
+          border: 0; border-radius: 9px; background: transparent; color: var(--ink-soft);
+          font-family: inherit; font-size: 12.5px; line-height: 1; cursor: pointer; touch-action: manipulation;
           transition: color .16s, background-color .16s; }
         .engine-btn:hover { color: var(--ink); background: var(--chip-hi); }
         .engine-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
@@ -1524,7 +1528,7 @@ const extPopupHtml = `<!DOCTYPE html>
         <aside class="dock" aria-label="插件目录">
             <div class="dock-brand">
                 <span class="dock-mark" aria-hidden="true">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="19" height="19" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="m19 21-7-4-7 4V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2Z"/></svg>
                 </span>
                 <span class="dock-title">收藏夹</span>
             </div>
