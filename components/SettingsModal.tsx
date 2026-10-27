@@ -1531,7 +1531,7 @@ const extPopupHtml = `<!DOCTYPE html>
                     </span>
                     <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
                     <span class="engine-wrap">
-                        <button id="engineBtn" class="engine-btn" type="button" aria-haspopup="true" aria-expanded="false" title="搜索引擎">
+                        <button id="engineBtn" class="engine-btn" type="button" aria-haspopup="true" aria-expanded="false" data-full="搜索引擎" data-host="可自定义添加或删除">
                             <span id="engineLabel">百度</span>
                             <svg xmlns="http://www.w3.org/2000/svg" width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>
                         </button>
@@ -1550,20 +1550,20 @@ const extPopupHtml = `<!DOCTYPE html>
                     </div>
                 </div>
                 <div class="tools">
-                    <button id="openSidepanel" class="tool-btn" type="button" title="打开侧边栏" aria-label="打开侧边栏">
+                    <button id="openSidepanel" class="tool-btn" type="button" data-full="打开侧边栏" aria-label="打开侧边栏">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></svg>
                     </button>
-                    <button id="refresh" class="tool-btn" type="button" title="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
+                    <button id="refresh" class="tool-btn" type="button" data-full="重新读取浏览器收藏夹" aria-label="重新读取浏览器收藏夹">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></svg>
                     </button>
-                    <button id="syncToSite" class="tool-btn" type="button" title="把浏览器收藏夹同步到站点" aria-label="同步到站点">
+                    <button id="syncToSite" class="tool-btn" type="button" data-full="同步到站点" data-host="把浏览器收藏夹同步到站点" aria-label="同步到站点">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M20.39 18.39A5 5 0 0 0 18 9h-1.26A8 8 0 1 0 3 16.3"/><polyline points="16 16 12 12 8 16"/><line x1="12" y1="12" x2="12" y2="21"/></svg>
                     </button>
-                    <button id="openSite" class="tool-btn" type="button" title="打开站点首页" aria-label="打开站点首页">
+                    <button id="openSite" class="tool-btn" type="button" data-full="打开站点首页" data-host="新标签页打开 Web 端" aria-label="打开站点首页">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
                     </button>
                     <span class="theme-wrap">
-                        <button id="themeBtn" class="tool-btn" type="button" title="主题配色" aria-label="主题配色"
+                        <button id="themeBtn" class="tool-btn" type="button" data-full="主题配色" data-host="八套主题，深浅色自动适配" aria-label="主题配色"
                                 aria-haspopup="true" aria-expanded="false">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.667h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg>
                         </button>
@@ -1571,7 +1571,7 @@ const extPopupHtml = `<!DOCTYPE html>
                             <div class="theme-grid" id="themeGrid"></div>
                         </div>
                     </span>
-                    <button id="lock" class="tool-btn" type="button" title="锁定（清除本机保存的密码）" aria-label="锁定并清除本机密码">
+                    <button id="lock" class="tool-btn" type="button" data-full="锁定" data-host="清除本机保存的站点密码" aria-label="锁定并清除本机密码">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
                     </button>
                 </div>
@@ -2105,7 +2105,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     let tipTimer = 0;
     let tipTarget = null;
     const TIP_DELAY = 260;
-    const TIP_SELECTOR = '.app, .engine-item[data-full], .dir-item[data-full]';
+    const TIP_SELECTOR = '.app, .engine-item[data-full], .dir-item[data-full], .tool-btn[data-full], .engine-btn[data-full]';
 
     const hideTip = () => {
         window.clearTimeout(tipTimer);
@@ -2175,6 +2175,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     bindTip(content);
     bindTip(engineGrid);
     bindTip(dirList);
+    bindTip(document.querySelector('.tools'));
     panel.addEventListener('scroll', hideTip, { passive: true });
     document.addEventListener('mousedown', hideTip);
 
