@@ -43,6 +43,7 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
   const [password, setPassword] = useState('');
   const [domain, setDomain] = useState('');
   const [browserType, setBrowserType] = useState<'chrome' | 'firefox'>('chrome');
+  const [overrideNewTab, setOverrideNewTab] = useState(false);
   const [isZipping, setIsZipping] = useState(false);
   const faviconUploadRef = useRef<HTMLInputElement>(null);
   
@@ -325,6 +326,13 @@ const SettingsModal: React.FC<SettingsModalProps> = ({
     };
     // 不设 default_popup：点图标时改由 background 在标签页里打开整屏导航页。
     // 弹窗形式受浏览器限制最大 800x600，没法铺满窗口。
+
+    // 接管新标签页：新建标签直接打开导航页（Chrome/Edge 与 Firefox 都支持这个字段）
+    if (overrideNewTab) {
+        json.chrome_url_overrides = {
+            newtab: "popup.html"
+        };
+    }
     
     if (browserType === 'firefox') {
         json.browser_specific_settings = {
@@ -2931,6 +2939,23 @@ document.addEventListener('DOMContentLoaded', async () => {
                                     <span className="font-semibold">Mozilla Firefox</span>
                                 </button>
                             </div>
+
+                            <label className="flex items-start gap-3 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 cursor-pointer hover:border-blue-300 transition-colors">
+                                <input
+                                    type="checkbox"
+                                    checked={overrideNewTab}
+                                    onChange={(e) => setOverrideNewTab(e.target.checked)}
+                                    className="mt-0.5 w-4 h-4 accent-blue-600"
+                                />
+                                <span className="text-sm">
+                                    <span className="font-medium text-slate-800 dark:text-slate-200">接管新标签页</span>
+                                    <span className="block text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">
+                                        勾选后 manifest 会加入 <code className="px-1 bg-slate-100 dark:bg-slate-900 rounded">chrome_url_overrides.newtab</code>，
+                                        以后每次新建标签都直接打开这个导航页，不用点图标。
+                                        {browserType === 'firefox' && '（Firefox 需要在 about:preferences#home 里把新标签页允许扩展接管。）'}
+                                    </span>
+                                </span>
+                            </label>
                         </div>
 
                         <div className="space-y-4">
