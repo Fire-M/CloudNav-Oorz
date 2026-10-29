@@ -1186,8 +1186,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .dock-label { padding: 0 2px 8px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
-        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
-          padding: 2px 4px 2px 0;
+        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
+          align-content: flex-start; padding: 2px 2px 2px 0;
           scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
         .dock-list::-webkit-scrollbar { width: 8px; height: 8px; }
         .dock-list::-webkit-scrollbar-button { display: none; }
@@ -1195,18 +1195,36 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-list::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border: 2px solid transparent;
           background-clip: content-box; border-radius: 999px; }
         .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
-        .dir-item { position: relative; display: flex; align-items: center; gap: 6px; width: 100%; height: 28px;
-          padding: 0 8px 0 calc(8px + (max(var(--d, 1), 1) - 1) * 12px);
-          border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft);
-          font-size: 12.5px; font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
-          transition: background-color .14s, color .14s; }
-        .dir-item:hover { background: var(--chip-hi); color: var(--ink); }
-        .dir-item.active { background: var(--chip); color: var(--ink); font-weight: 500; }
-        .dir-item.active::before { content: ''; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px;
-          border-radius: 2px; background: var(--accent); }
-        .dir-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dir-count { flex: 0 0 auto; font-size: 11px; font-variant-numeric: tabular-nums; opacity: .6; }
-        .dir-item.active .dir-count { opacity: .8; }
+        .dir-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 30px;
+          padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip);
+          color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
+          transition: background-color .14s, color .14s, border-color .14s; }
+        .dir-item:hover { background: var(--surface-solid); color: var(--ink); border-color: var(--line-strong); }
+        .dir-item.active { background: var(--solid); border-color: var(--solid); color: var(--solid-ink); font-weight: 500; }
+        .dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dir-count { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .65; }
+        .dir-item.active .dir-count { opacity: .85; }
+        /* 带子目录的胶囊：右侧箭头 + 展开态；当前选中的是子目录时，父胶囊留个淡高亮 */
+        .dir-caret { flex: 0 0 auto; width: 12px; height: 12px; margin-left: -2px; opacity: .55;
+          transition: transform .16s ease, opacity .14s; }
+        .dir-item[aria-expanded="true"] { background: var(--surface-solid); color: var(--ink);
+          border-color: var(--line-strong); }
+        .dir-item[aria-expanded="true"] .dir-caret { opacity: .9; transform: rotate(180deg); }
+        .dir-item.has-active { color: var(--ink); border-color: var(--line-strong); }
+        .dir-menu { position: fixed; z-index: 940; min-width: 168px; max-width: 264px; max-height: 62vh;
+          overflow: auto; padding: 5px; border: 1px solid var(--line); border-radius: 12px;
+          background: var(--surface-solid); box-shadow: 0 16px 32px -14px rgba(15,23,42,0.42); }
+        .dir-menu[hidden] { display: none; }
+        .dir-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 28px;
+          padding: 0 8px 0 calc(8px + var(--l, 0) * 12px); border: 0; border-radius: 7px;
+          background: transparent; color: var(--ink); font-family: inherit; font-size: 12.5px;
+          text-align: left; cursor: pointer; transition: background-color .12s; }
+        .dir-menu-item:hover { background: var(--chip-hi); }
+        .dir-menu-item.active { background: var(--chip); font-weight: 500; }
+        .dir-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: -2px; }
+        .dir-menu-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dir-menu-count { flex: 0 0 auto; font-size: 11px; color: var(--ink-soft);
+          font-variant-numeric: tabular-nums; }
         .dock-foot { margin-top: 10px; padding: 10px 2px 0; border-top: 1px solid var(--line);
           font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
@@ -1605,12 +1623,8 @@ const extPopupHtml = `<!DOCTYPE html>
               gap: 4px; padding: 0; overflow-x: auto; scrollbar-width: none; }
             .dock::-webkit-scrollbar { display: none; }
             .dock-brand, .dock-label, .dock-foot { display: none; }
-            .dock-list { flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow: visible; padding: 0; }
-            .dir-item { width: auto; height: 30px; flex: 0 0 auto; padding: 0 11px;
-              border: 1px solid var(--line); border-radius: 999px; background: var(--chip); }
-            .dir-item:hover { background: var(--surface-solid); border-color: var(--line-strong); }
-            .dir-item.active { background: var(--solid); border-color: var(--solid); color: var(--solid-ink); }
-            .dir-item.active::before { display: none; }
+            .dock-list { flex-wrap: nowrap; gap: 6px; overflow: visible; padding: 0; }
+            .dir-item { height: 30px; flex: 0 0 auto; }
             .dir-count { display: none; }
             .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 0 2px 10px; }
             .clock-wrap { gap: 8px; }
@@ -1710,6 +1724,7 @@ const extPopupHtml = `<!DOCTYPE html>
             <footer class="daily" id="daily"></footer>
         </section>
     </div>
+    <div id="dirMenu" class="dir-menu" role="menu" aria-label="子目录" hidden></div>
     <div id="tileMenu" class="tile-menu" role="menu" aria-label="收藏操作" hidden>
         <button type="button" class="tile-menu-item" role="menuitem" data-act="open">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
@@ -1831,40 +1846,94 @@ document.addEventListener('DOMContentLoaded', async () => {
         return found ? found.name : id;
     };
 
-    // 目录层级：按 parentId 回溯，异常数据最多追 8 层，深度上限 6 级
-    const dirDepths = () => {
+    // 目录树：只把一级目录排成胶囊，子目录收进胶囊下拉
+    let dirIndex = { roots: [], children: new Map(), parent: new Map(), count: new Map() };
+    const rebuildDirIndex = () => {
+        const list = categoryList();
         const byId = new Map();
-        categoryList().forEach((category) => byId.set(category.id, category));
-        const depths = new Map();
-        const walk = (category, guard) => {
-            if (!category) return 1;
-            if (depths.has(category.id)) return depths.get(category.id);
-            const parent = category.parentId ? byId.get(category.parentId) : null;
-            const depth = (!parent || guard > 8) ? 1 : Math.min(6, walk(parent, guard + 1) + 1);
-            depths.set(category.id, depth);
-            return depth;
+        list.forEach((category) => byId.set(category.id, category));
+        const children = new Map();
+        const parent = new Map();
+        list.forEach((category) => children.set(category.id, []));
+        const roots = [];
+        list.forEach((category) => {
+            const parentId = category.parentId && byId.has(category.parentId) ? category.parentId : '';
+            if (parentId) {
+                children.get(parentId).push(category);
+                parent.set(category.id, parentId);
+            } else {
+                roots.push(category);
+            }
+        });
+        // 汇总数量包含子目录，跟「选中父目录时的结果数」保持一致
+        const count = new Map();
+        const walk = (category) => {
+            let total = countOf(category.id);
+            children.get(category.id).forEach((child) => { total += walk(child); });
+            count.set(category.id, total);
+            return total;
         };
-        categoryList().forEach((category) => walk(category, 0));
-        return depths;
+        roots.forEach((category) => walk(category));
+        dirIndex = { roots: roots, children: children, parent: parent, count: count };
     };
 
-    // 左栏：插件目录（一级目录顶格，子目录逐级右移，能看出收藏夹的父子关系）
+    // 某个目录连同它的所有子孙：选中父目录时把下级收藏一起放出来
+    const categoryScope = (id) => {
+        const scope = new Set([id]);
+        const stack = [id];
+        while (stack.length) {
+            const current = stack.pop();
+            (dirIndex.children.get(current) || []).forEach((child) => {
+                if (scope.has(child.id)) return;
+                scope.add(child.id);
+                stack.push(child.id);
+            });
+        }
+        return scope;
+    };
+
+    const activeAncestors = () => {
+        const set = new Set();
+        let current = dirIndex.parent.get(activeCategory);
+        let guard = 0;
+        while (current && guard < 20) {
+            set.add(current);
+            current = dirIndex.parent.get(current);
+            guard += 1;
+        }
+        return set;
+    };
+
+    // 左栏：一级目录胶囊，带子目录的多一个下拉箭头
     const renderDir = () => {
-        const depths = dirDepths();
-        const rows = [{ id: 'all', name: '全部收藏', depth: 0 }];
-        categoryList().forEach((category) => {
-            rows.push({ id: category.id, name: category.name, depth: depths.get(category.id) || 1 });
+        // 重绘时把可能还开着的下拉收掉，避免菜单里留着上一次的目录
+        const staleMenu = document.getElementById('dirMenu');
+        if (staleMenu) {
+            staleMenu.hidden = true;
+            staleMenu.innerHTML = '';
+        }
+        const ancestors = activeAncestors();
+        const caret = '<svg class="dir-caret" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none"'
+            + ' stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"'
+            + ' aria-hidden="true" focusable="false"><path d="m6 9 6 6 6-6"/></svg>';
+        const chips = ['<button class="dir-item' + (activeCategory === 'all' ? ' active' : '') + '" type="button"'
+            + ' data-id="all" data-full="全部收藏">'
+            + '<span class="dir-name">全部收藏</span>'
+            + '<span class="dir-count">' + allLinks.length + '</span>'
+            + '</button>'];
+        dirIndex.roots.forEach((category) => {
+            const hasKids = (dirIndex.children.get(category.id) || []).length > 0;
+            const active = category.id === activeCategory;
+            const cls = 'dir-item' + (active ? ' active' : '') + (ancestors.has(category.id) ? ' has-active' : '');
+            chips.push('<button class="' + cls + '" type="button" data-id="' + escapeHtml(category.id) + '"'
+                + ' data-full="' + escapeHtml(category.name) + '"'
+                + (hasKids ? ' aria-haspopup="menu" aria-expanded="false"' : '') + '>'
+                + '<span class="dir-name">' + escapeHtml(category.name) + '</span>'
+                + '<span class="dir-count">' + (dirIndex.count.get(category.id) || 0) + '</span>'
+                + (hasKids ? caret : '')
+                + '</button>');
         });
-        dirList.innerHTML = rows.map((row) => {
-            const active = row.id === activeCategory;
-            return '<button class="dir-item' + (active ? ' active' : '') + '" type="button"'
-                + ' aria-current="' + (active ? 'true' : 'false') + '"'
-                + ' data-id="' + escapeHtml(row.id) + '" data-full="' + escapeHtml(row.name) + '"'
-                + ' data-depth="' + row.depth + '" style="--d:' + row.depth + '">'
-                + '<span class="dir-name">' + escapeHtml(row.name) + '</span>'
-                + '<span class="dir-count">' + countOf(row.id) + '</span>'
-                + '</button>';
-        }).join('');
+        dirList.innerHTML = chips.join('');
         dirFoot.textContent = allLinks.length + ' 个收藏 · ' + categoryList().length + ' 个目录';
     };
 
@@ -2116,11 +2185,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         // 搜索跨全部目录，所以结果要标出各自来源；不搜索时仍按当前目录浏览
         activeQuery = query;
         content.classList.toggle('content-searching', !!query);
-        const pool = query
-            ? allLinks
-            : (activeCategory === 'all'
-                ? allLinks
-                : allLinks.filter((link) => link.categoryId === activeCategory));
+        // 选中父目录时连子目录的收藏一起列出，和新加的层级胶囊保持一致
+        let pool = allLinks;
+        if (!query && activeCategory !== 'all') {
+            const scope = categoryScope(activeCategory);
+            pool = allLinks.filter((link) => scope.has(link.categoryId));
+        }
         viewList = query
             ? pool.filter((link) => link.title.toLowerCase().includes(query) ||
                 link.url.toLowerCase().includes(query))
@@ -2620,9 +2690,95 @@ document.addEventListener('DOMContentLoaded', async () => {
         render();
     };
 
+    // 胶囊下拉：父目录的子目录列成菜单，点箭头展开，点条目直接切过去
+    const dirMenu = document.getElementById('dirMenu');
+    let dirMenuOpenId = '';
+
+    const onDirMenuKey = (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeDirMenu();
+    };
+
+    const closeDirMenu = () => {
+        if (!dirMenu || dirMenu.hidden) return;
+        dirMenu.hidden = true;
+        dirMenuOpenId = '';
+        document.removeEventListener('keydown', onDirMenuKey, true);
+        const opened = dirList.querySelector('.dir-item[aria-expanded="true"]');
+        if (opened) opened.setAttribute('aria-expanded', 'false');
+    };
+
+    const dirMenuRows = (id, level) => {
+        let html = '';
+        (dirIndex.children.get(id) || []).forEach((child) => {
+            html += '<button class="dir-menu-item' + (child.id === activeCategory ? ' active' : '') + '"'
+                + ' type="button" role="menuitem" data-id="' + escapeHtml(child.id) + '"'
+                + ' style="--l:' + level + '">'
+                + '<span class="dir-menu-name">' + escapeHtml(child.name) + '</span>'
+                + '<span class="dir-menu-count">' + (dirIndex.count.get(child.id) || 0) + '</span>'
+                + '</button>';
+            html += dirMenuRows(child.id, level + 1);
+        });
+        return html;
+    };
+
+    const openDirMenu = (chip) => {
+        if (!dirMenu) return;
+        const id = chip.dataset.id || '';
+        if (!id || !(dirIndex.children.get(id) || []).length) return;
+        const html = dirMenuRows(id, 0);
+        if (!html) return;
+        closeDirMenu();
+        dirMenu.innerHTML = html;
+        dirMenu.hidden = false;
+        dirMenuOpenId = id;
+        chip.setAttribute('aria-expanded', 'true');
+        // 先量尺寸再定位，贴边时左右夹住、下方放不下翻到上方
+        const rect = chip.getBoundingClientRect();
+        const w = dirMenu.offsetWidth;
+        const h = dirMenu.offsetHeight;
+        const gap = 6;
+        let left = Math.max(8, Math.min(rect.left, window.innerWidth - w - 8));
+        let top = rect.bottom + gap;
+        if (top + h > window.innerHeight - 8) top = Math.max(8, rect.top - h - gap);
+        dirMenu.style.left = Math.round(left) + 'px';
+        dirMenu.style.top = Math.round(top) + 'px';
+        document.addEventListener('keydown', onDirMenuKey, true);
+        const first = dirMenu.querySelector('.dir-menu-item');
+        if (first) first.focus();
+    };
+
+    dirMenu?.addEventListener('click', (event) => {
+        const item = event.target.closest('.dir-menu-item');
+        if (!item) return;
+        const id = item.dataset.id || '';
+        closeDirMenu();
+        if (id) selectCategory(id);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!dirMenu || dirMenu.hidden) return;
+        if (event.target.closest('#dirMenu') || event.target.closest('.dir-caret')) return;
+        closeDirMenu();
+    });
+    dirList.addEventListener('scroll', closeDirMenu, { passive: true });
+    window.addEventListener('resize', closeDirMenu);
+
     dirList.addEventListener('click', (event) => {
+        const caret = event.target.closest('.dir-caret');
+        if (caret) {
+            event.stopPropagation();
+            const chip = caret.closest('.dir-item');
+            if (!chip) return;
+            const id = chip.dataset.id || '';
+            if (dirMenu && !dirMenu.hidden && dirMenuOpenId === id) closeDirMenu();
+            else openDirMenu(chip);
+            return;
+        }
         const item = event.target.closest('.dir-item');
         if (!item) return;
+        closeDirMenu();
         selectCategory(item.dataset.id || 'all');
     });
 
@@ -2709,6 +2865,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         allCategories = folders;
         allLinks = links;
         rebuildCounts();
+        rebuildDirIndex();
         if (activeCategory !== 'all' && !categoryList().some((category) => category.id === activeCategory)) {
             activeCategory = 'all';
         }
@@ -2740,7 +2897,7 @@ document.addEventListener('DOMContentLoaded', async () => {
                 throw new Error((response && response.error) || '读取收藏夹失败');
             }
             // 收藏夹文件夹当分类、书签当链接，喂给现成的渲染逻辑
-            // parentId 必须留着：左侧目录要按层级缩进，丢掉就全平铺了
+            // parentId 用于把子目录收进胶囊下拉
             const folders = (response.folders || []).map((folder) => ({
                 id: folder.id,
                 name: folder.title,
