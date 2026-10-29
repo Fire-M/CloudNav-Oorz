@@ -1186,8 +1186,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-title { font-size: 20px; font-weight: 600; letter-spacing: -0.01em;
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .dock-label { padding: 0 2px 8px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
-        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
-          align-content: flex-start; padding: 2px 2px 2px 0;
+        .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-direction: column; gap: 1px;
+          padding: 2px 4px 2px 0;
           scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
         .dock-list::-webkit-scrollbar { width: 8px; height: 8px; }
         .dock-list::-webkit-scrollbar-button { display: none; }
@@ -1195,15 +1195,18 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-list::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border: 2px solid transparent;
           background-clip: content-box; border-radius: 999px; }
         .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
-        .dir-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 30px;
-          padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip);
-          color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
-          transition: background-color .14s, color .14s, border-color .14s; }
-        .dir-item:hover { background: var(--surface-solid); color: var(--ink); border-color: var(--line-strong); }
-        .dir-item.active { background: var(--solid); border-color: var(--solid); color: var(--solid-ink); font-weight: 500; }
-        .dir-name { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-        .dir-count { font-size: 11px; font-variant-numeric: tabular-nums; opacity: .65; }
-        .dir-item.active .dir-count { opacity: .85; }
+        .dir-item { position: relative; display: flex; align-items: center; gap: 6px; width: 100%; height: 28px;
+          padding: 0 8px 0 calc(8px + (max(var(--d, 1), 1) - 1) * 12px);
+          border: 0; border-radius: 8px; background: transparent; color: var(--ink-soft);
+          font-size: 12.5px; font-family: inherit; text-align: left; cursor: pointer; touch-action: manipulation;
+          transition: background-color .14s, color .14s; }
+        .dir-item:hover { background: var(--chip-hi); color: var(--ink); }
+        .dir-item.active { background: var(--chip); color: var(--ink); font-weight: 500; }
+        .dir-item.active::before { content: ''; position: absolute; left: 0; top: 7px; bottom: 7px; width: 2px;
+          border-radius: 2px; background: var(--accent); }
+        .dir-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .dir-count { flex: 0 0 auto; font-size: 11px; font-variant-numeric: tabular-nums; opacity: .6; }
+        .dir-item.active .dir-count { opacity: .8; }
         .dock-foot { margin-top: 10px; padding: 10px 2px 0; border-top: 1px solid var(--line);
           font-size: 11px; color: var(--ink-soft); font-variant-numeric: tabular-nums; }
 
@@ -1228,8 +1231,21 @@ const extPopupHtml = `<!DOCTYPE html>
         @keyframes spin { 100% { transform: rotate(360deg); } }
         .search-wrap { position: relative; flex: 1 1 auto; max-width: 720px; margin: 0 auto; }
         .search-icon { position: absolute; left: 16px; top: 50%; transform: translateY(-50%); color: var(--ink-soft);
-          pointer-events: none; display: flex; }
+          pointer-events: none; display: flex; transition: opacity .12s ease; }
         .search-icon svg { width: 16px; height: 16px; }
+        /* 自绘清空按钮：原生 ✕ 会被右侧搜索源按钮压住，这里统一关掉原生的 */
+        .search-clear { position: absolute; left: 8px; top: 50%; transform: translateY(-50%);
+          display: inline-flex; align-items: center; justify-content: center; width: 30px; height: 30px;
+          border: 0; border-radius: 9px; background: transparent; color: var(--ink-soft);
+          cursor: pointer; touch-action: manipulation;
+          transition: color .14s, background-color .14s; }
+        .search-clear:hover { color: var(--ink); background: var(--chip-hi); }
+        .search-clear:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .search-clear svg { width: 14px; height: 14px; }
+        .search-clear[hidden] { display: none; }
+        .search-wrap.has-value .search-icon { opacity: 0; }
+        .search::-webkit-search-cancel-button,
+        .search::-webkit-search-decoration { -webkit-appearance: none; appearance: none; }
         .search { width: 100%; height: 44px; border: 1px solid var(--line); background: var(--surface-solid);
           color: var(--ink); border-radius: 13px; padding: 0 124px 0 46px; outline: none; font-size: 13.5px;
           transition: border-color .16s, box-shadow .16s, background-color .16s; }
@@ -1334,6 +1350,17 @@ const extPopupHtml = `<!DOCTYPE html>
           overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .content-searching .app { gap: 4px; }
         .content-searching .app-name { -webkit-line-clamp: 1; line-height: 1.2; color: var(--ink); }
+        /* 搜索命中片段：用强调色淡底标出，不改字重避免中文发糊 */
+        .app-name mark { background: var(--accent-soft); color: var(--ink); border-radius: 3px;
+          padding: 0 1px; }
+        /* 首屏骨架：形状对齐磁贴，数据到位后原地替换，不跳变 */
+        .app.sk { pointer-events: none; }
+        .sk-ico { width: 46px; height: 46px; border-radius: 12px; background: var(--chip-hi);
+          animation: sk-pulse 1.5s ease-in-out infinite; }
+        .sk-line { width: 58px; height: 8px; border-radius: 4px; background: var(--chip-hi);
+          animation: sk-pulse 1.5s ease-in-out infinite; }
+        .sk-line.short { width: 38px; height: 6px; margin-top: -3px; animation-delay: .15s; }
+        @keyframes sk-pulse { 0%, 100% { opacity: .5; } 50% { opacity: 1; } }
         .content-searching .app-dir { display: flex; }
         .content-searching .app-dir[hidden] { display: none; }
         @media (prefers-color-scheme: dark) {
@@ -1349,6 +1376,10 @@ const extPopupHtml = `<!DOCTYPE html>
         .app .tile-more:hover, .app .tile-more.on { color: var(--ink); background: var(--chip-hi); }
         .app .tile-more svg { width: 13px; height: 13px; }
         .app .tile-more[hidden] { display: none; }
+        /* 触屏没有 hover，⋯ 常显，否则菜单不可达 */
+        @media (hover: none) {
+            .app .tile-more { opacity: 1; pointer-events: auto; }
+        }
         .tile-menu { position: fixed; z-index: 950; width: 148px; padding: 5px;
           border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
           box-shadow: 0 16px 32px -14px rgba(15,23,42,0.42); }
@@ -1360,9 +1391,9 @@ const extPopupHtml = `<!DOCTYPE html>
         .tile-menu-item svg { width: 14px; height: 14px; color: var(--ink-soft); }
         .tile-menu-item:hover { background: var(--chip-hi); }
         .tile-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
-        .tile-menu-item.danger { color: #e11d48; }
-        .tile-menu-item.danger svg { color: #e11d48; }
-        .tile-menu-item.danger:hover { background: rgba(225,29,72,0.08); }
+        .tile-menu-item.danger { color: var(--danger); }
+        .tile-menu-item.danger svg { color: var(--danger); }
+        .tile-menu-item.danger:hover { background: var(--danger-soft); }
         /* 删除确认卡：替代原生 confirm，样式跟扩展其他浮层一致 */
         .confirm-mask { position: fixed; inset: 0; z-index: 1000; display: flex;
           align-items: center; justify-content: center; padding: 24px;
@@ -1384,8 +1415,12 @@ const extPopupHtml = `<!DOCTYPE html>
           transition: background-color .14s, border-color .14s, color .14s; }
         .confirm-btn:hover { background: var(--chip-hi); border-color: var(--line-strong); }
         .confirm-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-        .confirm-btn.danger { border-color: transparent; background: #e11d48; color: #fff; }
-        .confirm-btn.danger:hover { background: #be123c; border-color: transparent; }
+        /* 危险色走主题令牌：暗色主题下 --danger 是浅珊瑚色，文字改用深色才够对比 */
+        .confirm-btn.danger { border-color: transparent; background: var(--danger); color: #fff; }
+        .confirm-btn.danger:hover { border-color: transparent; filter: brightness(0.94); }
+        @media (prefers-color-scheme: dark) {
+            .confirm-btn.danger { color: #2a1010; }
+        }
         /* 悬浮信息卡：默认贴在元素正下方，完整标题 + 域名 */
         .tip { position: fixed; left: -999px; top: -999px; z-index: 900; max-width: 268px;
           padding: 9px 13px 9px 15px;
@@ -1406,6 +1441,9 @@ const extPopupHtml = `<!DOCTYPE html>
         .tip-name { font-size: 12.5px; font-weight: 500; line-height: 1.45; color: var(--ink); word-break: break-word; }
         .tip-host { margin-top: 2px; font-size: 11px; line-height: 1.4; color: var(--ink-soft); word-break: break-all; }
         .empty { text-align: center; color: var(--ink-soft); padding: 48px 12px; font-size: 13px; }
+        .empty-title { font-size: 13.5px; color: var(--ink); word-break: break-word; }
+        .empty-sub { margin-top: 5px; font-size: 12px; opacity: .8; }
+        .empty-btn { margin-top: 14px; }
         .status { flex: 0 0 auto; font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
         .status:empty { display: none; }
         .status:not(:empty) { padding: 8px 2px 0; }
@@ -1567,8 +1605,12 @@ const extPopupHtml = `<!DOCTYPE html>
               gap: 4px; padding: 0; overflow-x: auto; scrollbar-width: none; }
             .dock::-webkit-scrollbar { display: none; }
             .dock-brand, .dock-label, .dock-foot { display: none; }
-            .dock-list { flex-wrap: nowrap; gap: 6px; overflow: visible; padding: 0; }
-            .dir-item { height: 30px; flex: 0 0 auto; }
+            .dock-list { flex-direction: row; flex-wrap: nowrap; gap: 6px; overflow: visible; padding: 0; }
+            .dir-item { width: auto; height: 30px; flex: 0 0 auto; padding: 0 11px;
+              border: 1px solid var(--line); border-radius: 999px; background: var(--chip); }
+            .dir-item:hover { background: var(--surface-solid); border-color: var(--line-strong); }
+            .dir-item.active { background: var(--solid); border-color: var(--solid); color: var(--solid-ink); }
+            .dir-item.active::before { display: none; }
             .dir-count { display: none; }
             .topbar { flex-wrap: wrap; gap: 10px 12px; padding: 0 2px 10px; }
             .clock-wrap { gap: 8px; }
@@ -1608,6 +1650,9 @@ const extPopupHtml = `<!DOCTYPE html>
                     <span class="search-icon" aria-hidden="true">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" focusable="false"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                     </span>
+                    <button id="searchClear" class="search-clear" type="button" aria-label="清空搜索" hidden>
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" focusable="false" aria-hidden="true"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                    </button>
                     <input id="search" class="search" type="search" name="q" placeholder="搜索收藏夹，回车搜索网络…" autocomplete="off" aria-label="搜索收藏夹">
                     <span class="engine-wrap">
                         <button id="engineBtn" class="engine-btn" type="button" aria-haspopup="true" aria-expanded="false" data-full="搜索引擎" data-host="可自定义添加或删除">
@@ -1786,16 +1831,41 @@ document.addEventListener('DOMContentLoaded', async () => {
         return found ? found.name : id;
     };
 
-    // 左栏：插件目录
+    // 目录层级：按 parentId 回溯，异常数据最多追 8 层，深度上限 6 级
+    const dirDepths = () => {
+        const byId = new Map();
+        categoryList().forEach((category) => byId.set(category.id, category));
+        const depths = new Map();
+        const walk = (category, guard) => {
+            if (!category) return 1;
+            if (depths.has(category.id)) return depths.get(category.id);
+            const parent = category.parentId ? byId.get(category.parentId) : null;
+            const depth = (!parent || guard > 8) ? 1 : Math.min(6, walk(parent, guard + 1) + 1);
+            depths.set(category.id, depth);
+            return depth;
+        };
+        categoryList().forEach((category) => walk(category, 0));
+        return depths;
+    };
+
+    // 左栏：插件目录（一级目录顶格，子目录逐级右移，能看出收藏夹的父子关系）
     const renderDir = () => {
-        const items = [{ id: 'all', name: '全部收藏' }, ...categoryList()];
-        dirList.innerHTML = items.map((category) => \`
-            <button class="dir-item \${activeCategory === category.id ? 'active' : ''}" type="button" data-id="\${escapeHtml(category.id)}" data-full="\${escapeHtml(category.name)}">
-                <span class="dir-name">\${escapeHtml(category.name)}</span>
-                <span class="dir-count">\${countOf(category.id)}</span>
-            </button>
-        \`).join('');
-        dirFoot.textContent = \`\${allLinks.length} 个收藏 · \${categoryList().length} 个目录\`;
+        const depths = dirDepths();
+        const rows = [{ id: 'all', name: '全部收藏', depth: 0 }];
+        categoryList().forEach((category) => {
+            rows.push({ id: category.id, name: category.name, depth: depths.get(category.id) || 1 });
+        });
+        dirList.innerHTML = rows.map((row) => {
+            const active = row.id === activeCategory;
+            return '<button class="dir-item' + (active ? ' active' : '') + '" type="button"'
+                + ' aria-current="' + (active ? 'true' : 'false') + '"'
+                + ' data-id="' + escapeHtml(row.id) + '" data-full="' + escapeHtml(row.name) + '"'
+                + ' data-depth="' + row.depth + '" style="--d:' + row.depth + '">'
+                + '<span class="dir-name">' + escapeHtml(row.name) + '</span>'
+                + '<span class="dir-count">' + countOf(row.id) + '</span>'
+                + '</button>';
+        }).join('');
+        dirFoot.textContent = allLinks.length + ' 个收藏 · ' + categoryList().length + ' 个目录';
     };
 
     // 虚拟滚动：只把可视区那一屏磁贴放进 DOM，并且复用节点，滚动时只改内容与位置
@@ -1805,6 +1875,7 @@ document.addEventListener('DOMContentLoaded', async () => {
     const GAP_Y = 20;
     const OVERSCAN = 2;
     let viewList = [];
+    let activeQuery = '';
     let metrics = { cols: 1, cellW: 100, stepX: 114, stepY: TILE_H + GAP_Y };
     let panelH = 0;
     let contentTop = 0;
@@ -1871,6 +1942,29 @@ document.addEventListener('DOMContentLoaded', async () => {
         return el;
     };
 
+    // 命中片段用 mark 包起来；用 DOM 节点拼接，标题里的尖括号不会被当作 HTML
+    const paintName = (el, text) => {
+        const node = el.querySelector('.app-name');
+        const q = activeQuery;
+        if (!q || text.toLowerCase().indexOf(q) === -1) {
+            node.textContent = text;
+            return;
+        }
+        node.textContent = '';
+        const lower = text.toLowerCase();
+        let from = 0;
+        for (;;) {
+            const hit = lower.indexOf(q, from);
+            if (hit === -1) break;
+            if (hit > from) node.appendChild(document.createTextNode(text.slice(from, hit)));
+            const mark = document.createElement('mark');
+            mark.textContent = text.slice(hit, hit + q.length);
+            node.appendChild(mark);
+            from = hit + q.length;
+        }
+        if (from < text.length) node.appendChild(document.createTextNode(text.slice(from)));
+    };
+
     const fillTile = (el, link) => {
         el.href = link.url;
         // 不用原生 title（延迟 1s、样式不可控），改用统一的悬浮信息卡
@@ -1896,7 +1990,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         icon.classList.remove('fb');
         icon.style.setProperty('--h', hueFor(link));
         icon.lastChild.textContent = (String(link.title || '').trim().charAt(0) || '?').toUpperCase();
-        el.querySelector('.app-name').textContent = shortName(link.title);
+        paintName(el, shortName(link.title));
         const dirEl = el.querySelector('.app-dir');
         if (dirEl) {
             const dirName = link.categoryId ? categoryName(link.categoryId) : '';
@@ -1950,6 +2044,14 @@ document.addEventListener('DOMContentLoaded', async () => {
         openTileMenu(link, { x: event.clientX, y: event.clientY });
     });
 
+    // 空状态里的按钮：清空搜索 / 重新读取收藏夹
+    content.addEventListener('click', (event) => {
+        const btn = event.target.closest('[data-empty-act]');
+        if (!btn) return;
+        if (btn.dataset.emptyAct === 'clear') clearSearch();
+        else loadBookmarks(true);
+    });
+
     const clearTiles = () => {
         tiles.clear();
         spareTiles.length = 0;
@@ -1967,10 +2069,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const to = Math.min(viewList.length, lastRow * metrics.cols);
         if (from === paintedFrom && to === paintedTo) return;
 
-        // 滚出可视区的节点先收进空闲池
+        // 滚出可视区的节点先收进空闲池；焦点所在的节点必须留着，否则 Tab 到一半焦点会掉回 body
         const spare = [];
+        const activeNode = document.activeElement;
         tiles.forEach((el, index) => {
             if (index < from || index >= to) {
+                if (activeNode && el.contains(activeNode)) return;
                 spare.push(el);
                 tiles.delete(index);
             }
@@ -2000,10 +2104,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         paintedTo = to;
     };
 
+    // 状态栏的空闲文案：搜索态报结果数，浏览态报当前目录
+    const idleStatus = () => {
+        if (activeQuery) return '「' + searchInput.value.trim() + '」：全目录 ' + viewList.length + ' 条';
+        return categoryName(activeCategory) + ' · ' + viewList.length + ' 个';
+    };
+
     const render = () => {
         hideTip();
         const query = searchInput.value.trim().toLowerCase();
         // 搜索跨全部目录，所以结果要标出各自来源；不搜索时仍按当前目录浏览
+        activeQuery = query;
         content.classList.toggle('content-searching', !!query);
         const pool = query
             ? allLinks
@@ -2015,19 +2126,32 @@ document.addEventListener('DOMContentLoaded', async () => {
                 link.url.toLowerCase().includes(query))
             : pool;
 
-        // 搜索时给个结果计数，避免“到底筛出来没有”的疑问
-        if (query) {
-            statusBar.textContent = '「' + searchInput.value.trim() + '」：全目录 ' + viewList.length + ' 条';
-        } else if (!statusBar.classList.contains('error')) {
-            // 没有面包屑了，用状态栏说明当前所在目录
-            statusBar.textContent = categoryName(activeCategory) + ' · ' + viewList.length + ' 个';
-        }
+        // 状态栏：搜索时给结果计数，浏览时说明当前所在目录
+        if (!statusBar.classList.contains('error')) statusBar.textContent = idleStatus();
 
         if (!viewList.length) {
             viewList = [];
             clearTiles();
             content.style.height = '';
-            content.innerHTML = '<div class="empty">没有匹配的收藏，回车用搜索引擎搜一下</div>';
+            if (query) {
+                content.innerHTML = '<div class="empty">'
+                    + '<div class="empty-title">没有匹配「' + escapeHtml(searchInput.value.trim()) + '」的收藏</div>'
+                    + '<div class="empty-sub">回车可以用搜索引擎搜网络</div>'
+                    + '<button type="button" class="btn empty-btn" data-empty-act="clear">清空搜索</button>'
+                    + '</div>';
+            } else if (!allLinks.length) {
+                content.innerHTML = '<div class="empty">'
+                    + '<div class="empty-title">收藏夹还是空的</div>'
+                    + '<div class="empty-sub">在浏览器里加几个书签，这里会自动出现</div>'
+                    + '<button type="button" class="btn empty-btn" data-empty-act="reload">重新读取</button>'
+                    + '</div>';
+            } else {
+                content.innerHTML = '<div class="empty">'
+                    + '<div class="empty-title">「' + escapeHtml(categoryName(activeCategory)) + '」还没有收藏</div>'
+                    + '<div class="empty-sub">换一个目录看看，或在浏览器收藏夹里往这里添加</div>'
+                    + '<button type="button" class="btn empty-btn" data-empty-act="reload">重新读取</button>'
+                    + '</div>';
+            }
             return;
         }
 
@@ -2037,6 +2161,32 @@ document.addEventListener('DOMContentLoaded', async () => {
         paintWindow();
         // 切回标签时恢复原滚动位置；高度就位后再设置，避免被旧内容高度截断
         panel.scrollTop = scrollMemory[activeCategory] || 0;
+    };
+
+    // 首屏骨架：先用灰块把网格占住，数据到位后原地替换，避免整屏跳变
+    const showSkeleton = () => {
+        clearTiles();
+        content.innerHTML = '';
+        content.style.height = '';
+        if (!content.clientWidth) return;
+        content.classList.remove('content-searching');
+        measure();
+        const rows = Math.max(2, Math.ceil(panelH / metrics.stepY));
+        const count = Math.min(metrics.cols * rows, 24);
+        const frag = document.createDocumentFragment();
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'app sk';
+            el.innerHTML = '<div class="sk-ico"></div><div class="sk-line"></div><div class="sk-line short"></div>';
+            el.style.width = metrics.cellW + 'px';
+            const col = i % metrics.cols;
+            const row = (i - col) / metrics.cols;
+            el.style.transform = 'translate3d(' + Math.round(col * metrics.stepX) + 'px,'
+                + Math.round(row * metrics.stepY) + 'px,0)';
+            frag.appendChild(el);
+        }
+        content.appendChild(frag);
+        content.style.height = (Math.ceil(count / metrics.cols) * metrics.stepY - GAP_Y) + 'px';
     };
 
     let paintPending = false;
@@ -2347,15 +2497,32 @@ document.addEventListener('DOMContentLoaded', async () => {
     panel.addEventListener('scroll', hideTip, { passive: true });
     document.addEventListener('mousedown', hideTip);
 
+    // 清空按钮：输入框有内容时替换左侧放大镜，点击清空并回焦
+    const searchClear = document.getElementById('searchClear');
+    const searchWrapEl = searchInput.closest('.search-wrap');
+    const syncSearchClear = () => {
+        const has = !!searchInput.value;
+        if (searchClear) searchClear.hidden = !has;
+        if (searchWrapEl) searchWrapEl.classList.toggle('has-value', has);
+    };
+    const clearSearch = () => {
+        searchInput.value = '';
+        syncSearchClear();
+        render();
+        searchInput.focus();
+    };
+    searchClear?.addEventListener('click', clearSearch);
+
     let searchTimer = 0;
     searchInput.addEventListener('input', () => {
+        syncSearchClear();
         window.clearTimeout(searchTimer);
         searchTimer = window.setTimeout(render, 120);
     });
     searchInput.addEventListener('keydown', (event) => {
         if (event.key === 'Escape' && searchInput.value) {
-            searchInput.value = '';
-            render();
+            event.preventDefault();
+            clearSearch();
             return;
         }
         if (event.key !== 'Enter') return;
@@ -2566,12 +2733,19 @@ document.addEventListener('DOMContentLoaded', async () => {
     const loadBookmarks = async (force) => {
         try {
             refreshBtn.classList.add('rotating');
+            // 首屏还没有任何数据时先铺骨架，避免从空文本一下跳到满屏磁贴
+            if (!liveLoaded && !allLinks.length) showSkeleton();
             const response = await chrome.runtime.sendMessage({ type: 'get-bookmarks-preview' });
             if (!response || !response.ok) {
                 throw new Error((response && response.error) || '读取收藏夹失败');
             }
             // 收藏夹文件夹当分类、书签当链接，喂给现成的渲染逻辑
-            const folders = (response.folders || []).map((folder) => ({ id: folder.id, name: folder.title }));
+            // parentId 必须留着：左侧目录要按层级缩进，丢掉就全平铺了
+            const folders = (response.folders || []).map((folder) => ({
+                id: folder.id,
+                name: folder.title,
+                parentId: folder.parentId || ''
+            }));
             const links = (response.links || []).map((link) => ({
                 id: link.id,
                 title: link.title,
@@ -2599,9 +2773,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         }
     };
 
+    // 成功类提示 2.4s 后自动回落到当前目录信息；错误保留，直到下一次操作覆盖
+    let statusTimer = 0;
     const setStatus = (text, isError) => {
+        window.clearTimeout(statusTimer);
         statusBar.textContent = text || '';
         statusBar.classList.toggle('error', !!isError);
+        if (!isError && text) {
+            statusTimer = window.setTimeout(() => {
+                statusBar.classList.remove('error');
+                statusBar.textContent = idleStatus();
+            }, 2400);
+        }
     };
 
     // 磁贴菜单：⋯ 与右键共用，anchor 传 right/bottom（按钮下方右对齐）或 x/y（跟随光标）
