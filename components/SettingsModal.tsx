@@ -1188,13 +1188,8 @@ const extPopupHtml = `<!DOCTYPE html>
         .dock-label { padding: 0 2px 8px; font-size: 11px; letter-spacing: 0.16em; color: var(--ink-soft); opacity: .8; }
         .dock-list { flex: 1; min-height: 0; overflow-y: auto; display: flex; flex-wrap: wrap; gap: 8px;
           align-content: flex-start; padding: 2px 2px 2px 0;
-          scrollbar-width: thin; scrollbar-color: rgba(127,127,127,0.35) transparent; }
-        .dock-list::-webkit-scrollbar { width: 8px; height: 8px; }
-        .dock-list::-webkit-scrollbar-button { display: none; }
-        .dock-list::-webkit-scrollbar-track { background: transparent; }
-        .dock-list::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.28); border: 2px solid transparent;
-          background-clip: content-box; border-radius: 999px; }
-        .dock-list:hover::-webkit-scrollbar-thumb { background: rgba(127,127,127,0.44); background-clip: content-box; }
+          -ms-overflow-style: none; scrollbar-width: none; }
+        .dock-list::-webkit-scrollbar { display: none; width: 0; height: 0; }
         .dir-item { display: inline-flex; align-items: center; gap: 6px; max-width: 100%; height: 30px;
           padding: 0 11px; border: 1px solid var(--line); border-radius: 999px; background: var(--chip);
           color: var(--ink-soft); font-size: 12.5px; font-family: inherit; cursor: pointer; touch-action: manipulation;
