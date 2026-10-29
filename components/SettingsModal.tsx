@@ -1325,13 +1325,21 @@ const extPopupHtml = `<!DOCTYPE html>
           font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
           overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
-        /* 搜索时的结果行：标题一行 + 来源目录，目录只用字号和透明度区分层级 */
-        .app-dir { display: none; font-size: 10.5px; line-height: 1.2; color: var(--ink-soft); opacity: .78;
-          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        /* 搜索时的结果行：标题一行 + 目录标签；同一目录同一色相，方便成组扫读 */
+        .app-dir { display: none; align-items: center; gap: 4px; max-width: 100%;
+          font-size: 10.5px; line-height: 1.2; color: var(--ink-soft); }
+        .app-dir svg { flex: 0 0 auto; width: 10px; height: 10px; color: hsl(var(--h, 220), 52%, 46%); }
+        .app-dir .dir-name { min-width: 0; padding: 1px 6px; border-radius: 999px;
+          background: hsla(var(--h, 220), 62%, 50%, 0.16);
+          overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .content-searching .app { gap: 4px; }
-        .content-searching .app-name { -webkit-line-clamp: 1; color: var(--ink); }
-        .content-searching .app-dir { display: block; }
-        .content-searching .app-dir:empty { display: none; }
+        .content-searching .app-name { -webkit-line-clamp: 1; line-height: 1.2; color: var(--ink); }
+        .content-searching .app-dir { display: flex; }
+        .content-searching .app-dir[hidden] { display: none; }
+        @media (prefers-color-scheme: dark) {
+            .app-dir svg { color: hsl(var(--h, 220), 60%, 70%); }
+            .app-dir .dir-name { background: hsla(var(--h, 220), 65%, 55%, 0.24); }
+        }
         /* 磁贴操作入口：只在悬停时浮出三个点，不描边、不压图标；右键复用同一个菜单 */
         .app .tile-more { position: absolute; top: 0; right: 0; z-index: 3;
           display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
@@ -1836,12 +1844,27 @@ document.addEventListener('DOMContentLoaded', async () => {
         return h;
     };
 
+    // 目录名同样散列成色相：同一目录在搜索态下永远是同一个颜色
+    const dirHueCache = new Map();
+    const dirHue = (name) => {
+        const key = String(name || '');
+        if (dirHueCache.has(key)) return dirHueCache.get(key);
+        let h = 0;
+        for (let i = 0; i < key.length; i++) h = (h * 31 + key.charCodeAt(i)) % 360;
+        dirHueCache.set(key, h);
+        return h;
+    };
+
     const createTile = () => {
         const el = document.createElement('a');
         el.className = 'app';
         el.target = '_blank';
         el.rel = 'noopener noreferrer';
-        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div><div class="app-dir"></div>'
+        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>'
+            + '<div class="app-dir" hidden>'
+            + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" focusable="false"><path d="M3 7a2 2 0 0 1 2-2h3.7a2 2 0 0 1 1.6.8L11 6.6h8a2 2 0 0 1 2 2v8.8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/></svg>'
+            + '<span class="dir-name"></span>'
+            + '</div>'
             + '<span class="tile-more" role="button" tabindex="-1" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" hidden>'
             + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" focusable="false"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>'
             + '</span>';
@@ -1875,7 +1898,13 @@ document.addEventListener('DOMContentLoaded', async () => {
         icon.lastChild.textContent = (String(link.title || '').trim().charAt(0) || '?').toUpperCase();
         el.querySelector('.app-name').textContent = shortName(link.title);
         const dirEl = el.querySelector('.app-dir');
-        if (dirEl) dirEl.textContent = link.categoryId ? categoryName(link.categoryId) : '';
+        if (dirEl) {
+            const dirName = link.categoryId ? categoryName(link.categoryId) : '';
+            const dirText = dirEl.querySelector('.dir-name');
+            if (dirText) dirText.textContent = dirName;
+            dirEl.hidden = !dirName;
+            if (dirName) dirEl.style.setProperty('--h', dirHue(dirName));
+        }
     };
 
     // 用 transform 定位，走合成层，比改 left/top 少一次布局
