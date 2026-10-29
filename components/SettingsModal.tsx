@@ -1325,6 +1325,40 @@ const extPopupHtml = `<!DOCTYPE html>
           font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
           overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
+        /* 删除角标：只在磁贴悬停时浮现，删的就是浏览器收藏夹里那一条 */
+        .app .tile-del { position: absolute; top: -8px; right: calc(50% - 23px); z-index: 3;
+          display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+          border-radius: 50%; border: 1px solid var(--line); background: var(--surface-solid);
+          color: var(--ink-soft); cursor: pointer; opacity: 0; pointer-events: none;
+          box-shadow: 0 6px 14px -8px rgba(15,23,42,0.5);
+          transition: opacity .14s, color .14s, border-color .14s, background-color .14s; }
+        .app:hover .tile-del, .app:focus-within .tile-del { opacity: 1; pointer-events: auto; }
+        .app .tile-del:hover { color: #e11d48; border-color: #e11d48; }
+        .app .tile-del svg { width: 10px; height: 10px; }
+        .app .tile-del[hidden] { display: none; }
+        /* 删除确认卡：替代原生 confirm，样式跟扩展其他浮层一致 */
+        .confirm-mask { position: fixed; inset: 0; z-index: 1000; display: flex;
+          align-items: center; justify-content: center; padding: 24px;
+          background: rgba(15,23,42,0.42); }
+        .confirm-mask[hidden] { display: none; }
+        .confirm-card { width: 100%; max-width: 320px; padding: 18px 18px 14px;
+          border: 1px solid var(--line); border-radius: 16px; background: var(--surface-solid);
+          color: var(--ink); box-shadow: 0 24px 48px -20px rgba(15,23,42,0.5);
+          opacity: 0; transform: translateY(6px) scale(.98);
+          transition: opacity .16s, transform .16s cubic-bezier(.22,.61,.36,1); }
+        .confirm-mask.show .confirm-card { opacity: 1; transform: none; }
+        .confirm-title { font-size: 14px; font-weight: 600; letter-spacing: -0.01em; }
+        .confirm-desc { margin-top: 7px; font-size: 12.5px; line-height: 1.55;
+          color: var(--ink-soft); word-break: break-word; }
+        .confirm-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+        .confirm-btn { height: 32px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line);
+          background: transparent; color: var(--ink); font-family: inherit; font-size: 12.5px;
+          cursor: pointer; touch-action: manipulation;
+          transition: background-color .14s, border-color .14s, color .14s; }
+        .confirm-btn:hover { background: var(--chip-hi); border-color: var(--line-strong); }
+        .confirm-btn:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+        .confirm-btn.danger { border-color: transparent; background: #e11d48; color: #fff; }
+        .confirm-btn.danger:hover { background: #be123c; border-color: transparent; }
         /* 悬浮信息卡：默认贴在元素正下方，完整标题 + 域名 */
         .tip { position: fixed; left: -999px; top: -999px; z-index: 900; max-width: 268px;
           padding: 9px 13px 9px 15px;
@@ -1604,6 +1638,16 @@ const extPopupHtml = `<!DOCTYPE html>
             <footer class="daily" id="daily"></footer>
         </section>
     </div>
+    <div id="confirmMask" class="confirm-mask" hidden>
+        <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
+            <div class="confirm-title" id="confirmTitle">确认删除</div>
+            <div class="confirm-desc" id="confirmDesc"></div>
+            <div class="confirm-actions">
+                <button type="button" class="confirm-btn" id="confirmCancel">取消</button>
+                <button type="button" class="confirm-btn danger" id="confirmOk">删除</button>
+            </div>
+        </div>
+    </div>
     <script src="popup.js"></script>
 </body>
 </html>`;
@@ -1768,7 +1812,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.className = 'app';
         el.target = '_blank';
         el.rel = 'noopener noreferrer';
-        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>';
+        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>'
+            + '<span class="tile-del" role="button" tabindex="-1" aria-label="从浏览器收藏夹删除" hidden>'
+            + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+            + '</span>';
         return el;
     };
 
@@ -1778,6 +1825,10 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.dataset.full = link.title || '';
         el.dataset.host = getHostname(link.url);
         el.setAttribute('aria-label', link.title || '');
+        // 复用的磁贴要清掉上一轮的数据，否则删除角标会带到别的收藏上
+        el.dataset.id = link.id || '';
+        const delBtn = el.querySelector('.tile-del');
+        if (delBtn) delBtn.hidden = String(link.id || '').indexOf('bm_') !== 0;
         const icon = el.firstChild;
         const img = icon.firstChild;
         img.src = getFaviconUrl(link);
@@ -1785,7 +1836,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         icon.classList.remove('fb');
         icon.style.setProperty('--h', hueFor(link));
         icon.lastChild.textContent = (String(link.title || '').trim().charAt(0) || '?').toUpperCase();
-        el.lastChild.textContent = shortName(link.title);
+        el.querySelector('.app-name').textContent = shortName(link.title);
     };
 
     // 用 transform 定位，走合成层，比改 left/top 少一次布局
@@ -1803,6 +1854,17 @@ document.addEventListener('DOMContentLoaded', async () => {
         img.style.display = 'none';
         img.parentNode.classList.add('fb');
     }, true);
+
+    // 删除角标：删的是浏览器收藏夹里那一条，不经过站点
+    content.addEventListener('click', (event) => {
+        const del = event.target.closest('.tile-del');
+        if (!del) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const tile = del.closest('.app');
+        const link = tile ? allLinks.find((item) => item.id === tile.dataset.id) : null;
+        deleteBookmark(link);
+    });
 
     const clearTiles = () => {
         tiles.clear();
@@ -2452,6 +2514,80 @@ document.addEventListener('DOMContentLoaded', async () => {
     const setStatus = (text, isError) => {
         statusBar.textContent = text || '';
         statusBar.classList.toggle('error', !!isError);
+    };
+
+    // 自定义确认卡：替代原生 confirm，避免阻塞渲染、样式也统一
+    const confirmMask = document.getElementById('confirmMask');
+    const confirmDesc = document.getElementById('confirmDesc');
+    const confirmOkBtn = document.getElementById('confirmOk');
+    const confirmCancelBtn = document.getElementById('confirmCancel');
+    let confirmResolve = null;
+
+    // 只接管 Esc（等同取消）；Enter 交给焦点按钮自己处理，避免误删
+    const onConfirmKey = (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeConfirm(false);
+    };
+
+    const closeConfirm = (result) => {
+        if (!confirmResolve) return;
+        const resolve = confirmResolve;
+        confirmResolve = null;
+        document.removeEventListener('keydown', onConfirmKey, true);
+        if (confirmMask) {
+            confirmMask.classList.remove('show');
+            confirmMask.hidden = true;
+        }
+        resolve(result);
+    };
+
+    const askConfirm = (message) => {
+        if (!confirmMask || !confirmDesc) return Promise.resolve(window.confirm(message));
+        // 上一个还没关掉就先按取消处理，避免 Promise 悬挂
+        if (confirmResolve) closeConfirm(false);
+        confirmDesc.textContent = message;
+        confirmMask.hidden = false;
+        window.requestAnimationFrame(() => {
+            if (confirmMask) confirmMask.classList.add('show');
+        });
+        // 破坏性操作默认焦点给「取消」，误按回车也不会删
+        if (confirmCancelBtn) confirmCancelBtn.focus();
+        document.addEventListener('keydown', onConfirmKey, true);
+        return new Promise((resolve) => { confirmResolve = resolve; });
+    };
+
+    confirmOkBtn?.addEventListener('click', () => closeConfirm(true));
+    confirmCancelBtn?.addEventListener('click', () => closeConfirm(false));
+    confirmMask?.addEventListener('click', (event) => {
+        if (event.target === confirmMask) closeConfirm(false);
+    });
+
+    // 删除只作用于浏览器收藏夹（chrome.bookmarks.remove），不写站点、不碰 KV。
+    // 站点侧要等下次「同步收藏夹」才会因为收藏夹里没有这条而清掉，正好保持单向。
+    const deleteBookmark = async (link) => {
+        if (!link) return;
+        const rawId = String(link.id || '');
+        if (rawId.indexOf('bm_') !== 0) {
+            setStatus('这条不在浏览器收藏夹里，扩展无法删除', true);
+            return;
+        }
+        const nodeId = rawId.slice(3);
+        const name = link.title || link.url || '该收藏';
+        const confirmed = await askConfirm('「' + name + '」将从浏览器收藏夹中删除，该操作不可撤销。');
+        if (!confirmed) return;
+        try {
+            await chrome.bookmarks.remove(nodeId);
+        } catch (e) {
+            // 已经不存在（其他窗口删过了）也当作成功，避免卡在旧列表上
+            const message = String((e && e.message) || e);
+            if (message.indexOf('Cannot find bookmark') === -1 && message.indexOf('Invalid bookmark') === -1) {
+                setStatus('删除失败：' + message, true);
+                return;
+            }
+        }
+        await loadBookmarks(true);
+        setStatus('已从收藏夹删除「' + name + '」');
     };
 
     // 只有这一步需要站点凭证，所以没解锁才会弹登录框
