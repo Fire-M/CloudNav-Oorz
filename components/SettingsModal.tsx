@@ -1325,6 +1325,13 @@ const extPopupHtml = `<!DOCTYPE html>
           font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
           overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
+        /* 搜索时的结果行：标题一行 + 来源目录，目录只用字号和透明度区分层级 */
+        .app-dir { display: none; font-size: 10.5px; line-height: 1.2; color: var(--ink-soft); opacity: .78;
+          max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .content-searching .app { gap: 4px; }
+        .content-searching .app-name { -webkit-line-clamp: 1; color: var(--ink); }
+        .content-searching .app-dir { display: block; }
+        .content-searching .app-dir:empty { display: none; }
         /* 磁贴操作入口：只在悬停时浮出三个点，不描边、不压图标；右键复用同一个菜单 */
         .app .tile-more { position: absolute; top: 0; right: 0; z-index: 3;
           display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
@@ -1834,7 +1841,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.className = 'app';
         el.target = '_blank';
         el.rel = 'noopener noreferrer';
-        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>'
+        el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div><div class="app-dir"></div>'
             + '<span class="tile-more" role="button" tabindex="-1" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" hidden>'
             + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" focusable="false"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>'
             + '</span>';
@@ -1867,6 +1874,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         icon.style.setProperty('--h', hueFor(link));
         icon.lastChild.textContent = (String(link.title || '').trim().charAt(0) || '?').toUpperCase();
         el.querySelector('.app-name').textContent = shortName(link.title);
+        const dirEl = el.querySelector('.app-dir');
+        if (dirEl) dirEl.textContent = link.categoryId ? categoryName(link.categoryId) : '';
     };
 
     // 用 transform 定位，走合成层，比改 left/top 少一次布局
@@ -1965,9 +1974,13 @@ document.addEventListener('DOMContentLoaded', async () => {
     const render = () => {
         hideTip();
         const query = searchInput.value.trim().toLowerCase();
-        const pool = activeCategory === 'all'
+        // 搜索跨全部目录，所以结果要标出各自来源；不搜索时仍按当前目录浏览
+        content.classList.toggle('content-searching', !!query);
+        const pool = query
             ? allLinks
-            : allLinks.filter((link) => link.categoryId === activeCategory);
+            : (activeCategory === 'all'
+                ? allLinks
+                : allLinks.filter((link) => link.categoryId === activeCategory));
         viewList = query
             ? pool.filter((link) => link.title.toLowerCase().includes(query) ||
                 link.url.toLowerCase().includes(query))
@@ -1975,7 +1988,7 @@ document.addEventListener('DOMContentLoaded', async () => {
 
         // 搜索时给个结果计数，避免“到底筛出来没有”的疑问
         if (query) {
-            statusBar.textContent = '「' + searchInput.value.trim() + '」：' + viewList.length + ' 条结果';
+            statusBar.textContent = '「' + searchInput.value.trim() + '」：全目录 ' + viewList.length + ' 条';
         } else if (!statusBar.classList.contains('error')) {
             // 没有面包屑了，用状态栏说明当前所在目录
             statusBar.textContent = categoryName(activeCategory) + ' · ' + viewList.length + ' 个';
