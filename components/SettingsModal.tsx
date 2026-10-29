@@ -1325,17 +1325,29 @@ const extPopupHtml = `<!DOCTYPE html>
           font-size: 12px; color: var(--ink-soft); text-align: center; max-width: 100%; line-height: 1.3;
           overflow: hidden; }
         .app:hover .app-name { color: var(--ink); }
-        /* 删除角标：只在磁贴悬停时浮现，删的就是浏览器收藏夹里那一条 */
-        .app .tile-del { position: absolute; top: -8px; right: calc(50% - 23px); z-index: 3;
-          display: flex; align-items: center; justify-content: center; width: 18px; height: 18px;
-          border-radius: 50%; border: 1px solid var(--line); background: var(--surface-solid);
-          color: var(--ink-soft); cursor: pointer; opacity: 0; pointer-events: none;
-          box-shadow: 0 6px 14px -8px rgba(15,23,42,0.5);
-          transition: opacity .14s, color .14s, border-color .14s, background-color .14s; }
-        .app:hover .tile-del, .app:focus-within .tile-del { opacity: 1; pointer-events: auto; }
-        .app .tile-del:hover { color: #e11d48; border-color: #e11d48; }
-        .app .tile-del svg { width: 10px; height: 10px; }
-        .app .tile-del[hidden] { display: none; }
+        /* 磁贴操作入口：只在悬停时浮出三个点，不描边、不压图标；右键复用同一个菜单 */
+        .app .tile-more { position: absolute; top: 0; right: 0; z-index: 3;
+          display: inline-flex; align-items: center; justify-content: center; width: 18px; height: 18px;
+          border-radius: 7px; color: var(--ink-soft); cursor: pointer; opacity: 0; pointer-events: none;
+          transition: opacity .12s ease, color .12s, background-color .12s; }
+        .app:hover .tile-more { opacity: 1; pointer-events: auto; }
+        .app .tile-more:hover, .app .tile-more.on { color: var(--ink); background: var(--chip-hi); }
+        .app .tile-more svg { width: 13px; height: 13px; }
+        .app .tile-more[hidden] { display: none; }
+        .tile-menu { position: fixed; z-index: 950; width: 148px; padding: 5px;
+          border: 1px solid var(--line); border-radius: 12px; background: var(--surface-solid);
+          box-shadow: 0 16px 32px -14px rgba(15,23,42,0.42); }
+        .tile-menu[hidden] { display: none; }
+        .tile-menu-item { display: flex; align-items: center; gap: 8px; width: 100%; height: 32px;
+          padding: 0 8px; border: 0; border-radius: 8px; background: transparent; color: var(--ink);
+          font-family: inherit; font-size: 12.5px; text-align: left; cursor: pointer;
+          transition: background-color .12s, color .12s; }
+        .tile-menu-item svg { width: 14px; height: 14px; color: var(--ink-soft); }
+        .tile-menu-item:hover { background: var(--chip-hi); }
+        .tile-menu-item:focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
+        .tile-menu-item.danger { color: #e11d48; }
+        .tile-menu-item.danger svg { color: #e11d48; }
+        .tile-menu-item.danger:hover { background: rgba(225,29,72,0.08); }
         /* 删除确认卡：替代原生 confirm，样式跟扩展其他浮层一致 */
         .confirm-mask { position: fixed; inset: 0; z-index: 1000; display: flex;
           align-items: center; justify-content: center; padding: 24px;
@@ -1638,6 +1650,16 @@ const extPopupHtml = `<!DOCTYPE html>
             <footer class="daily" id="daily"></footer>
         </section>
     </div>
+    <div id="tileMenu" class="tile-menu" role="menu" aria-label="收藏操作" hidden>
+        <button type="button" class="tile-menu-item" role="menuitem" data-act="open">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg>
+            打开
+        </button>
+        <button type="button" class="tile-menu-item danger" role="menuitem" data-act="delete">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false"><path d="M4 7h16"/><path d="M9.5 7V5.2h5V7"/><path d="M6.5 7l.9 12.8h9.2L17.5 7"/></svg>
+            删除
+        </button>
+    </div>
     <div id="confirmMask" class="confirm-mask" hidden>
         <div class="confirm-card" role="dialog" aria-modal="true" aria-labelledby="confirmTitle" aria-describedby="confirmDesc">
             <div class="confirm-title" id="confirmTitle">确认删除</div>
@@ -1813,8 +1835,8 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.target = '_blank';
         el.rel = 'noopener noreferrer';
         el.innerHTML = '<div class="app-icon"><img alt="" width="36" height="36" loading="lazy" decoding="async"><span class="app-letter"></span></div><div class="app-name"></div>'
-            + '<span class="tile-del" role="button" tabindex="-1" aria-label="从浏览器收藏夹删除" hidden>'
-            + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" focusable="false"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>'
+            + '<span class="tile-more" role="button" tabindex="-1" aria-label="更多操作" aria-haspopup="menu" aria-expanded="false" hidden>'
+            + '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="currentColor" focusable="false"><circle cx="5" cy="12" r="1.9"/><circle cx="12" cy="12" r="1.9"/><circle cx="19" cy="12" r="1.9"/></svg>'
             + '</span>';
         return el;
     };
@@ -1825,10 +1847,18 @@ document.addEventListener('DOMContentLoaded', async () => {
         el.dataset.full = link.title || '';
         el.dataset.host = getHostname(link.url);
         el.setAttribute('aria-label', link.title || '');
-        // 复用的磁贴要清掉上一轮的数据，否则删除角标会带到别的收藏上
+        // 复用的磁贴要清掉上一轮的数据，否则删除入口会带到别的收藏上
         el.dataset.id = link.id || '';
-        const delBtn = el.querySelector('.tile-del');
-        if (delBtn) delBtn.hidden = String(link.id || '').indexOf('bm_') !== 0;
+        const moreBtn = el.querySelector('.tile-more');
+        if (moreBtn) {
+            const canAct = String(link.id || '').indexOf('bm_') === 0;
+            moreBtn.hidden = !canAct;
+            moreBtn.classList.remove('on');
+            moreBtn.setAttribute('aria-expanded', 'false');
+            if (canAct) {
+                moreBtn.setAttribute('aria-label', '更多操作「' + (link.title || link.url || '') + '」');
+            }
+        }
         const icon = el.firstChild;
         const img = icon.firstChild;
         img.src = getFaviconUrl(link);
@@ -1855,15 +1885,31 @@ document.addEventListener('DOMContentLoaded', async () => {
         img.parentNode.classList.add('fb');
     }, true);
 
-    // 删除角标：删的是浏览器收藏夹里那一条，不经过站点
+    // ⋯ 与右键共用同一个磁贴菜单
     content.addEventListener('click', (event) => {
-        const del = event.target.closest('.tile-del');
-        if (!del) return;
+        const more = event.target.closest('.tile-more');
+        if (!more) return;
         event.preventDefault();
         event.stopPropagation();
-        const tile = del.closest('.app');
+        const tile = more.closest('.app');
         const link = tile ? allLinks.find((item) => item.id === tile.dataset.id) : null;
-        deleteBookmark(link);
+        if (!link) return;
+        const wasOpen = !tileMenu.hidden && menuLink === link && more.classList.contains('on');
+        closeTileMenu();
+        if (wasOpen) return;
+        more.classList.add('on');
+        more.setAttribute('aria-expanded', 'true');
+        const rect = more.getBoundingClientRect();
+        openTileMenu(link, { right: rect.right, bottom: rect.bottom });
+    });
+
+    content.addEventListener('contextmenu', (event) => {
+        const tile = event.target.closest('.app');
+        if (!tile) return;
+        const link = allLinks.find((item) => item.id === tile.dataset.id);
+        if (!link) return;
+        event.preventDefault();
+        openTileMenu(link, { x: event.clientX, y: event.clientY });
     });
 
     const clearTiles = () => {
@@ -2515,6 +2561,77 @@ document.addEventListener('DOMContentLoaded', async () => {
         statusBar.textContent = text || '';
         statusBar.classList.toggle('error', !!isError);
     };
+
+    // 磁贴菜单：⋯ 与右键共用，anchor 传 right/bottom（按钮下方右对齐）或 x/y（跟随光标）
+    const tileMenu = document.getElementById('tileMenu');
+    let menuLink = null;
+
+    const onTileMenuKey = (event) => {
+        if (event.key !== 'Escape') return;
+        event.preventDefault();
+        closeTileMenu();
+    };
+
+    const closeTileMenu = () => {
+        if (!tileMenu || tileMenu.hidden) return;
+        tileMenu.hidden = true;
+        menuLink = null;
+        document.removeEventListener('keydown', onTileMenuKey, true);
+        const opened = document.querySelector('.tile-more.on');
+        if (opened) {
+            opened.classList.remove('on');
+            opened.setAttribute('aria-expanded', 'false');
+        }
+    };
+
+    const openTileMenu = (link, anchor) => {
+        if (!tileMenu || !link) return;
+        hideTip();
+        if (!tileMenu.hidden) closeTileMenu();
+        menuLink = link;
+        tileMenu.hidden = false;
+        // 先量尺寸再定位，贴边时翻转，避免出屏
+        const w = tileMenu.offsetWidth;
+        const h = tileMenu.offsetHeight;
+        const gap = 6;
+        let left = anchor.x != null ? anchor.x : anchor.right - w;
+        let top = anchor.y != null ? anchor.y : anchor.bottom + gap;
+        left = Math.max(8, Math.min(left, window.innerWidth - w - 8));
+        if (top + h > window.innerHeight - 8) {
+            top = anchor.y != null ? Math.max(8, anchor.y - h) : Math.max(8, anchor.bottom - h);
+        }
+        tileMenu.style.left = Math.round(left) + 'px';
+        tileMenu.style.top = Math.round(top) + 'px';
+        document.addEventListener('keydown', onTileMenuKey, true);
+        const first = tileMenu.querySelector('.tile-menu-item');
+        if (first) first.focus();
+    };
+
+    tileMenu?.addEventListener('click', (event) => {
+        const item = event.target.closest('.tile-menu-item');
+        if (!item) return;
+        const link = menuLink;
+        const act = item.dataset.act;
+        closeTileMenu();
+        if (!link) return;
+        if (act === 'open') {
+            try {
+                chrome.tabs.create({ url: link.url });
+            } catch (e) {
+                window.open(link.url, '_blank');
+            }
+            return;
+        }
+        if (act === 'delete') deleteBookmark(link);
+    });
+
+    document.addEventListener('click', (event) => {
+        if (!tileMenu || tileMenu.hidden) return;
+        if (event.target.closest('#tileMenu') || event.target.closest('.tile-more')) return;
+        closeTileMenu();
+    });
+    panel.addEventListener('scroll', closeTileMenu, { passive: true });
+    window.addEventListener('resize', closeTileMenu);
 
     // 自定义确认卡：替代原生 confirm，避免阻塞渲染、样式也统一
     const confirmMask = document.getElementById('confirmMask');
